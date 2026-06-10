@@ -245,6 +245,14 @@ try {
     "easyar_write_onboarding_report should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_project_handoff"),
+    "easyar_generate_project_handoff should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_project_handoff"),
+    "easyar_write_project_handoff should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_focused_preflight"),
     "easyar_generate_focused_preflight should be listed"
   );
@@ -791,6 +799,39 @@ try {
   );
   assert(workflowStateMarkdown.includes("EasyAR Workflow State - Image Tracking"), "Workflow state markdown should include title");
   assert(workflowStateMarkdown.includes("check-official-access"), "Workflow state markdown should include phase");
+
+  const projectHandoff = await callTool("easyar_generate_project_handoff", {
+    projectPath,
+    platform: "android",
+    client: "claude-desktop",
+    serverPath: path.resolve("dist/index.js")
+  });
+  assertTextIncludes(projectHandoff, "\"readyForContinuation\": false");
+  assertTextIncludes(projectHandoff, "\"topNextCall\"");
+  assertTextIncludes(projectHandoff, "image-tracking");
+  assertTextIncludes(projectHandoff, "cloud-recognition");
+  assertTextIncludes(projectHandoff, "PROJECT_HANDOFF.md");
+  assert(!extractText(projectHandoff).includes("env-test-account-token"), "Project handoff should not include account token values");
+  assert(!extractText(projectHandoff).includes("env-test-license-key"), "Project handoff should not include license values");
+
+  const writtenProjectHandoff = await callTool("easyar_write_project_handoff", {
+    projectPath,
+    platform: "android",
+    client: "claude-desktop",
+    serverPath: path.resolve("dist/index.js")
+  });
+  assertTextIncludes(writtenProjectHandoff, "PROJECT_HANDOFF.md");
+  const projectHandoffMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"),
+    "utf8"
+  );
+  assert(projectHandoffMarkdown.includes("EasyAR Project Handoff"), "Project handoff markdown should include title");
+  assert(projectHandoffMarkdown.includes("Top Next Call"), "Project handoff markdown should include top next call");
+  assert(projectHandoffMarkdown.includes("Focused Workflows"), "Project handoff markdown should include focused workflows");
+  assert(projectHandoffMarkdown.includes("Image Tracking"), "Project handoff markdown should include Image Tracking");
+  assert(projectHandoffMarkdown.includes("Cloud Recognition"), "Project handoff markdown should include Cloud Recognition");
+  assert(!projectHandoffMarkdown.includes("env-test-account-token"), "Project handoff markdown should not include account token values");
+  assert(!projectHandoffMarkdown.includes("env-test-license-key"), "Project handoff markdown should not include license values");
 
   const writtenOfficialAccess = await callTool("easyar_write_official_access_report", {
     projectPath,

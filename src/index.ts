@@ -103,6 +103,8 @@ const toolCatalog = [
   "easyar_write_release_manifest",
   "easyar_onboarding_report",
   "easyar_write_onboarding_report",
+  "easyar_generate_project_handoff",
+  "easyar_write_project_handoff",
   "easyar_generate_sample_plan",
   "easyar_generate_focused_preflight",
   "easyar_write_focused_preflight",
@@ -1280,6 +1282,83 @@ server.tool(
       nextCall: report.nextCall,
       nextActions: report.nextActions,
       note: "The onboarding report contains setup status and non-secret next steps only."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_project_handoff",
+  "Generate a project-level handoff dashboard across account setup, local config, Unity environment, focused samples, and next MCP calls.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    client: z.enum(clientKinds).default("claude-desktop"),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist"),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js when entrypointMode=local-dist."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, platform, client, entrypointMode, serverPath, maxScriptIssues, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    return jsonText(await buildProjectHandoff({
+      root,
+      platform,
+      client,
+      entrypointMode,
+      serverPath,
+      maxScriptIssues,
+      maxLogBytes,
+      maxLogIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_project_handoff",
+  "Write PROJECT_HANDOFF.md, a concise continuation dashboard for another AI tool or human operator.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    client: z.enum(clientKinds).default("claude-desktop"),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist"),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js when entrypointMode=local-dist."),
+    relativePath: z.string().optional().describe("Optional output path inside the project. Defaults to Assets/EasyARGenerated/PROJECT_HANDOFF.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing project handoff artifact.")
+  },
+  async ({ projectPath, platform, client, entrypointMode, serverPath, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const handoff = await buildProjectHandoff({
+      root,
+      platform,
+      client,
+      entrypointMode,
+      serverPath,
+      maxScriptIssues,
+      maxLogBytes,
+      maxLogIssues
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(root, "Assets", "EasyARGenerated", "PROJECT_HANDOFF.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildProjectHandoffMarkdown(handoff), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      readyForContinuation: handoff.readyForContinuation,
+      topNextCall: handoff.topNextCall,
+      focusedSamplesComplete: handoff.focusedScope.allFocusedSamplesComplete,
+      blockerCount: handoff.blockers.length,
+      nextActions: handoff.nextActions,
+      security: handoff.security
     });
   }
 );
@@ -4840,6 +4919,129 @@ async function buildOnboardingReport(input: {
       ...workflowState.nextActions
     ])).slice(0, 12),
     security: "Onboarding report does not include secret values. Keep official EasyAR tokens, license keys, Cloud Recognition credentials, signing keys, and provisioning secrets out of committed files."
+  };
+}
+
+async function buildProjectHandoff(input: {
+  root: string;
+  platform: typeof mobilePlatforms[number];
+  client: typeof clientKinds[number];
+  entrypointMode: typeof clientEntrypointModes[number];
+  serverPath?: string;
+  maxScriptIssues: number;
+  maxLogBytes: number;
+  maxLogIssues: number;
+}) {
+  const focused = focusedSamples();
+  const [clientSetup, accountMaterials, localConfig, unityEnvironment, focusedScope, workflows] = await Promise.all([
+    buildClientSetupReport(input.client, input.entrypointMode, input.serverPath, true),
+    buildAccountMaterialsReport(input.root, findSample("cloud-recognition"), input.platform),
+    buildLocalConfigValidationReport(input.root),
+    buildUnityEnvironmentReport(input.root, null),
+    buildFocusedScopeStatus(input.root, input.platform, input.maxScriptIssues, input.maxLogBytes, input.maxLogIssues),
+    Promise.all(focused.map((sample) => {
+      const outputPath = input.platform === "android"
+        ? `Builds/${sample.id}.apk`
+        : `Builds/iOS/${sample.id}`;
+      return buildWorkflowState(input.root, sample, input.platform, outputPath, input.maxScriptIssues);
+    }))
+  ]);
+  const workflowSummaries = workflows.map((workflow) => ({
+    sampleId: workflow.sample.id,
+    sampleName: workflow.sample.name,
+    phase: workflow.phase,
+    blocked: workflow.blocked,
+    reason: workflow.reason,
+    nextCall: workflow.nextCall,
+    missingArtifacts: workflow.summary.missingArtifacts.slice(0, 8),
+    nextActions: workflow.nextActions.slice(0, 6)
+  }));
+  const firstBlockedWorkflow = workflowSummaries.find((workflow) => workflow.blocked);
+  const topNextCall = firstBlockedWorkflow?.nextCall
+    ?? (focusedScope.allFocusedSamplesComplete
+      ? { tool: "easyar_write_production_validation", arguments: { projectPath: input.root, platform: input.platform } }
+      : { tool: "easyar_write_focused_scope_status", arguments: { projectPath: input.root, platform: input.platform } });
+  const blockers = [
+    ...(!clientSetup.readyForClientConnection
+      ? clientSetup.blockers.map((blocker) => ({
+          id: `client/${blocker.id}`,
+          detail: blocker.detail,
+          action: clientSetup.nextActions[0] ?? "Run easyar_write_client_setup and fix required client setup blockers."
+        }))
+      : []),
+    ...(!localConfig.valid
+      ? localConfig.checks.filter((check) => !check.ok).map((check) => ({
+          id: `config/${check.id}`,
+          detail: check.detail,
+          action: localConfigAction(check.id)
+        }))
+      : []),
+    ...(accountMaterials.missingRequired.length > 0
+      ? [{
+          id: "account/materials",
+          detail: `Missing account material(s): ${accountMaterials.missingRequired.join(", ")}.`,
+          action: "Run easyar_write_account_onboarding, easyar_write_account_materials, and easyar_write_local_config_handoff before Unity automation."
+        }]
+      : []),
+    ...workflowSummaries.filter((workflow) => workflow.blocked).map((workflow) => ({
+      id: `workflow/${workflow.sampleId}/${workflow.phase}`,
+      detail: workflow.reason,
+      action: `Run ${workflow.nextCall.tool} with ${JSON.stringify(workflow.nextCall.arguments)}.`
+    }))
+  ];
+  const nextActions = Array.from(new Set([
+    ...blockers.slice(0, 8).map((blocker) => blocker.action),
+    `Run easyar_write_project_handoff projectPath=${input.root} platform=${input.platform} after each major setup or Unity run attempt.`,
+    "Read PROJECT_HANDOFF.md first when resuming this project in another MCP client."
+  ]));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    platform: input.platform,
+    client: input.client,
+    entrypointMode: input.entrypointMode,
+    readyForContinuation: blockers.length === 0,
+    topNextCall,
+    clientSetup: {
+      readyForClientConnection: clientSetup.readyForClientConnection,
+      command: clientSetup.command,
+      args: clientSetup.args,
+      configDestination: clientSetup.configDestination,
+      warningCount: clientSetup.warnings.length
+    },
+    account: {
+      readyForLocalConfigValidation: accountMaterials.readyForLocalConfigValidation,
+      missingRequired: accountMaterials.missingRequired
+    },
+    localConfig: {
+      valid: localConfig.valid,
+      configPath: localConfig.configPath,
+      failedChecks: localConfig.checks.filter((check) => !check.ok).map((check) => check.id)
+    },
+    unity: {
+      readyForUnityBatch: unityEnvironment.readyForUnityBatch,
+      recommendedUnityPath: unityEnvironment.recommendedUnityPath,
+      unityVersion: unityEnvironment.unityVersion
+    },
+    focusedScope: {
+      allFocusedSamplesComplete: focusedScope.allFocusedSamplesComplete,
+      completedCount: focusedScope.completedCount,
+      blockedCount: focusedScope.blockedCount,
+      failedCount: focusedScope.failedCount,
+      notRunCount: focusedScope.notRunCount
+    },
+    workflows: workflowSummaries,
+    artifacts: {
+      projectHandoff: path.join("Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"),
+      accountOnboarding: path.join("Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md"),
+      localConfigHandoff: path.join("Assets", "EasyARGenerated", "LOCAL_CONFIG_HANDOFF.md"),
+      unityEnvironment: path.join("Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
+      focusedScopeStatus: path.join("Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md")
+    },
+    blockers: uniqueBlockers(blockers),
+    nextActions,
+    security: "Project handoff reports status, paths, tool calls, and field presence only. It does not include EasyAR passwords, tokens, license keys, appKey, appSecret, signing keys, provisioning profiles, or raw private logs."
   };
 }
 
@@ -10976,6 +11178,84 @@ function buildOnboardingMarkdown(report: Awaited<ReturnType<typeof buildOnboardi
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildProjectHandoffMarkdown(handoff: Awaited<ReturnType<typeof buildProjectHandoff>>): string {
+  return [
+    "# EasyAR Project Handoff",
+    "",
+    `Generated at: ${handoff.generatedAt}`,
+    `Project: ${handoff.projectPath}`,
+    `Platform: ${handoff.platform}`,
+    `Client: ${handoff.client}`,
+    `Entrypoint mode: ${handoff.entrypointMode}`,
+    `Ready for continuation: ${handoff.readyForContinuation ? "yes" : "no"}`,
+    "",
+    "## Top Next Call",
+    "",
+    `Tool: \`${handoff.topNextCall.tool}\``,
+    `Arguments: \`${JSON.stringify(handoff.topNextCall.arguments)}\``,
+    "",
+    "## Summary",
+    "",
+    `Client ready: ${handoff.clientSetup.readyForClientConnection ? "yes" : "no"}`,
+    `Local config valid: ${handoff.localConfig.valid ? "yes" : "no"}`,
+    `Unity batch ready: ${handoff.unity.readyForUnityBatch ? "yes" : "no"}`,
+    `All focused samples complete: ${handoff.focusedScope.allFocusedSamplesComplete ? "yes" : "no"}`,
+    `Focused counts: completed=${handoff.focusedScope.completedCount}, blocked=${handoff.focusedScope.blockedCount}, failed=${handoff.focusedScope.failedCount}, not-run=${handoff.focusedScope.notRunCount}`,
+    "",
+    "## Client",
+    "",
+    `Command: ${handoff.clientSetup.command}`,
+    `Args: ${JSON.stringify(handoff.clientSetup.args)}`,
+    `Config destination: ${handoff.clientSetup.configDestination}`,
+    `Warnings: ${handoff.clientSetup.warningCount}`,
+    "",
+    "## Account And Config",
+    "",
+    `Ready for local config validation: ${handoff.account.readyForLocalConfigValidation ? "yes" : "no"}`,
+    `Missing account materials: ${handoff.account.missingRequired.length > 0 ? handoff.account.missingRequired.join(", ") : "none"}`,
+    `Local config: ${handoff.localConfig.configPath}`,
+    `Failed local config checks: ${handoff.localConfig.failedChecks.length > 0 ? handoff.localConfig.failedChecks.join(", ") : "none"}`,
+    "",
+    "## Unity",
+    "",
+    `Project version: ${handoff.unity.unityVersion ?? "unknown"}`,
+    `Recommended Unity path: ${handoff.unity.recommendedUnityPath ?? "none"}`,
+    "",
+    "## Focused Workflows",
+    "",
+    ...handoff.workflows.flatMap((workflow) => [
+      `### ${workflow.sampleName}`,
+      "",
+      `Sample id: ${workflow.sampleId}`,
+      `Phase: ${workflow.phase}`,
+      `Blocked: ${workflow.blocked ? "yes" : "no"}`,
+      `Reason: ${workflow.reason}`,
+      `Next tool: ${workflow.nextCall.tool}`,
+      `Next arguments: ${JSON.stringify(workflow.nextCall.arguments)}`,
+      `Missing artifacts: ${workflow.missingArtifacts.length > 0 ? workflow.missingArtifacts.join(", ") : "none"}`,
+      "Next actions:",
+      ...markdownIssueList(workflow.nextActions, "No workflow-specific next actions."),
+      ""
+    ]),
+    "## Key Artifacts",
+    "",
+    ...Object.entries(handoff.artifacts).map(([name, relativePath]) => `- ${name}: ${relativePath}`),
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(handoff.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No project handoff blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...handoff.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    handoff.security,
     ""
   ].join("\n");
 }
