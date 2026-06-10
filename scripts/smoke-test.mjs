@@ -2438,6 +2438,8 @@ exit 0
     buildOutputPath: "Builds/iOS/cloud-recognition"
   });
   assertTextIncludes(cloudDeviceValidation, "\"readyForDeviceValidation\"");
+  assertTextIncludes(cloudDeviceValidation, "portal-evidence");
+  assertTextIncludes(cloudDeviceValidation, "PORTAL_EVIDENCE.md is missing");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-network");
   assertTextIncludes(cloudDeviceValidation, "cloud-target-library-ready");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
@@ -2500,6 +2502,17 @@ exit 0
   assertTextIncludes(cloudPreflightWithReadyPortal, "\"id\": \"portal-evidence\"");
   assertTextIncludes(cloudPreflightWithReadyPortal, "Portal evidence is sufficient");
   assert(!extractText(cloudPreflightWithReadyPortal).includes("cloud library status=missing"), "Ready portal evidence should clear missing library detail");
+
+  const cloudDeviceValidationWithReadyPortal = await callTool("easyar_generate_device_validation_checklist", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    device: "Pixel cloud test device",
+    buildOutputPath: "Builds/cloud-recognition.apk"
+  });
+  assertTextIncludes(cloudDeviceValidationWithReadyPortal, "\"portalCloudLibraryStatus\": \"present\"");
+  assertTextIncludes(cloudDeviceValidationWithReadyPortal, "\"portalCloudTargetCount\": 1");
+  assert(!extractText(cloudDeviceValidationWithReadyPortal).includes("\"id\": \"portal-evidence\""), "Ready portal evidence should clear device validation portal blocker");
 
   const focusedHandoffPackPlan = await callTool("easyar_generate_focused_handoff_pack", {
     projectPath,

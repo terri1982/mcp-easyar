@@ -8117,15 +8117,7 @@ async function buildFocusedPreflight(
     buildWorkflowState(root, sample, platform, outputPath, maxScriptIssues),
     readPortalEvidenceArtifact(root, sample)
   ]);
-  const portalEvidenceReady = sample.id !== "cloud-recognition" || (
-    portalEvidence.exists
-    && portalEvidence.senseLicenseStatus !== "missing"
-    && portalEvidence.cloudLibraryStatus === "present"
-    && typeof portalEvidence.cloudTargetCount === "number"
-    && portalEvidence.cloudTargetCount > 0
-    && portalEvidence.apiKeyPresent !== false
-    && portalEvidence.apiSecretPresent !== false
-  );
+  const portalEvidenceReady = isPortalEvidenceReadyForSample(portalEvidence, sample);
   const checks = [
     preflightCheck("sample-focus", sample.implementationStatus === "focused", "sample", `${sample.name} status is ${sample.implementationStatus}.`, "Use image-tracking or cloud-recognition for the current focused run-through."),
     preflightCheck("account-materials", accountMaterials.missingRequired.length === 0, "account", accountMaterials.missingRequired.length > 0 ? `Missing account material(s): ${accountMaterials.missingRequired.join(", ")}.` : "Required account materials are present or not required.", "Run easyar_write_account_onboarding and easyar_write_account_materials, then prepare official account values."),
@@ -9380,6 +9372,34 @@ async function readPortalEvidenceArtifact(root: string, sample: SampleInfo) {
   }
 }
 
+function devicePortalEvidenceBlockers(
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  portalEvidence: Awaited<ReturnType<typeof readPortalEvidenceArtifact>>
+) {
+  const detail = portalEvidencePreflightDetail(portalEvidence, sample);
+  return isPortalEvidenceReadyForSample(portalEvidence, sample)
+    ? []
+    : [{
+        id: "portal-evidence",
+        detail,
+        action: `Run easyar_write_portal_evidence projectPath=${root} sampleId=${sample.id} platform=${platform} with non-secret EasyAR development center observations before device validation.`
+      }];
+}
+
+function isPortalEvidenceReadyForSample(portalEvidence: Awaited<ReturnType<typeof readPortalEvidenceArtifact>>, sample: SampleInfo): boolean {
+  return sample.id !== "cloud-recognition" || (
+    portalEvidence.exists
+    && portalEvidence.senseLicenseStatus !== "missing"
+    && portalEvidence.cloudLibraryStatus === "present"
+    && typeof portalEvidence.cloudTargetCount === "number"
+    && portalEvidence.cloudTargetCount > 0
+    && portalEvidence.apiKeyPresent !== false
+    && portalEvidence.apiSecretPresent !== false
+  );
+}
+
 function portalEvidencePreflightDetail(portalEvidence: Awaited<ReturnType<typeof readPortalEvidenceArtifact>>, sample: SampleInfo): string {
   if (sample.id !== "cloud-recognition") {
     return "Portal evidence is optional for this sample.";
@@ -9699,6 +9719,7 @@ async function buildDeviceValidationChecklist(
   const readiness = await buildSampleReadinessReport(root, sample);
   const importChecklist = await buildImportChecklist(root, sample);
   const sceneAudit = await buildSampleSceneAudit(root, sample, 25);
+  const portalEvidence = await readPortalEvidenceArtifact(root, sample);
   const readinessBlockers = readiness.checks
     .filter((check) => !check.ok)
     .map((check) => ({
@@ -9718,10 +9739,12 @@ async function buildDeviceValidationChecklist(
     detail: blocker.detail,
     action: blocker.action
   }));
+  const portalBlockers = devicePortalEvidenceBlockers(root, sample, platform, portalEvidence);
   const blockers = uniqueBlockers([
     ...readinessBlockers,
     ...importBlockers,
-    ...sceneBlockers
+    ...sceneBlockers,
+    ...portalBlockers
   ]);
   const readyForDeviceValidation = blockers.length === 0;
   const steps = buildDeviceValidationSteps(sample, platform);
@@ -9750,6 +9773,10 @@ async function buildDeviceValidationChecklist(
       readinessReady: readiness.ready,
       importReady: importChecklist.readyForFocusedPreparation,
       sceneReady: sceneAudit.readyForUnityValidation,
+      portalEvidenceExists: portalEvidence.exists,
+      portalSenseLicenseStatus: portalEvidence.senseLicenseStatus,
+      portalCloudLibraryStatus: portalEvidence.cloudLibraryStatus,
+      portalCloudTargetCount: portalEvidence.cloudTargetCount,
       unityVersion: readiness.unityVersion
     },
     steps,
@@ -12710,6 +12737,10 @@ function buildDeviceValidationChecklistMarkdown(checklist: Awaited<ReturnType<ty
     `Readiness ready: ${checklist.preflightSummary.readinessReady ? "yes" : "no"}`,
     `Import ready: ${checklist.preflightSummary.importReady ? "yes" : "no"}`,
     `Scene ready: ${checklist.preflightSummary.sceneReady ? "yes" : "no"}`,
+    `Portal evidence exists: ${checklist.preflightSummary.portalEvidenceExists ? "yes" : "no"}`,
+    `Portal Sense License status: ${checklist.preflightSummary.portalSenseLicenseStatus ?? "unknown"}`,
+    `Portal cloud library status: ${checklist.preflightSummary.portalCloudLibraryStatus ?? "unknown"}`,
+    `Portal cloud target count: ${checklist.preflightSummary.portalCloudTargetCount ?? "unknown"}`,
     `Unity version: ${checklist.preflightSummary.unityVersion ?? "unknown"}`,
     "",
     "## Blockers",
