@@ -67,6 +67,7 @@ easyar_audit_sample_scene projectPath=/path/to/UnityProject sampleId=image-track
 easyar_write_scene_audit projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_generate_support_bundle projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_support_bundle projectPath=/path/to/UnityProject sampleId=image-tracking
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=image-tracking overallStatus=blocked
 ```
 
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.

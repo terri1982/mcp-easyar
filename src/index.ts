@@ -22,6 +22,7 @@ const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recogn
 const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
 const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
 const mobilePlatforms = ["android", "ios"] as const;
+const runResultStatuses = ["passed", "failed", "blocked", "not-run"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
@@ -44,6 +45,8 @@ const toolCatalog = [
   "easyar_write_scene_audit",
   "easyar_generate_support_bundle",
   "easyar_write_support_bundle",
+  "easyar_generate_run_result",
+  "easyar_write_run_result",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -161,6 +164,7 @@ const quickstartWorkflow = [
   "12. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
   "13. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
   "14. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
+  "15. Use `easyar_write_run_result` after compile, build, or device attempts to preserve handoff evidence and next actions.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -805,6 +809,107 @@ server.tool(
       logIssueCount: bundle.latestLog.issueCount,
       nextActions: bundle.nextActions,
       note: "The support bundle does not include secret values or full Unity log text."
+    });
+  }
+);
+
+const runResultStepSchema = z.object({
+  name: z.string().describe("Step name, for example Unity compile, Build Settings, device build, or real device validation."),
+  status: z.enum(runResultStatuses).describe("Observed step status."),
+  evidence: z.string().optional().describe("Short evidence, for example log path, build path, device model, or observed behavior."),
+  nextAction: z.string().optional().describe("Recommended next action for this step.")
+});
+
+server.tool(
+  "easyar_generate_run_result",
+  "Generate a focused sample run result summary for handoff after Unity compile, build, or device validation attempts.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    overallStatus: z.enum(runResultStatuses).describe("Overall result status for the latest focused sample attempt."),
+    device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    notes: z.string().optional().describe("Short human or AI notes about the run attempt. Do not include secrets."),
+    steps: z.array(runResultStepSchema).default([]),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, sampleId, platform, overallStatus, device, buildOutputPath, notes, steps, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildRunResult({
+      root,
+      sample,
+      platform,
+      overallStatus,
+      device,
+      buildOutputPath,
+      notes,
+      steps,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_run_result",
+  "Write a focused sample run result Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    overallStatus: z.enum(runResultStatuses).describe("Overall result status for the latest focused sample attempt."),
+    device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    notes: z.string().optional().describe("Short human or AI notes about the run attempt. Do not include secrets."),
+    steps: z.array(runResultStepSchema).default([]),
+    relativePath: z.string().optional().describe("Optional result path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing run result artifact.")
+  },
+  async ({ projectPath, sampleId, platform, overallStatus, device, buildOutputPath, notes, steps, relativePath, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const result = await buildRunResult({
+      root,
+      sample,
+      platform,
+      overallStatus,
+      device,
+      buildOutputPath,
+      notes,
+      steps,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "RUN_RESULT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildRunResultMarkdown(result), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      overallStatus: result.overallStatus,
+      stepCount: result.steps.length,
+      nextActions: result.nextActions,
+      note: "The run result does not include secret values."
     });
   }
 );
@@ -1860,7 +1965,8 @@ async function buildSupportBundle(input: {
     runSequence: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_SEQUENCE.md")),
     runReport: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_REPORT.md")),
     sceneAudit: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SCENE_AUDIT.md")),
-    supportBundle: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SUPPORT_BUNDLE.md"))
+    supportBundle: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SUPPORT_BUNDLE.md")),
+    runResult: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_RESULT.md"))
   };
   const nextActions = Array.from(new Set([
     runReport.nextRecommendedPhase,
@@ -1885,6 +1991,67 @@ async function buildSupportBundle(input: {
     latestLog,
     nextActions,
     security: "Secret values and full Unity log text are not included. This bundle reports presence, status, excerpts, and recommended actions only."
+  };
+}
+
+async function buildRunResult(input: {
+  root: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  overallStatus: typeof runResultStatuses[number];
+  device?: string;
+  buildOutputPath?: string;
+  notes?: string;
+  steps: Array<{
+    name: string;
+    status: typeof runResultStatuses[number];
+    evidence?: string;
+    nextAction?: string;
+  }>;
+  maxScriptIssues: number;
+  maxCandidates: number;
+  maxLogBytes: number;
+  maxLogIssues: number;
+}) {
+  const supportBundle = await buildSupportBundle({
+    root: input.root,
+    sample: input.sample,
+    platform: input.platform,
+    outputPath: input.buildOutputPath,
+    developmentBuild: input.overallStatus !== "passed",
+    maxScriptIssues: input.maxScriptIssues,
+    maxCandidates: input.maxCandidates,
+    maxLogBytes: input.maxLogBytes,
+    maxLogIssues: input.maxLogIssues
+  });
+  const failedSteps = input.steps.filter((step) => step.status === "failed" || step.status === "blocked");
+  const missingSteps = input.steps.filter((step) => step.status === "not-run");
+  const recommendedNextActions = Array.from(new Set([
+    ...failedSteps.map((step) => step.nextAction).filter(isNonEmptyString),
+    ...missingSteps.map((step) => step.nextAction).filter(isNonEmptyString),
+    ...supportBundle.nextActions
+  ]));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample: supportBundle.sample,
+    platform: input.platform,
+    overallStatus: input.overallStatus,
+    device: input.device ?? null,
+    buildOutputPath: input.buildOutputPath ?? null,
+    notes: sanitizeRunResultNotes(input.notes),
+    steps: input.steps,
+    failedStepCount: failedSteps.length,
+    notRunStepCount: missingSteps.length,
+    supportBundleSummary: {
+      overallReady: supportBundle.runReport.overallReady,
+      readyForUnityValidation: supportBundle.sceneAudit.readyForUnityValidation,
+      logIssueCount: supportBundle.latestLog.issueCount,
+      supportBundlePath: supportBundle.generatedArtifacts.supportBundle
+    },
+    nextActions: recommendedNextActions,
+    security: "Secret values are not returned. Do not include license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in run result notes or evidence."
   };
 }
 
@@ -2390,6 +2557,17 @@ function isNonPlaceholderString(value: unknown): boolean {
 
 function isOptionalNonPlaceholderString(value: unknown): boolean {
   return value === undefined || value === null || value === "" || isNonPlaceholderString(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function sanitizeRunResultNotes(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  return value.replace(/(licenseKey|accountToken|appKey|appSecret|password|secret)\s*[:=]\s*\S+/gi, "$1=<redacted>");
 }
 
 function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
@@ -2993,6 +3171,57 @@ function buildSupportBundleMarkdown(bundle: Awaited<ReturnType<typeof buildSuppo
     bundle.security,
     ""
   ].join("\n");
+}
+
+function buildRunResultMarkdown(result: Awaited<ReturnType<typeof buildRunResult>>): string {
+  return [
+    `# EasyAR Focused Run Result - ${result.sample.name}`,
+    "",
+    `Generated at: ${result.generatedAt}`,
+    `Project: ${result.projectPath}`,
+    `Sample id: ${result.sample.id}`,
+    `Status: ${result.sample.implementationStatus}`,
+    `Platform: ${result.platform}`,
+    `Overall status: ${result.overallStatus}`,
+    `Device: ${result.device ?? "not recorded"}`,
+    `Build output: ${result.buildOutputPath ?? "not recorded"}`,
+    "",
+    "## Notes",
+    "",
+    result.notes ?? "No notes recorded.",
+    "",
+    "## Step Results",
+    "",
+    ...markdownRunResultSteps(result.steps),
+    "",
+    "## Support Summary",
+    "",
+    `Overall ready: ${result.supportBundleSummary.overallReady ? "yes" : "no"}`,
+    `Ready for Unity validation: ${result.supportBundleSummary.readyForUnityValidation ? "yes" : "no"}`,
+    `Latest log issue count: ${result.supportBundleSummary.logIssueCount}`,
+    `Support bundle: ${result.supportBundleSummary.supportBundlePath}`,
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(result.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    result.security,
+    ""
+  ].join("\n");
+}
+
+function markdownRunResultSteps(steps: Awaited<ReturnType<typeof buildRunResult>>["steps"]): string[] {
+  if (steps.length === 0) {
+    return ["- No step results recorded."];
+  }
+  return steps.flatMap((step, index) => [
+    `${index + 1}. ${step.name}`,
+    `   - Status: ${step.status}`,
+    `   - Evidence: ${step.evidence ?? "not recorded"}`,
+    `   - Next action: ${step.nextAction ?? "not recorded"}`
+  ]);
 }
 
 function buildRunSequenceMarkdown(sequence: ReturnType<typeof buildFocusedRunSequence>): string {

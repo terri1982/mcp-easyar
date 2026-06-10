@@ -19,6 +19,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - write focused run reports into Unity projects as Markdown artifacts
 - audit focused sample scenes, Build Settings hints, EasyAR import signals, and sample-specific blockers
 - generate focused support bundles that summarize project state, scene audit, run report, and latest Unity log diagnostics
+- record focused sample run results for compile, build, and device validation handoff
 - list common EasyAR Unity sample categories with focused/deferred status
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for Android/iOS player settings and camera permissions
@@ -155,6 +156,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_scene_audit`: write the focused scene audit to `Assets/EasyARGenerated/<sampleId>/SCENE_AUDIT.md`.
 - `easyar_generate_support_bundle`: generate a focused support bundle summary across run sequence, run report, scene audit, and latest Unity log diagnostics.
 - `easyar_write_support_bundle`: write the focused support bundle to `Assets/EasyARGenerated/<sampleId>/SUPPORT_BUNDLE.md`.
+- `easyar_generate_run_result`: generate a focused sample run result summary for compile, build, or device validation attempts.
+- `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.

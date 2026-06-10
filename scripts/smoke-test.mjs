@@ -93,6 +93,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_support_bundle"),
     "easyar_write_support_bundle should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_run_result"),
+    "easyar_generate_run_result should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_run_result"),
+    "easyar_write_run_result should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -601,6 +609,55 @@ try {
   assert(supportBundleMarkdown.includes("EasyAR Focused Support Bundle - Cloud Recognition"), "Support bundle markdown should include title");
   assert(supportBundleMarkdown.includes("Latest Unity Log"), "Support bundle markdown should include latest log section");
   assert(supportBundleMarkdown.includes("cloud-recognition-network"), "Support bundle markdown should include focused log issue");
+
+  const runResult = await callTool("easyar_generate_run_result", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    overallStatus: "blocked",
+    buildOutputPath: "Builds/cloud-recognition.apk",
+    notes: "Device run blocked by network timeout. appSecret=should-not-leak",
+    steps: [
+      {
+        name: "Unity compile",
+        status: "passed",
+        evidence: "Logs/mcp-easyar-CompileCheck.log"
+      },
+      {
+        name: "Device validation",
+        status: "blocked",
+        evidence: "CloudRecognizer network timeout",
+        nextAction: "Verify network access and Cloud Recognition service region."
+      }
+    ]
+  });
+  assertTextIncludes(runResult, "\"overallStatus\": \"blocked\"");
+  assertTextIncludes(runResult, "Verify network access and Cloud Recognition service region");
+  assertTextIncludes(runResult, "appSecret=<redacted>");
+
+  const writtenRunResult = await callTool("easyar_write_run_result", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    overallStatus: "blocked",
+    notes: "Cloud validation blocked. appKey=should-not-leak",
+    steps: [
+      {
+        name: "Cloud Recognition device validation",
+        status: "blocked",
+        evidence: "CloudRecognizer network timeout",
+        nextAction: "Retry on a real device network and inspect device logs."
+      }
+    ]
+  });
+  assertTextIncludes(writtenRunResult, "RUN_RESULT.md");
+  const runResultMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "RUN_RESULT.md"),
+    "utf8"
+  );
+  assert(runResultMarkdown.includes("EasyAR Focused Run Result - Cloud Recognition"), "Run result markdown should include title");
+  assert(runResultMarkdown.includes("Overall status: blocked"), "Run result markdown should include overall status");
+  assert(runResultMarkdown.includes("appKey=<redacted>"), "Run result markdown should redact sensitive notes");
 
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
