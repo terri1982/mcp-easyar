@@ -206,6 +206,15 @@ Then validate without exposing secrets:
 easyar_validate_local_config projectPath=/path/to/UnityProject
 ```
 
+Before building to a mobile device, export the ignored runtime copy that the app can read from `StreamingAssets`:
+
+```text
+easyar_create_local_config_bridge projectPath=/path/to/UnityProject sampleId=cloud-recognition overwrite=true
+easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig
+```
+
+The bridge copies `ProjectSettings/EasyAR/easyar.local.json` to `Assets/StreamingAssets/EasyAR/easyar.runtime.json` after validating required fields. The runtime file is ignored by git and is intended only for local device builds. `EasyARLocalConfigRuntime` reads the file at runtime and exposes values to user scripts without logging secret values.
+
 Before any Unity batch command, write the Unity executable setup report:
 
 ```text

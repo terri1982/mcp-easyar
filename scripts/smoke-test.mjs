@@ -77,6 +77,10 @@ try {
     "easyar_create_mobile_settings_helper should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_create_local_config_bridge"),
+    "easyar_create_local_config_bridge should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_review_csharp_scripts"),
     "easyar_review_csharp_scripts should be listed"
   );
@@ -1104,7 +1108,26 @@ try {
   assertTextIncludes(prepared, "EasyARBuildSettingsHelper.cs");
   assertTextIncludes(prepared, "EasyARMobileSettingsHelper.cs");
   assertTextIncludes(prepared, "EasyARSampleValidationHelper.cs");
+  assertTextIncludes(prepared, "EasyARLocalConfigBridge.cs");
+  assertTextIncludes(prepared, "EasyARLocalConfigRuntime.cs");
   assertTextIncludes(prepared, "Assets/EasyARGenerated/image-tracking/RUNBOOK.md");
+  const preparedGitignore = await readFile(path.join(projectPath, ".gitignore"), "utf8");
+  assert(preparedGitignore.includes("ProjectSettings/EasyAR/easyar.local.json"), "Prepared project should ignore local config");
+  assert(preparedGitignore.includes("Assets/StreamingAssets/EasyAR/easyar.runtime.json"), "Prepared project should ignore exported runtime config");
+  const preparedBridgeEditor = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARLocalConfigBridge.cs"),
+    "utf8"
+  );
+  assert(preparedBridgeEditor.includes("ExportRuntimeConfig"), "Prepared project should include local config export method");
+  assert(preparedBridgeEditor.includes("Assets/StreamingAssets/EasyAR/easyar.runtime.json"), "Bridge editor should write runtime config under StreamingAssets");
+  const preparedBridgeRuntime = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs"),
+    "utf8"
+  );
+  assert(preparedBridgeRuntime.includes("UnityWebRequest.Get"), "Runtime bridge should support StreamingAssets reads on Android");
+  assert(preparedBridgeRuntime.includes("HasCloudRecognitionCredentials"), "Runtime bridge should expose cloud credential presence");
+  assert(!preparedBridgeEditor.includes("env-test-license-key"), "Bridge editor should not contain test license value");
+  assert(!preparedBridgeRuntime.includes("env-test-license-key"), "Bridge runtime should not contain test license value");
   const imageLocalConfigExample = await readFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
     "utf8"
@@ -1185,6 +1208,29 @@ try {
   });
   assertTextIncludes(validConfig, "\"valid\": true");
   assertTextIncludes(validConfig, "Secret values are not returned");
+
+  const localConfigBridge = await callTool("easyar_create_local_config_bridge", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    overwrite: true
+  });
+  assertTextIncludes(localConfigBridge, "EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig");
+  assertTextIncludes(localConfigBridge, "EasyARLocalConfigRuntime.cs");
+  assertTextIncludes(localConfigBridge, "easyar.runtime.json");
+  assert(!extractText(localConfigBridge).includes("test-license-key"), "Local config bridge result should not return local license value");
+  const cloudBridgeEditor = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARLocalConfigBridge.cs"),
+    "utf8"
+  );
+  assert(cloudBridgeEditor.includes("Cloud Recognition appSecret"), "Cloud bridge editor should validate cloud appSecret presence");
+  assert(cloudBridgeEditor.includes("File.WriteAllText(targetPath, json)"), "Cloud bridge editor should export runtime json");
+  const cloudBridgeRuntime = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs"),
+    "utf8"
+  );
+  assert(cloudBridgeRuntime.includes("CloudRecognitionAppSecret"), "Cloud bridge runtime should expose cloud appSecret property");
+  assert(!cloudBridgeRuntime.includes("test-license-key"), "Cloud bridge runtime should not contain local license value");
+  assert(!cloudBridgeRuntime.includes("test-app-secret"), "Cloud bridge runtime should not contain local cloud secret value");
 
   await mkdir(path.join(projectPath, "Assets", "EasyAR"), { recursive: true });
   await writeFile(

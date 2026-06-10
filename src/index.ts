@@ -147,6 +147,7 @@ const toolCatalog = [
   "easyar_analyze_latest_unity_log",
   "easyar_prepare_unity_project",
   "easyar_create_sample_validation_helper",
+  "easyar_create_local_config_bridge",
   "easyar_create_mobile_settings_helper",
   "easyar_create_build_settings_helper",
   "easyar_create_device_build_helper",
@@ -2690,6 +2691,8 @@ server.tool(
     const buildSettingsPath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
     const mobileSettingsPath = path.join(editorDir, "EasyARMobileSettingsHelper.cs");
     const validationPath = path.join(editorDir, "EasyARSampleValidationHelper.cs");
+    const bridgeEditorPath = path.join(editorDir, "EasyARLocalConfigBridge.cs");
+    const bridgeRuntimePath = path.join(root, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs");
     const runbookPath = focusedSampleRunbookPath(root, sample);
     const configExamplePath = path.join(configDir, "easyar.local.json.example");
     const localConfigPath = path.join(configDir, "easyar.local.json");
@@ -2700,12 +2703,16 @@ server.tool(
     await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
     await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, null), overwrite, written);
     await writeGeneratedFile(validationPath, buildSampleValidationHelper(sample), overwrite, written);
+    await writeGeneratedFile(bridgeEditorPath, buildLocalConfigBridgeEditor(sample), overwrite, written);
+    await writeGeneratedFile(bridgeRuntimePath, buildLocalConfigBridgeRuntime(), overwrite, written);
     await writeGeneratedFile(runbookPath, buildFocusedSampleRunbook(sample), overwrite, written);
     await writeFocusedSampleSupportFiles(root, sample, overwrite, written);
     await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
     await ensureGitignoreEntries(gitignorePath, [
       "ProjectSettings/EasyAR/easyar.local.json",
-      "ProjectSettings/EasyAR/*.secret.json"
+      "ProjectSettings/EasyAR/*.secret.json",
+      "Assets/StreamingAssets/EasyAR/easyar.runtime.json",
+      "Assets/StreamingAssets/EasyAR/*.secret.json"
     ]);
 
     return jsonText({
@@ -2719,6 +2726,7 @@ server.tool(
         "Do not commit the local config file; .gitignore has been updated to protect it.",
         "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner.",
         `Review ${path.relative(root, runbookPath)} for the focused ${sample.name} run-through checklist.`,
+        "Call EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig before mobile builds to copy local config into ignored StreamingAssets for device runtime.",
         "Call EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample in Unity batch mode after importing the official sample scene.",
         "Call EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings in Unity batch mode before device builds.",
         "Call EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the matching sample scene to Build Settings."
@@ -2751,6 +2759,52 @@ server.tool(
       sample: sample.name,
       executeMethod: "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample",
       nextStep: "Run easyar_run_unity_method with the returned executeMethod after importing official EasyAR assets and sample scenes."
+    });
+  }
+);
+
+server.tool(
+  "easyar_create_local_config_bridge",
+  "Create Unity Editor/runtime scripts that export ProjectSettings/EasyAR/easyar.local.json into ignored StreamingAssets for device builds and read it at runtime without logging secret values.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    overwrite: z.boolean().default(false).describe("Whether to replace existing generated bridge scripts.")
+  },
+  async ({ projectPath, sampleId, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const editorPath = path.join(root, "Assets", "Editor", "EasyARLocalConfigBridge.cs");
+    const runtimePath = path.join(root, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs");
+    const gitignorePath = path.join(root, ".gitignore");
+
+    const written: string[] = [];
+    await writeGeneratedFile(editorPath, buildLocalConfigBridgeEditor(sample), overwrite, written);
+    await writeGeneratedFile(runtimePath, buildLocalConfigBridgeRuntime(), overwrite, written);
+    await ensureGitignoreEntries(gitignorePath, [
+      "Assets/StreamingAssets/EasyAR/easyar.runtime.json",
+      "Assets/StreamingAssets/EasyAR/*.secret.json"
+    ]);
+
+    return jsonText({
+      created: written,
+      skipped: [
+        ...(written.includes(editorPath) ? [] : [editorPath]),
+        ...(written.includes(runtimePath) ? [] : [runtimePath])
+      ],
+      sample: sample.name,
+      executeMethod: "EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig",
+      sourceConfig: path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json"),
+      runtimeConfig: path.join(root, "Assets", "StreamingAssets", "EasyAR", "easyar.runtime.json"),
+      runtimeReader: runtimePath,
+      nextActions: [
+        "Fill ProjectSettings/EasyAR/easyar.local.json locally and validate it with easyar_validate_local_config.",
+        "Run easyar_run_unity_method with EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig before a mobile device build.",
+        "Attach EasyARLocalConfigRuntime to a scene object or call EasyAR.Samples.Generated.EasyARLocalConfigRuntime.Instance from sample scripts.",
+        "Wire the official EasyAR sample's license/cloud fields from the runtime reader without logging values."
+      ],
+      security: "The bridge writes an ignored runtime config for local device builds and never prints license keys, account tokens, appKey, or appSecret values."
     });
   }
 );
@@ -11930,6 +11984,201 @@ ${sampleValidation}
             }
             var value = match.Groups[1].Value.Trim();
             return value.Length > 0
+                && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+    }
+}
+`;
+}
+
+function buildLocalConfigBridgeEditor(sample: SampleInfo): string {
+  const cloudValidation = sample.id === "cloud-recognition"
+    ? `            RequireConfiguredJsonString(json, "appId", "Cloud Recognition appId is missing or still a placeholder.");
+            RequireConfiguredJsonString(json, "appKey", "Cloud Recognition appKey is missing or still a placeholder.");
+            RequireConfiguredJsonString(json, "appSecret", "Cloud Recognition appSecret is missing or still a placeholder.");
+`
+    : "";
+
+  return `using System;
+using System.IO;
+using System.Text.RegularExpressions;
+using UnityEditor;
+
+namespace EasyAR.EditorTools
+{
+    public static class EasyARLocalConfigBridge
+    {
+        private const string SourceRelativePath = "ProjectSettings/EasyAR/easyar.local.json";
+        private const string RuntimeRelativePath = "Assets/StreamingAssets/EasyAR/easyar.runtime.json";
+
+        [MenuItem("Tools/EasyAR/Export Local Config For Runtime")]
+        public static void ExportRuntimeConfig()
+        {
+            var projectRoot = Directory.GetCurrentDirectory();
+            var sourcePath = Path.Combine(projectRoot, SourceRelativePath);
+            if (!File.Exists(sourcePath))
+            {
+                throw new InvalidOperationException("Missing " + SourceRelativePath + ". Fill it locally before exporting runtime config.");
+            }
+
+            var json = File.ReadAllText(sourcePath);
+            RequireConfiguredJsonString(json, "licenseKey", "EasyAR licenseKey is missing or still a placeholder.");
+${cloudValidation}
+            var targetPath = Path.Combine(projectRoot, RuntimeRelativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+            File.WriteAllText(targetPath, json);
+            AssetDatabase.ImportAsset(RuntimeRelativePath);
+            UnityEngine.Debug.Log("Exported EasyAR runtime config to " + RuntimeRelativePath + " without printing secret values. The file must stay ignored by git.");
+        }
+
+        private static void RequireConfiguredJsonString(string json, string key, string message)
+        {
+            if (!ContainsConfiguredJsonString(json, key))
+            {
+                throw new InvalidOperationException(message);
+            }
+        }
+
+        private static bool ContainsConfiguredJsonString(string json, string key)
+        {
+            var match = Regex.Match(json, "\\\\\\"" + Regex.Escape(key) + "\\\\\\"\\\\s*:\\\\s*\\\\\\"([^\\\\\\"]*)\\\\\\"");
+            if (!match.Success)
+            {
+                return false;
+            }
+            var value = match.Groups[1].Value.Trim();
+            return value.Length > 0
+                && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+    }
+}
+`;
+}
+
+function buildLocalConfigBridgeRuntime(): string {
+  return `using System;
+using System.Collections;
+using System.Text.RegularExpressions;
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.Networking;
+
+namespace EasyAR.Samples.Generated
+{
+    public sealed class EasyARLocalConfigRuntime : MonoBehaviour
+    {
+        private const string RuntimeRelativePath = "EasyAR/easyar.runtime.json";
+
+        public static EasyARLocalConfigRuntime Instance { get; private set; }
+
+        [SerializeField] private UnityEvent onConfigLoaded = new UnityEvent();
+
+        private bool loadOnAwake = true;
+        private bool dontDestroyOnLoad = true;
+        private Coroutine loadRoutine;
+        public bool Loaded { get; private set; }
+        public string LicenseKey { get; private set; }
+        public string AccountToken { get; private set; }
+        public string BundleIdentifier { get; private set; }
+        public string CloudRecognitionAppId { get; private set; }
+        public string CloudRecognitionAppKey { get; private set; }
+        public string CloudRecognitionAppSecret { get; private set; }
+
+        public bool HasLicenseKey => IsConfigured(LicenseKey);
+        public bool HasAccountToken => IsConfigured(AccountToken);
+        public bool HasCloudRecognitionCredentials =>
+            IsConfigured(CloudRecognitionAppId)
+            && IsConfigured(CloudRecognitionAppKey)
+            && IsConfigured(CloudRecognitionAppSecret);
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+            if (dontDestroyOnLoad)
+            {
+                DontDestroyOnLoad(gameObject);
+            }
+
+            if (loadOnAwake)
+            {
+                loadRoutine = StartCoroutine(Load());
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (loadRoutine != null)
+            {
+                StopCoroutine(loadRoutine);
+                loadRoutine = null;
+            }
+        }
+
+        public IEnumerator Load()
+        {
+            var path = System.IO.Path.Combine(Application.streamingAssetsPath, RuntimeRelativePath);
+            string json;
+            if (path.Contains("://") || path.Contains(":///"))
+            {
+                using (var request = UnityWebRequest.Get(path))
+                {
+                    yield return request.SendWebRequest();
+                    if (request.result != UnityWebRequest.Result.Success)
+                    {
+                        Debug.LogError("EasyAR runtime config could not be loaded from StreamingAssets. Export it before building.");
+                        yield break;
+                    }
+                    json = request.downloadHandler.text;
+                }
+            }
+            else
+            {
+                if (!System.IO.File.Exists(path))
+                {
+                    Debug.LogError("EasyAR runtime config is missing from StreamingAssets. Export it before building.");
+                    yield break;
+                }
+                json = System.IO.File.ReadAllText(path);
+            }
+
+            ApplyJson(json);
+            Loaded = true;
+            Debug.Log("EasyAR runtime config loaded. License present: " + HasLicenseKey + ", cloud credentials present: " + HasCloudRecognitionCredentials + ".");
+            if (onConfigLoaded != null)
+            {
+                onConfigLoaded.Invoke();
+            }
+        }
+
+        public void ApplyJson(string json)
+        {
+            LicenseKey = ReadString(json, "licenseKey");
+            AccountToken = ReadString(json, "accountToken");
+            BundleIdentifier = ReadString(json, "bundleIdentifier");
+            CloudRecognitionAppId = ReadString(json, "appId");
+            CloudRecognitionAppKey = ReadString(json, "appKey");
+            CloudRecognitionAppSecret = ReadString(json, "appSecret");
+        }
+
+        private static string ReadString(string json, string key)
+        {
+            var match = Regex.Match(json ?? string.Empty, "\\\\\\"" + Regex.Escape(key) + "\\\\\\"\\\\s*:\\\\s*\\\\\\"([^\\\\\\"]*)\\\\\\"");
+            return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
+        }
+
+        private static bool IsConfigured(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value)
                 && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
                 && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
                 && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
