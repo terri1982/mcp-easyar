@@ -342,6 +342,20 @@ try {
   assertTextIncludes(logAnalysis, "Unity C# compilation error");
   assertTextIncludes(logAnalysis, "Camera permission problem");
 
+  const imageTrackingLogAnalysis = await callTool("easyar_analyze_unity_log", {
+    sampleId: "image-tracking",
+    logText: "ImageTarget load failed: target database missing"
+  });
+  assertTextIncludes(imageTrackingLogAnalysis, "image-tracking-target-load");
+  assertTextIncludes(imageTrackingLogAnalysis, "\"id\": \"image-tracking\"");
+
+  const cloudLogAnalysis = await callTool("easyar_analyze_unity_log", {
+    sampleId: "cloud-recognition",
+    logText: "CloudRecognizer unauthorized: appKey invalid"
+  });
+  assertTextIncludes(cloudLogAnalysis, "cloud-recognition-credentials");
+  assertTextIncludes(cloudLogAnalysis, "\"id\": \"cloud-recognition\"");
+
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
   console.log("MCP smoke test passed.");

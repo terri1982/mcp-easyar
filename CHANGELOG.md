@@ -15,6 +15,7 @@ Initial public MVP for `mcp-easyar`.
 - Configurable official EasyAR account-status and license-validation endpoint calls.
 - Unity project inspection and sample readiness diagnostics.
 - Sample-specific readiness checks for Image Tracking target assets and Cloud Recognition credentials.
+- Focused Unity log diagnostics for Image Tracking target loading/detection and Cloud Recognition credential/network failures.
 - EasyAR local config template generation and validation without returning secrets.
 - Unity Editor helper generation for sample scene opening, mobile player settings, Build Settings configuration, and device/player builds.
 - Unity C# MonoBehaviour templates for image tracking, surface placement, cloud recognition, and lifecycle workflows.

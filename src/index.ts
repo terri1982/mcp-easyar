@@ -595,23 +595,30 @@ server.tool(
 
 server.tool(
   "easyar_analyze_unity_log",
-  "Analyze Unity Editor or build logs for common EasyAR, permission, license, compile, and build issues.",
+  "Analyze Unity Editor or build logs for common and focused-sample EasyAR issues.",
   {
     logText: z.string().optional().describe("Unity log text to analyze."),
     logPath: z.string().optional().describe("Path to a Unity Editor.log or build log file."),
+    sampleId: z.string().optional().describe("Optional focused sample id for sample-specific diagnostics, for example image-tracking or cloud-recognition."),
     maxIssues: z.number().int().positive().max(50).default(20)
   },
-  async ({ logText, logPath, maxIssues }) => {
+  async ({ logText, logPath, sampleId, maxIssues }) => {
     if (!logText && !logPath) {
       throw new Error("Provide either logText or logPath.");
     }
 
+    const sample = sampleId ? findSample(sampleId) : null;
     const text = logText ?? await readLogFile(logPath as string);
-    const issues = analyzeUnityLog(text).slice(0, maxIssues);
+    const issues = analyzeUnityLog(text, sample).slice(0, maxIssues);
     const summary = summarizeLog(text);
 
     return jsonText({
       summary,
+      sample: sample ? {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      } : null,
       issueCount: issues.length,
       issues,
       nextActions: issues.length > 0
@@ -1351,8 +1358,16 @@ function summarizeLog(logText: string) {
   };
 }
 
-function analyzeUnityLog(logText: string) {
-  const rules = [
+type UnityLogRule = {
+  id: string;
+  severity: "high" | "medium" | "low";
+  pattern: RegExp;
+  title: string;
+  actions: string[];
+};
+
+function analyzeUnityLog(logText: string, sample: SampleInfo | null = null) {
+  const rules: UnityLogRule[] = [
     {
       id: "easyar-license",
       severity: "high",
@@ -1431,6 +1446,7 @@ function analyzeUnityLog(logText: string) {
       ]
     }
   ];
+  rules.push(...sampleSpecificLogRules(sample));
 
   const lines = logText.split(/\r?\n/);
   return rules
@@ -1442,6 +1458,79 @@ function analyzeUnityLog(logText: string) {
       evidence: findEvidence(lines, rule.pattern),
       actions: rule.actions
     }));
+}
+
+function sampleSpecificLogRules(sample: SampleInfo | null): UnityLogRule[] {
+  if (!sample) {
+    return [];
+  }
+
+  if (sample.id === "image-tracking") {
+    return [
+      {
+        id: "image-tracking-target-load",
+        severity: "high",
+        pattern: /(image\s*target|imagetarget|target).{0,160}(not\s*found|missing|load(ed)?\s*failed|cannot\s*load|invalid|empty)/i,
+        title: "Image Tracking target asset cannot be loaded",
+        actions: [
+          "Check Assets/EasyARGenerated/image-tracking/RUNBOOK.md.",
+          "Add official Image Tracking target images, target JSON/XML files, `.etd` files, or imported target assets under Assets.",
+          "Run easyar_check_sample_readiness with sampleId=image-tracking and confirm image-target-assets passes."
+        ]
+      },
+      {
+        id: "image-tracking-no-detection",
+        severity: "medium",
+        pattern: /(image\s*target|imagetarget|tracker|tracking).{0,160}(not\s*detected|lost|timeout|no\s*target|cannot\s*recognize)/i,
+        title: "Image Tracking target is not being detected",
+        actions: [
+          "Verify target physical size and target database/import settings in the official EasyAR workflow.",
+          "Test on a real device with stable lighting and a clear printed or screen-displayed target.",
+          "Confirm the Image Tracking sample scene is the active scene in Build Settings."
+        ]
+      }
+    ];
+  }
+
+  if (sample.id === "cloud-recognition") {
+    return [
+      {
+        id: "cloud-recognition-credentials",
+        severity: "high",
+        pattern: /(cloud\s*recognition|cloudrecognizer|cloud).{0,180}(appId|appKey|appSecret|credential|secret|key|unauthorized|forbidden|invalid|missing)/i,
+        title: "Cloud Recognition credentials are invalid or missing",
+        actions: [
+          "Fill easyar.cloudRecognition.appId, appKey, and appSecret in ProjectSettings/EasyAR/easyar.local.json.",
+          "Run easyar_check_sample_readiness with sampleId=cloud-recognition and confirm cloud-recognition-credentials passes.",
+          "Verify the credentials and target library in the official EasyAR account."
+        ]
+      },
+      {
+        id: "cloud-recognition-network",
+        severity: "medium",
+        pattern: /(cloud\s*recognition|cloudrecognizer|cloud).{0,180}(network|timeout|dns|http|ssl|tls|connection|service unavailable|gateway)/i,
+        title: "Cloud Recognition network or service request failed",
+        actions: [
+          "Confirm the device has network access and platform Internet permission.",
+          "Verify the EasyAR cloud recognition service endpoint/region configured by the official sample.",
+          "Retry on a real device network and inspect device logs for HTTP status details."
+        ]
+      }
+    ];
+  }
+
+  return [
+    {
+      id: "sample-deferred",
+      severity: "low",
+      pattern: /easyar|sample|tracking|cloud|camera/i,
+      title: "Sample is outside the current focused run-through scope",
+      actions: [
+        "Current focused run-through work covers image-tracking and cloud-recognition.",
+        `Switch to a focused sample before expecting sample-specific diagnostics for ${sample.id}.`
+      ]
+    }
+  ];
 }
 
 function findEvidence(lines: string[], pattern: RegExp): string[] {

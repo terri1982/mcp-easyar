@@ -145,13 +145,13 @@ For iOS, use an output folder such as `Builds/iOS` and complete signing in Xcode
 If Unity compilation, Editor automation, or device builds fail, pass the relevant log excerpt back to the MCP server:
 
 ```text
-easyar_analyze_unity_log logText="..."
+easyar_analyze_unity_log sampleId=image-tracking logText="..."
 ```
 
 For local log files:
 
 ```text
-easyar_analyze_unity_log logPath=/path/to/Editor.log
+easyar_analyze_unity_log sampleId=cloud-recognition logPath=/path/to/Editor.log
 ```
 
-The tool classifies common EasyAR license, plugin import, camera permission, C# compile, Android/Gradle, iOS signing, and sample scene issues.
+The tool classifies common EasyAR license, plugin import, camera permission, C# compile, Android/Gradle, iOS signing, and sample scene issues. With `sampleId=image-tracking` or `sampleId=cloud-recognition`, it adds focused target-asset, cloud credential, and network diagnostics.
