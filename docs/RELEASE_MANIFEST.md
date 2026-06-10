@@ -27,6 +27,30 @@ npm run build
 npm start
 ```
 
+## Install Profiles
+
+### Local Git clone
+
+Entrypoint mode: `local-dist`
+
+- `npm install`
+- `npm run build`
+- Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=local-dist serverPath=/absolute/path/to/mcp-easyar/dist/index.js`
+
+### Global npm package
+
+Entrypoint mode: `package-bin`
+
+- `npm install -g mcp-easyar`
+- Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=package-bin`
+
+### npx package
+
+Entrypoint mode: `npx`
+
+- `npx -y mcp-easyar`
+- Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=npx`
+
 ## MCP Entrypoints
 
 - Built entrypoint: `node /absolute/path/to/mcp-easyar/dist/index.js`

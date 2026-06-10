@@ -3637,6 +3637,29 @@ async function buildReleaseManifest() {
     "npm run build",
     "npm start"
   ];
+  const installProfiles = [
+    {
+      id: "local-clone",
+      label: "Local Git clone",
+      commands: ["npm install", "npm run build"],
+      entrypointMode: "local-dist",
+      clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=local-dist serverPath=/absolute/path/to/mcp-easyar/dist/index.js"
+    },
+    {
+      id: "global-package",
+      label: "Global npm package",
+      commands: [`npm install -g ${packageJson.name ?? serverName}`],
+      entrypointMode: "package-bin",
+      clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=package-bin"
+    },
+    {
+      id: "npx-package",
+      label: "npx package",
+      commands: [`npx -y ${packageJson.name ?? serverName}`],
+      entrypointMode: "npx",
+      clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=npx"
+    }
+  ];
   const verificationCommands = [
     "npm run typecheck",
     "npm test",
@@ -3678,6 +3701,7 @@ async function buildReleaseManifest() {
       deferredSamples: deferredSamples().map((sample) => sample.id)
     },
     installCommands,
+    installProfiles,
     verificationCommands,
     mcpEntrypoints,
     clientSetupTools: [
@@ -8456,6 +8480,17 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
     "",
     ...manifest.installCommands.map((command) => `- \`${command}\``),
     "",
+    "## Install Profiles",
+    "",
+    ...manifest.installProfiles.flatMap((profile) => [
+      `### ${profile.label}`,
+      "",
+      `Entrypoint mode: \`${profile.entrypointMode}\``,
+      "",
+      ...profile.commands.map((command) => `- \`${command}\``),
+      `- Client config: \`${profile.clientConfigCall}\``,
+      ""
+    ]),
     "## MCP Entrypoints",
     "",
     ...manifest.mcpEntrypoints.map((entrypoint) => `- ${entrypoint.label}: \`${[entrypoint.command, ...entrypoint.args].join(" ")}\``),

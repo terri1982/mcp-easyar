@@ -86,6 +86,8 @@ npm install
 npm run build
 ```
 
+For package-based clients after publishing, use `npm install -g mcp-easyar` with `entrypointMode=package-bin`, or `entrypointMode=npx` for `npx -y mcp-easyar`.
+
 ## Run
 
 ```bash
