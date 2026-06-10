@@ -8,6 +8,8 @@ Ready for production official access: no
 
 Official EasyAR MCP service for registered users running EasyAR Unity samples and Unity project programming workflows.
 
+Machine-readable contract: `docs/openapi/easyar-mcp-account-api.openapi.json`
+
 ## Environment
 
 Base URL: https://www.easyar.cn

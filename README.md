@@ -119,7 +119,7 @@ Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` fi
 
 `EASYAR_ACCOUNT_STATUS_ENDPOINT`, `EASYAR_LICENSE_VALIDATE_ENDPOINT`, `EASYAR_DOWNLOADS_ENDPOINT`, and `EASYAR_CLOUD_CREDENTIALS_ENDPOINT` are intentionally configurable. Connect them to authorized EasyAR account APIs in production; the open-source default does not guess or bypass private EasyAR endpoints.
 
-See [`docs/OFFICIAL_API_CONTRACT.md`](docs/OFFICIAL_API_CONTRACT.md) or call `easyar_generate_official_api_contract` for the required official account API contract, request fields, response policy, and secret-handling rules.
+See [`docs/OFFICIAL_API_CONTRACT.md`](docs/OFFICIAL_API_CONTRACT.md) or the machine-readable [`docs/openapi/easyar-mcp-account-api.openapi.json`](docs/openapi/easyar-mcp-account-api.openapi.json) for the required official account API contract, request fields, response policy, and secret-handling rules. MCP clients can also call `easyar_generate_official_api_contract`.
 
 ## Claude Desktop
 

@@ -100,6 +100,7 @@ Entrypoint mode: `npx`
 - OK docs/quickstart.md
 - OK docs/OFFICIAL_API_CONTRACT.md
 - OK docs/OFFICIAL_API_HANDOFF.md
+- OK docs/openapi/easyar-mcp-account-api.openapi.json
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md
 - OK assets/easyar-icon.png
@@ -114,6 +115,7 @@ Entrypoint mode: `npx`
 - dist
 - docs/OFFICIAL_API_CONTRACT.md
 - docs/OFFICIAL_API_HANDOFF.md
+- docs/openapi/easyar-mcp-account-api.openapi.json
 - docs/quickstart.md
 - docs/RELEASE_MANIFEST.md
 - docs/troubleshooting.md

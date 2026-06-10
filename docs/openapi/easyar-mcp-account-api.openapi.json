@@ -1,0 +1,629 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "mcp-easyar Official Account API",
+    "version": "0.1.0",
+    "summary": "Official EasyAR account API contract for mcp-easyar.",
+    "description": "Machine-readable contract for EasyAR backend services that authorize registered users, validate local EasyAR Sense licenses, expose account-authorized downloads, and report Cloud Recognition credential presence without returning raw secrets."
+  },
+  "servers": [
+    {
+      "url": "https://www.easyar.cn",
+      "description": "Production EasyAR web domain. Deployments may override endpoint URLs through MCP environment variables."
+    }
+  ],
+  "security": [
+    {
+      "EasyARBearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "OfficialAccess",
+      "description": "Registered-user account and entitlement checks for mcp-easyar."
+    }
+  ],
+  "paths": {
+    "/mcp/account/status": {
+      "get": {
+        "operationId": "getMcpAccountStatus",
+        "tags": [
+          "OfficialAccess"
+        ],
+        "summary": "Confirm registered EasyAR account status.",
+        "description": "Confirms that the bearer token belongs to a registered EasyAR user and returns non-secret entitlement metadata.",
+        "responses": {
+          "200": {
+            "description": "Registered account metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/mcp/license/validate": {
+      "post": {
+        "operationId": "validateMcpLicense",
+        "tags": [
+          "OfficialAccess"
+        ],
+        "summary": "Validate an EasyAR Sense license.",
+        "description": "Validates that a local EasyAR Sense license key is usable for the requested Unity bundle identifier and platform. The response must not echo the license key.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseValidationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "License validation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LicenseValidationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/mcp/downloads": {
+      "post": {
+        "operationId": "discoverMcpDownloads",
+        "tags": [
+          "OfficialAccess"
+        ],
+        "summary": "Discover account-authorized EasyAR downloads.",
+        "description": "Returns account-authorized EasyAR SDK, Unity Plugin, and sample package metadata without bypassing EasyAR login, entitlement, or download gates.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorized package metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/mcp/cloud-recognition/credentials": {
+      "post": {
+        "operationId": "discoverMcpCloudRecognitionCredentials",
+        "tags": [
+          "OfficialAccess"
+        ],
+        "summary": "Discover Cloud Recognition credential metadata.",
+        "description": "Returns Cloud Recognition app metadata and credential presence flags for the registered user. The response must never include raw API KEY, API Secret, legacy appKey, or legacy appSecret values.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloudCredentialsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cloud Recognition metadata and presence flags.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudCredentialsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "EasyARBearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "EasyAR registered-user token",
+        "description": "Bearer token sourced from EASYAR_API_TOKEN or MCP client secret storage. Tokens must not be pasted into chat, committed to GitHub, or returned by API responses."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid or incomplete request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, expired, or invalid bearer token.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Registered account lacks the requested entitlement, license, package, or Cloud Recognition access.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Repeated validation attempts are rate limited.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "AccountStatusResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "account",
+          "entitlements"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "account": {
+            "$ref": "#/components/schemas/AccountMetadata"
+          },
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "examples": [
+              [
+                "easyar-sense",
+                "cloud-recognition"
+              ]
+            ]
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "organization": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AccountMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "registered",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Non-secret account identifier."
+          },
+          "registered": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "disabled",
+              "expired"
+            ]
+          },
+          "emailMasked": {
+            "type": "string",
+            "description": "Masked email only, for example u***@example.com."
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
+      "LicenseValidationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "licenseKey",
+          "bundleIdentifier",
+          "platform"
+        ],
+        "properties": {
+          "licenseKey": {
+            "type": "string",
+            "minLength": 1,
+            "writeOnly": true,
+            "description": "Local EasyAR Sense license key. Accept for validation only and never echo in responses or logs."
+          },
+          "bundleIdentifier": {
+            "type": "string",
+            "minLength": 1,
+            "examples": [
+              "com.easyar.testsample"
+            ]
+          },
+          "platform": {
+            "$ref": "#/components/schemas/TargetPlatform"
+          }
+        }
+      },
+      "LicenseValidationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "license"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "license": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "valid",
+              "product",
+              "bundleIdentifierMatches",
+              "platformAllowed"
+            ],
+            "properties": {
+              "valid": {
+                "type": "boolean"
+              },
+              "product": {
+                "type": "string",
+                "examples": [
+                  "EasyAR Sense Unity Plugin"
+                ]
+              },
+              "bundleIdentifierMatches": {
+                "type": "boolean"
+              },
+              "platformAllowed": {
+                "type": "boolean"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "edition": {
+                "type": "string"
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "examples": [
+                  [
+                    "image-tracking",
+                    "cloud-recognition"
+                  ]
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "DownloadsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sampleId",
+          "packageKind",
+          "unityVersion"
+        ],
+        "properties": {
+          "sampleId": {
+            "$ref": "#/components/schemas/SampleId"
+          },
+          "packageKind": {
+            "type": "string",
+            "enum": [
+              "unity-plugin",
+              "unity-samples",
+              "sample-assets",
+              "documentation"
+            ]
+          },
+          "unityVersion": {
+            "type": "string",
+            "examples": [
+              "2022.3.62f3"
+            ]
+          }
+        }
+      },
+      "DownloadsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "packages"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PackageMetadata"
+            }
+          }
+        }
+      },
+      "PackageMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Authorized URL only. Do not mint private download URLs for unauthorized accounts."
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "releaseNotesUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "CloudCredentialsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sampleId",
+          "bundleIdentifier",
+          "platform"
+        ],
+        "properties": {
+          "sampleId": {
+            "type": "string",
+            "const": "cloud-recognition"
+          },
+          "bundleIdentifier": {
+            "type": "string",
+            "minLength": 1,
+            "examples": [
+              "com.easyar.testsample"
+            ]
+          },
+          "platform": {
+            "$ref": "#/components/schemas/TargetPlatform"
+          }
+        }
+      },
+      "CloudCredentialsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "cloudRecognition"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "cloudRecognition": {
+            "$ref": "#/components/schemas/CloudRecognitionMetadata"
+          }
+        }
+      },
+      "CloudRecognitionMetadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "apiKeyPresent"
+        ],
+        "properties": {
+          "appId": {
+            "type": "string",
+            "description": "Cloud Recognition AppId. Return masked or non-secret identifier according to EasyAR account policy."
+          },
+          "apiKeyPresent": {
+            "type": "boolean",
+            "description": "True when the account has an API KEY configured. Never return the raw API KEY value."
+          },
+          "apiSecretPresent": {
+            "type": "boolean",
+            "description": "True when an API Secret exists. Never return the raw secret."
+          },
+          "appKeyPresent": {
+            "type": "boolean",
+            "description": "Legacy compatibility flag only. Never return a raw legacy appKey."
+          },
+          "appSecretPresent": {
+            "type": "boolean",
+            "description": "Legacy compatibility flag only. Never return a raw legacy appSecret."
+          },
+          "serviceRegion": {
+            "type": "string"
+          },
+          "targetLibraryCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dashboardUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "SampleId": {
+        "type": "string",
+        "enum": [
+          "image-tracking",
+          "cloud-recognition"
+        ]
+      },
+      "TargetPlatform": {
+        "type": "string",
+        "enum": [
+          "android",
+          "ios",
+          "visionos",
+          "windows",
+          "macos",
+          "unity-editor"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "examples": [
+                  "unauthorized",
+                  "license_not_entitled",
+                  "cloud_credentials_missing"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "Redacted human-readable message. Must not include raw tokens, license keys, API keys, appKey, appSecret, passwords, or verification codes."
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "nextAction": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

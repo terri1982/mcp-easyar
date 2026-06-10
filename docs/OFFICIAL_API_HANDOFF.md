@@ -9,6 +9,8 @@ Repository: https://github.com/terri1982/mcp-easyar
 
 This handoff is for EasyAR backend and operations teams connecting mcp-easyar to authorized registered-user account, license, downloads, and Cloud Recognition services.
 
+Machine-readable contract for gateway import, server stubs, and client generation: `docs/openapi/easyar-mcp-account-api.openapi.json`
+
 ## Environment
 
 Base URL: https://www.easyar.cn
@@ -202,6 +204,7 @@ curl -fsS -X POST -H "Authorization: Bearer ${EASYAR_API_TOKEN}" -H "Content-Typ
 
 - docs/OFFICIAL_API_CONTRACT.md
 - docs/OFFICIAL_API_HANDOFF.md
+- docs/openapi/easyar-mcp-account-api.openapi.json
 - Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md
 - Assets/EasyARGenerated/DEPLOYMENT_READINESS.md
 - Assets/EasyARGenerated/PRODUCTION_VALIDATION.md

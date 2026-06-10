@@ -80,7 +80,7 @@ EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
 
 The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, `appKey`, or `appSecret`.
 
-The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md` and can be regenerated with:
+The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md`. The machine-readable OpenAPI contract for gateway import, backend stubs, and client generation is `docs/openapi/easyar-mcp-account-api.openapi.json`. The Markdown contract can be regenerated with:
 
 ```text
 easyar_generate_official_api_contract
