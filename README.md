@@ -259,8 +259,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_review_csharp_scripts`: review Unity C# scripts for common EasyAR secret, lifecycle, input, and performance risks.
 - `easyar_unity_environment`: inspect `EASYAR_UNITY_PATH` and common Unity install locations without launching Unity.
 - `easyar_write_unity_environment_report`: write Unity executable discovery, `EASYAR_UNITY_PATH`, and batch compile dry-run guidance to `Assets/EasyARGenerated/UNITY_ENVIRONMENT.md`.
-- `easyar_run_unity_compile_check`: open Unity in batch mode to force script import/compilation and analyze the generated log.
-- `easyar_run_unity_method`: execute a Unity static editor method in batch mode, optionally writing a project-local Unity log with `logPath`.
+- `easyar_run_unity_compile_check`: open Unity in batch mode to force script import/compilation, analyze the generated log, and return a suggested `easyar_write_run_result` handoff when `sampleId` is provided.
+- `easyar_run_unity_method`: execute a Unity static editor method in batch mode, optionally writing a project-local Unity log with `logPath`; pass `sampleId` to receive focused log diagnostics and a suggested `RUN_RESULT.md` update.
 - `easyar_analyze_unity_log`: analyze Unity Editor/build logs and suggest next debugging actions, with optional focused sample diagnostics.
 - `easyar_analyze_latest_unity_log`: locate the latest Unity Editor/project log and analyze its tail.
 

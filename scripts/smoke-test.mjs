@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -724,6 +724,36 @@ try {
   });
   assertTextIncludes(compileDryRun, "\"dryRun\": true");
   assertTextIncludes(compileDryRun, "mcp-easyar-CompileCheck.log");
+  assertTextIncludes(compileDryRun, "suggestedRunResultCall");
+  assertTextIncludes(compileDryRun, "easyar_write_run_result");
+
+  const fakeUnityPath = await createFakeUnityExecutable(projectPath);
+  const compileWithFakeUnity = await callTool("easyar_run_unity_compile_check", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    unityPath: fakeUnityPath,
+    logPath: "Logs/mcp-easyar-FakeCompile.log",
+    timeoutSeconds: 5
+  });
+  assertTextIncludes(compileWithFakeUnity, "\"exitCode\": 0");
+  assertTextIncludes(compileWithFakeUnity, "\"overallStatus\": \"passed\"");
+  assertTextIncludes(compileWithFakeUnity, "Unity compile/import check");
+  assertTextIncludes(compileWithFakeUnity, "easyar_write_run_result");
+
+  const methodWithFakeUnity = await callTool("easyar_run_unity_method", {
+    projectPath,
+    executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings",
+    sampleId: "image-tracking",
+    platform: "android",
+    unityPath: fakeUnityPath,
+    logPath: "Logs/mcp-easyar-FakeBuildSettings.log",
+    timeoutSeconds: 5
+  });
+  assertTextIncludes(methodWithFakeUnity, "\"exitCode\": 0");
+  assertTextIncludes(methodWithFakeUnity, "Configure Build Settings");
+  assertTextIncludes(methodWithFakeUnity, "suggestedRunResultCall");
+  assertTextIncludes(methodWithFakeUnity, "Run the focused sample validation helper");
 
   const prepared = await callTool("easyar_prepare_unity_project", {
     projectPath,
@@ -1502,4 +1532,29 @@ async function createUnityProject() {
   await writeFile(path.join(projectPath, "Packages", "manifest.json"), "{\"dependencies\":{}}\n", "utf8");
   await writeFile(path.join(projectPath, "ProjectSettings", "ProjectVersion.txt"), "m_EditorVersion: 2022.3.62f1\n", "utf8");
   return projectPath;
+}
+
+async function createFakeUnityExecutable(projectPath) {
+  const fakeUnityPath = path.join(projectPath, "fake-unity.sh");
+  await writeFile(
+    fakeUnityPath,
+    `#!/bin/sh
+LOG_FILE=""
+PREV=""
+for ARG in "$@"; do
+  if [ "$PREV" = "-logFile" ]; then
+    LOG_FILE="$ARG"
+  fi
+  PREV="$ARG"
+done
+if [ -n "$LOG_FILE" ]; then
+  mkdir -p "$(dirname "$LOG_FILE")"
+  printf "Fake Unity run completed successfully\\nScripts have compiler errors: false\\n" > "$LOG_FILE"
+fi
+exit 0
+`,
+    "utf8"
+  );
+  await chmod(fakeUnityPath, 0o755);
+  return fakeUnityPath;
 }

@@ -2601,12 +2601,13 @@ server.tool(
   {
     projectPath: z.string().describe("Unity project path."),
     sampleId: z.string().optional().describe("Optional focused sample id used for log diagnostics."),
+    platform: z.enum(["android", "ios"]).default("android").describe("Target device platform used for suggested RUN_RESULT handoff when sampleId is provided."),
     unityPath: z.string().optional().describe("Unity executable path. Defaults to EASYAR_UNITY_PATH or Unity on PATH."),
     logPath: z.string().optional().describe("Optional Unity -logFile path. Defaults to Logs/mcp-easyar-CompileCheck.log inside the project."),
     timeoutSeconds: z.number().int().positive().max(1800).default(600),
     dryRun: z.boolean().default(false).describe("Return the command without launching Unity.")
   },
-  async ({ projectPath, sampleId, unityPath, logPath, timeoutSeconds, dryRun }) => {
+  async ({ projectPath, sampleId, platform, unityPath, logPath, timeoutSeconds, dryRun }) => {
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
     const unity = unityPath ?? process.env.EASYAR_UNITY_PATH ?? "Unity";
@@ -2619,6 +2620,15 @@ server.tool(
         dryRun: true,
         command: [unity, ...args].join(" "),
         logPath: resolvedLogPath,
+        suggestedRunResultCall: sample ? buildSuggestedRunResultCall({
+          root,
+          sample,
+          platform,
+          stepName: "Unity compile/import check",
+          status: "not-run",
+          evidence: `Dry-run command only. Planned log path: ${path.relative(root, resolvedLogPath)}.`,
+          nextAction: "Run easyar_run_unity_compile_check without dryRun, then call easyar_write_run_result with the observed result."
+        }) : null,
         nextStep: "Run without dryRun to force Unity script import/compilation."
       });
     }
@@ -2626,6 +2636,13 @@ server.tool(
     const result = await runUnity(unity, root, null, timeoutSeconds, resolvedLogPath);
     const logText = await exists(resolvedLogPath) ? await readLogTail(resolvedLogPath, 200000) : `${result.stdout}\n${result.stderr}`;
     const issues = analyzeUnityLog(logText, sample);
+    const suggestedStep = buildUnityRunResultStep({
+      stepName: "Unity compile/import check",
+      result,
+      issues,
+      root,
+      successNextAction: "Continue with mobile settings, Build Settings, and focused sample validation."
+    });
     return jsonText({
       ...result,
       sample: sample ? {
@@ -2636,9 +2653,21 @@ server.tool(
       summary: summarizeLog(logText),
       issueCount: issues.length,
       issues,
+      suggestedRunResultCall: sample ? buildSuggestedRunResultCall({
+        root,
+        sample,
+        platform,
+        overallStatus: suggestedStep.status,
+        stepName: suggestedStep.name,
+        status: suggestedStep.status,
+        evidence: suggestedStep.evidence,
+        nextAction: suggestedStep.nextAction
+      }) : null,
       nextActions: issues.length > 0
         ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
-        : ["No known EasyAR/Unity issue patterns were detected. If Unity exited 0, continue with the focused run sequence."]
+        : result.exitCode === 0
+          ? ["No known EasyAR/Unity issue patterns were detected. Continue with the focused run sequence and record the outcome with easyar_write_run_result."]
+          : ["Unity exited with a non-zero code. Inspect the returned log summary and record the outcome with easyar_write_run_result."]
     });
   }
 );
@@ -2649,16 +2678,55 @@ server.tool(
   {
     projectPath: z.string().describe("Unity project path."),
     executeMethod: z.string().describe("Fully qualified static method, for example EasyAR.EditorTools.EasyARSampleRunner.OpenSampleScene."),
+    sampleId: z.string().optional().describe("Optional focused sample id used for log diagnostics and suggested RUN_RESULT handoff."),
+    platform: z.enum(["android", "ios"]).default("android").describe("Target device platform used for suggested RUN_RESULT handoff when sampleId is provided."),
     unityPath: z.string().optional().describe("Unity executable path. Defaults to EASYAR_UNITY_PATH or Unity on PATH."),
     logPath: z.string().optional().describe("Optional Unity -logFile path. Relative paths are resolved inside the Unity project."),
     timeoutSeconds: z.number().int().positive().max(1800).default(300)
   },
-  async ({ projectPath, executeMethod, unityPath, logPath, timeoutSeconds }) => {
+  async ({ projectPath, executeMethod, sampleId, platform, unityPath, logPath, timeoutSeconds }) => {
     const root = resolveProjectPath(projectPath);
     const unity = unityPath ?? process.env.EASYAR_UNITY_PATH ?? "Unity";
     const resolvedLogPath = logPath ? resolveUnityLogPath(root, logPath) : null;
+    const sample = sampleId ? findSample(sampleId) : null;
     const result = await runUnity(unity, root, executeMethod, timeoutSeconds, resolvedLogPath);
-    return jsonText(result);
+    const logText = resolvedLogPath && await exists(resolvedLogPath)
+      ? await readLogTail(resolvedLogPath, 200000)
+      : `${result.stdout}\n${result.stderr}`;
+    const issues = analyzeUnityLog(logText, sample);
+    const suggestedStep = buildUnityRunResultStep({
+      stepName: unityMethodStepName(executeMethod),
+      result,
+      issues,
+      root,
+      successNextAction: unityMethodSuccessNextAction(executeMethod)
+    });
+    return jsonText({
+      ...result,
+      sample: sample ? {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      } : null,
+      summary: summarizeLog(logText),
+      issueCount: issues.length,
+      issues,
+      suggestedRunResultCall: sample ? buildSuggestedRunResultCall({
+        root,
+        sample,
+        platform,
+        overallStatus: suggestedStep.status,
+        stepName: suggestedStep.name,
+        status: suggestedStep.status,
+        evidence: suggestedStep.evidence,
+        nextAction: suggestedStep.nextAction
+      }) : null,
+      nextActions: issues.length > 0
+        ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
+        : result.exitCode === 0
+          ? [unityMethodSuccessNextAction(executeMethod), "Record the outcome with easyar_write_run_result."]
+          : ["Unity exited with a non-zero code. Inspect the returned log summary and record the outcome with easyar_write_run_result."]
+    });
   }
 );
 
@@ -9166,6 +9234,103 @@ function resolveUnityLogPath(root: string, logPath: string): string {
 
 function defaultUnityBatchLogPath(executeMethod: string): string {
   return path.join("Logs", `mcp-easyar-${executeMethod.split(".").pop() ?? "unity-method"}.log`);
+}
+
+function buildUnityRunResultStep(input: {
+  stepName: string;
+  result: { exitCode: number | null; logPath: string | null };
+  issues: Array<{ title: string; actions: string[] }>;
+  root: string;
+  successNextAction: string;
+}) {
+  const status: typeof runResultStatuses[number] = input.result.exitCode === 0 && input.issues.length === 0
+    ? "passed"
+    : input.result.exitCode === null
+      ? "blocked"
+      : "failed";
+  const logEvidence = input.result.logPath ? `Log: ${path.relative(input.root, input.result.logPath)}` : "No project-local Unity log path was provided.";
+  const exitEvidence = `Unity exit code: ${input.result.exitCode ?? "unknown"}`;
+  const issueEvidence = input.issues.length > 0
+    ? `Detected issue(s): ${input.issues.map((issue) => issue.title).join("; ")}`
+    : "No known EasyAR/Unity issue patterns detected.";
+  const nextAction = status === "passed"
+    ? input.successNextAction
+    : input.issues[0]?.actions[0] ?? "Inspect the Unity log, fix the failing Unity step, and rerun the focused workflow.";
+
+  return {
+    name: input.stepName,
+    status,
+    evidence: `${exitEvidence}. ${logEvidence}. ${issueEvidence}`,
+    nextAction
+  };
+}
+
+function buildSuggestedRunResultCall(input: {
+  root: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  overallStatus?: typeof runResultStatuses[number];
+  stepName: string;
+  status: typeof runResultStatuses[number];
+  evidence: string;
+  nextAction: string;
+}) {
+  const overallStatus = input.overallStatus ?? input.status;
+  return {
+    tool: "easyar_write_run_result",
+    arguments: {
+      projectPath: input.root,
+      sampleId: input.sample.id,
+      platform: input.platform,
+      overallStatus,
+      steps: [
+        {
+          name: input.stepName,
+          status: input.status,
+          evidence: input.evidence,
+          nextAction: input.nextAction
+        }
+      ]
+    }
+  };
+}
+
+function unityMethodStepName(executeMethod: string): string {
+  if (/MobileSettingsHelper\.ConfigureMobileSettings$/.test(executeMethod)) {
+    return "Configure mobile player settings";
+  }
+  if (/BuildSettingsHelper\.ConfigureBuildSettings$/.test(executeMethod)) {
+    return "Configure Build Settings";
+  }
+  if (/SampleValidationHelper\.ValidateFocusedSample$/.test(executeMethod)) {
+    return "Validate focused sample";
+  }
+  if (/DeviceBuildHelper\.Build$/.test(executeMethod)) {
+    return "Build device player";
+  }
+  if (/SampleRunner\.OpenSampleScene$/.test(executeMethod)) {
+    return "Open focused sample scene";
+  }
+  return `Run Unity method ${executeMethod}`;
+}
+
+function unityMethodSuccessNextAction(executeMethod: string): string {
+  if (/MobileSettingsHelper\.ConfigureMobileSettings$/.test(executeMethod)) {
+    return "Run the Build Settings helper for the focused sample.";
+  }
+  if (/BuildSettingsHelper\.ConfigureBuildSettings$/.test(executeMethod)) {
+    return "Run the focused sample validation helper, then compile check.";
+  }
+  if (/SampleValidationHelper\.ValidateFocusedSample$/.test(executeMethod)) {
+    return "Run easyar_run_unity_compile_check, then prepare the device build helper.";
+  }
+  if (/DeviceBuildHelper\.Build$/.test(executeMethod)) {
+    return "Install the build on a real Android/iOS device and follow DEVICE_VALIDATION.md.";
+  }
+  if (/SampleRunner\.OpenSampleScene$/.test(executeMethod)) {
+    return "Run Build Settings and focused sample validation after opening the scene.";
+  }
+  return "Continue with the focused run sequence and record the next observed result.";
 }
 
 function buildUnityArgs(projectPath: string, executeMethod: string | null, logPath: string | null): string[] {
