@@ -1,5 +1,5 @@
 {
-  "name": "easyar-official-mcp-server",
+  "name": "mcp-easyar",
   "version": "0.1.0",
   "description": "Official EasyAR MCP server for registered users building EasyAR Unity samples and projects.",
   "type": "module",
@@ -10,6 +10,7 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
+    "test": "npm run build && node scripts/smoke-test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
@@ -21,12 +22,12 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/terri1982/easyar-official-mcp-server.git"
+    "url": "https://github.com/terri1982/mcp-easyar.git"
   },
   "bugs": {
-    "url": "https://github.com/terri1982/easyar-official-mcp-server/issues"
+    "url": "https://github.com/terri1982/mcp-easyar/issues"
   },
-  "homepage": "https://github.com/terri1982/easyar-official-mcp-server#readme",
+  "homepage": "https://github.com/terri1982/mcp-easyar#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.76"

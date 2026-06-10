@@ -28,3 +28,6 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: MCP smoke test
+        run: npm test

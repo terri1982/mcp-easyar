@@ -1,6 +1,6 @@
 # EasyAR Official MCP Server
 
-[![CI](https://github.com/terri1982/easyar-official-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/easyar-official-mcp-server/actions/workflows/ci.yml)
+[![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
 
 EasyAR Official MCP Server helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
 
@@ -10,6 +10,7 @@ This MVP focuses on local Unity project assistance:
 - list common EasyAR Unity sample categories
 - generate an Editor runner script for opening sample scenes
 - prepare a Unity project with EasyAR local config templates and secret ignore rules
+- generate Unity MonoBehaviour script templates for common EasyAR workflows
 - write C# scripts safely inside a Unity project
 - run a Unity static editor method in batch mode
 - expose EasyAR workflow guidance as MCP resources
@@ -52,7 +53,7 @@ EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/
   "mcpServers": {
     "easyar": {
       "command": "node",
-      "args": ["/absolute/path/to/easyar-official-mcp-server/dist/index.js"],
+      "args": ["/absolute/path/to/mcp-easyar/dist/index.js"],
       "env": {
         "EASYAR_API_BASE_URL": "https://www.easyar.cn",
         "EASYAR_API_TOKEN": "your_registered_user_token"
@@ -67,7 +68,7 @@ EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/
 Use the same stdio command:
 
 ```bash
-node /absolute/path/to/easyar-official-mcp-server/dist/index.js
+node /absolute/path/to/mcp-easyar/dist/index.js
 ```
 
 ## Local Development
@@ -82,6 +83,7 @@ Run checks:
 ```bash
 npm run build
 npm run typecheck
+npm test
 ```
 
 ## Publish To GitHub
@@ -90,7 +92,7 @@ After authenticating GitHub CLI with your account:
 
 ```bash
 gh auth login
-gh repo create easyar-official-mcp-server --public --source=. --remote=origin --push
+gh repo create mcp-easyar --public --source=. --remote=origin --push
 ```
 
 Use `--private` instead of `--public` if this repository should not be public yet.
@@ -103,6 +105,7 @@ Use `--private` instead of `--public` if this repository should not be public ye
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
 - `easyar_prepare_unity_project`: create a sample runner, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
+- `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
 - `easyar_run_unity_method`: execute a Unity static editor method in batch mode.
 

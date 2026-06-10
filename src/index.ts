@@ -16,6 +16,8 @@ type SampleInfo = {
   setupNotes: string[];
 };
 
+const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "lifecycle"] as const;
+
 const samples: SampleInfo[] = [
   {
     id: "hello-ar",
@@ -87,7 +89,7 @@ const officialInfo = {
 };
 
 const server = new McpServer({
-  name: "easyar-official-mcp-server",
+  name: "mcp-easyar",
   version: "0.1.0"
 });
 
@@ -289,6 +291,44 @@ server.tool(
 );
 
 server.tool(
+  "easyar_create_mono_behaviour",
+  "Create a Unity C# MonoBehaviour template for common EasyAR sample development tasks.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    relativePath: z.string().describe("Relative .cs path inside the Unity project, for example Assets/Scripts/ImageTargetContentController.cs."),
+    className: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).describe("C# class name."),
+    kind: z.enum(monoBehaviourKinds).describe("Template kind to generate."),
+    overwrite: z.boolean().default(false).describe("Whether to replace an existing script.")
+  },
+  async ({ projectPath, relativePath, className, kind, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const target = path.resolve(root, relativePath);
+    assertInside(root, target);
+    if (!target.endsWith(".cs")) {
+      throw new Error("easyar_create_mono_behaviour only writes .cs files.");
+    }
+    if (!overwrite && await exists(target)) {
+      return jsonText({
+        skipped: target,
+        reason: "File already exists. Pass overwrite=true to replace it."
+      });
+    }
+
+    const contents = buildMonoBehaviourTemplate(className, kind);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, contents, "utf8");
+
+    return jsonText({
+      written: target,
+      className,
+      kind,
+      nextStep: "Attach this component to the relevant Unity GameObject, then wire public fields in the Inspector."
+    });
+  }
+);
+
+server.tool(
   "easyar_write_csharp_file",
   "Create or replace a C# script inside a Unity project. The file must stay inside the project and end with .cs.",
   {
@@ -479,6 +519,142 @@ function buildLocalConfigExample(sample: SampleInfo): string {
     null,
     2
   )}\n`;
+}
+
+function buildMonoBehaviourTemplate(className: string, kind: typeof monoBehaviourKinds[number]): string {
+  const header = `using UnityEngine;
+
+namespace EasyAR.Samples.Generated
+{
+    public sealed class ${className} : MonoBehaviour
+    {`;
+  const footer = `    }
+}
+`;
+
+  if (kind === "image-tracking") {
+    return `${header}
+        [SerializeField] private GameObject contentRoot;
+
+        private void Awake()
+        {
+            SetContentVisible(false);
+        }
+
+        public void OnTargetFound()
+        {
+            SetContentVisible(true);
+        }
+
+        public void OnTargetLost()
+        {
+            SetContentVisible(false);
+        }
+
+        private void SetContentVisible(bool visible)
+        {
+            if (contentRoot != null)
+            {
+                contentRoot.SetActive(visible);
+            }
+        }
+${footer}`;
+  }
+
+  if (kind === "surface-placement") {
+    return `${header}
+        [SerializeField] private Camera arCamera;
+        [SerializeField] private GameObject placementPrefab;
+        [SerializeField] private LayerMask placementMask = ~0;
+
+        private GameObject currentPlacement;
+
+        private void Update()
+        {
+            if (Input.touchCount == 0 || Input.GetTouch(0).phase != TouchPhase.Began)
+            {
+                return;
+            }
+
+            var ray = arCamera != null
+                ? arCamera.ScreenPointToRay(Input.GetTouch(0).position)
+                : new Ray(transform.position, transform.forward);
+
+            if (Physics.Raycast(ray, out var hit, 10f, placementMask))
+            {
+                Place(hit.point, hit.normal);
+            }
+        }
+
+        private void Place(Vector3 position, Vector3 normal)
+        {
+            if (placementPrefab == null)
+            {
+                Debug.LogWarning("Placement prefab is not assigned.");
+                return;
+            }
+
+            if (currentPlacement == null)
+            {
+                currentPlacement = Instantiate(placementPrefab);
+            }
+
+            currentPlacement.transform.SetPositionAndRotation(position, Quaternion.LookRotation(normal));
+        }
+${footer}`;
+  }
+
+  if (kind === "cloud-recognition") {
+    return `${header}
+        [SerializeField] private string expectedTargetName;
+        [SerializeField] private GameObject recognizedContent;
+
+        private void Awake()
+        {
+            SetRecognized(false);
+        }
+
+        public void OnCloudTargetRecognized(string targetName)
+        {
+            var matched = string.IsNullOrEmpty(expectedTargetName) || expectedTargetName == targetName;
+            SetRecognized(matched);
+            Debug.Log("EasyAR cloud recognition result: " + targetName);
+        }
+
+        public void OnCloudRecognitionLost()
+        {
+            SetRecognized(false);
+        }
+
+        private void SetRecognized(bool recognized)
+        {
+            if (recognizedContent != null)
+            {
+                recognizedContent.SetActive(recognized);
+            }
+        }
+${footer}`;
+  }
+
+  return `${header}
+        [SerializeField] private bool logLifecycle = true;
+
+        private void OnEnable()
+        {
+            if (logLifecycle)
+            {
+                Debug.Log("${className} enabled.");
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (logLifecycle)
+            {
+                Debug.Log("${className} disabled.");
+            }
+        }
+${footer}`;
 }
 
 async function writeGeneratedFile(filePath: string, contents: string, overwrite: boolean, written: string[]) {
