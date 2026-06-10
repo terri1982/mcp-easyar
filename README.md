@@ -1,5 +1,7 @@
 # EasyAR Official MCP Server
 
+[![CI](https://github.com/terri1982/easyar-official-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/easyar-official-mcp-server/actions/workflows/ci.yml)
+
 EasyAR Official MCP Server helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
 
 This MVP focuses on local Unity project assistance:
@@ -7,6 +9,7 @@ This MVP focuses on local Unity project assistance:
 - inspect Unity project structure and EasyAR-related files
 - list common EasyAR Unity sample categories
 - generate an Editor runner script for opening sample scenes
+- prepare a Unity project with EasyAR local config templates and secret ignore rules
 - write C# scripts safely inside a Unity project
 - run a Unity static editor method in batch mode
 - expose EasyAR workflow guidance as MCP resources
@@ -98,6 +101,7 @@ Use `--private` instead of `--public` if this repository should not be public ye
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
+- `easyar_prepare_unity_project`: create a sample runner, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
 - `easyar_run_unity_method`: execute a Unity static editor method in batch mode.

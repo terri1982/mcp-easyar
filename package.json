@@ -19,6 +19,14 @@
     "augmented-reality"
   ],
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/terri1982/easyar-official-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/terri1982/easyar-official-mcp-server/issues"
+  },
+  "homepage": "https://github.com/terri1982/easyar-official-mcp-server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.76"

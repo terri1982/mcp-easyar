@@ -183,7 +183,7 @@ server.tool(
       "Unity workflow:",
       "- Run easyar_inspect_unity_project against the project path.",
       "- Import the official EasyAR Unity package if the project does not contain EasyAR assets.",
-      "- Run easyar_create_sample_runner to create an Editor helper for opening matching sample scenes.",
+      "- Run easyar_prepare_unity_project to create an Editor helper, local config template, and secret ignore rules.",
       "- Build to a real Android/iOS device when the sample requires camera, motion tracking, or cloud recognition.",
       "",
       "Required capabilities:",
@@ -215,6 +215,52 @@ server.tool(
     };
 
     return jsonText(checks);
+  }
+);
+
+server.tool(
+  "easyar_prepare_unity_project",
+  "Prepare a Unity project for an authorized EasyAR sample workflow by creating editor helpers, local config templates, and secret ignore rules.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Sample id from easyar_list_samples."),
+    overwrite: z.boolean().default(false).describe("Whether to replace existing generated files.")
+  },
+  async ({ projectPath, sampleId, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+
+    const editorDir = path.join(root, "Assets", "Editor");
+    const configDir = path.join(root, "ProjectSettings", "EasyAR");
+    await mkdir(editorDir, { recursive: true });
+    await mkdir(configDir, { recursive: true });
+
+    const runnerPath = path.join(editorDir, "EasyARSampleRunner.cs");
+    const configExamplePath = path.join(configDir, "easyar.local.json.example");
+    const localConfigPath = path.join(configDir, "easyar.local.json");
+    const gitignorePath = path.join(root, ".gitignore");
+
+    const written: string[] = [];
+    await writeGeneratedFile(runnerPath, buildSampleRunner(sample), overwrite, written);
+    await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
+    await ensureGitignoreEntries(gitignorePath, [
+      "ProjectSettings/EasyAR/easyar.local.json",
+      "ProjectSettings/EasyAR/*.secret.json"
+    ]);
+
+    return jsonText({
+      projectPath: root,
+      sample: sample.name,
+      written,
+      localConfig: localConfigPath,
+      instructions: [
+        `Copy ${path.relative(root, configExamplePath)} to ${path.relative(root, localConfigPath)}.`,
+        "Fill the local file with the EasyAR license key and official account-scoped credentials.",
+        "Do not commit the local config file; .gitignore has been updated to protect it.",
+        "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner."
+      ]
+    });
   }
 );
 
@@ -408,6 +454,60 @@ ${sceneNames}
     }
 }
 `;
+}
+
+function buildLocalConfigExample(sample: SampleInfo): string {
+  return `${JSON.stringify(
+    {
+      sampleId: sample.id,
+      sampleName: sample.name,
+      easyar: {
+        apiBaseUrl: "https://www.easyar.cn",
+        accountToken: "paste-official-registered-user-token-here",
+        licenseKey: "paste-easyar-license-key-here",
+        cloudRecognition: {
+          appId: "",
+          appKey: "",
+          appSecret: ""
+        }
+      },
+      unity: {
+        targetPlatform: "android",
+        notes: sample.setupNotes
+      }
+    },
+    null,
+    2
+  )}\n`;
+}
+
+async function writeGeneratedFile(filePath: string, contents: string, overwrite: boolean, written: string[]) {
+  if (!overwrite && await exists(filePath)) {
+    return;
+  }
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, contents, "utf8");
+  written.push(filePath);
+}
+
+async function ensureGitignoreEntries(gitignorePath: string, entries: string[]) {
+  let current = "";
+  if (await exists(gitignorePath)) {
+    current = await readFile(gitignorePath, "utf8");
+  }
+
+  const lines = new Set(current.split(/\r?\n/).filter(Boolean));
+  let changed = false;
+  for (const entry of entries) {
+    if (!lines.has(entry)) {
+      lines.add(entry);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    await writeFile(gitignorePath, `${Array.from(lines).join("\n")}\n`, "utf8");
+  }
 }
 
 function escapeCsharp(value: string): string {
