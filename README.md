@@ -20,6 +20,8 @@ This MVP focuses on local Unity project assistance:
 - write C# scripts safely inside a Unity project
 - run a Unity static editor method in batch mode
 - expose EasyAR workflow guidance as MCP resources
+- check EasyAR account environment configuration without exposing secrets
+- generate MCP client configuration snippets for Codex and Claude
 
 The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
 
@@ -77,6 +79,8 @@ Use the same stdio command:
 node /absolute/path/to/mcp-easyar/dist/index.js
 ```
 
+You can also ask the MCP server for a config snippet with `easyar_generate_client_config`.
+
 ## Local Development
 
 ```bash
@@ -107,6 +111,8 @@ Use `--private` instead of `--public` if this repository should not be public ye
 
 - `easyar_list_samples`: list supported sample categories.
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
+- `easyar_auth_status`: check EasyAR API environment configuration without returning secrets.
+- `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.

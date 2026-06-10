@@ -18,6 +18,7 @@ type SampleInfo = {
 
 const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "lifecycle"] as const;
 const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
+const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 
 const samples: SampleInfo[] = [
   {
@@ -157,6 +158,53 @@ server.tool(
   "Return official EasyAR links and package versions captured by this MCP server.",
   {},
   async () => jsonText(officialInfo)
+);
+
+server.tool(
+  "easyar_auth_status",
+  "Report whether EasyAR account environment variables are configured without exposing secret values.",
+  {},
+  async () => {
+    const auth = readAuthConfig();
+    return jsonText({
+      apiBaseUrl: auth.apiBaseUrl,
+      hasToken: auth.hasToken,
+      tokenPreview: auth.tokenPreview,
+      readyForAccountScopedContent: auth.hasToken,
+      requiredEnvironment: [
+        "EASYAR_API_BASE_URL",
+        "EASYAR_API_TOKEN"
+      ],
+      security: "Secret values are never returned by this tool."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_client_config",
+  "Generate MCP client configuration snippets for connecting Codex, Claude Desktop, or another stdio MCP client.",
+  {
+    client: z.enum(clientKinds).describe("Target MCP client config style."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint."),
+    includeTokenPlaceholder: z.boolean().default(true).describe("Whether to include EASYAR_API_TOKEN placeholder text.")
+  },
+  async ({ client, serverPath, includeTokenPlaceholder }) => {
+    const entrypoint = serverPath ?? process.argv[1] ?? "dist/index.js";
+    const env = {
+      EASYAR_API_BASE_URL: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
+      ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
+    };
+    const config = buildClientConfig(client, entrypoint, env);
+
+    return jsonText({
+      client,
+      command: "node",
+      args: [entrypoint],
+      env,
+      config,
+      note: "Replace token placeholders with locally stored official EasyAR account credentials. Do not commit secrets."
+    });
+  }
 );
 
 server.tool(
@@ -494,9 +542,45 @@ function findSample(sampleId: string): SampleInfo {
 }
 
 function readAuthConfig() {
+  const token = process.env.EASYAR_API_TOKEN;
   return {
     apiBaseUrl: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
-    hasToken: Boolean(process.env.EASYAR_API_TOKEN)
+    hasToken: Boolean(token),
+    tokenPreview: token ? `${token.slice(0, 4)}...${token.slice(-4)}` : null
+  };
+}
+
+function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {
+  if (client === "codex") {
+    return {
+      mcpServers: {
+        easyar: {
+          command: "node",
+          args: [entrypoint],
+          env
+        }
+      }
+    };
+  }
+
+  if (client === "claude-desktop") {
+    return {
+      mcpServers: {
+        easyar: {
+          command: "node",
+          args: [entrypoint],
+          env
+        }
+      }
+    };
+  }
+
+  return {
+    name: "easyar",
+    transport: "stdio",
+    command: "node",
+    args: [entrypoint],
+    env
   };
 }
 

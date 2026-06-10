@@ -5,6 +5,11 @@ import { spawn } from "node:child_process";
 
 const serverPath = path.resolve("dist/index.js");
 const child = spawn(process.execPath, [serverPath], {
+  env: {
+    ...process.env,
+    EASYAR_API_BASE_URL: "https://www.easyar.cn",
+    EASYAR_API_TOKEN: ""
+  },
   stdio: ["pipe", "pipe", "pipe"]
 });
 
@@ -54,6 +59,17 @@ try {
 
   const officialInfo = await callTool("easyar_official_info", {});
   assertTextIncludes(officialInfo, "easyarSenseUnityPlugin");
+
+  const authStatus = await callTool("easyar_auth_status", {});
+  assertTextIncludes(authStatus, "\"hasToken\": false");
+  assertTextIncludes(authStatus, "Secret values are never returned");
+
+  const clientConfig = await callTool("easyar_generate_client_config", {
+    client: "claude-desktop",
+    serverPath: "/tmp/mcp-easyar/dist/index.js"
+  });
+  assertTextIncludes(clientConfig, "\"mcpServers\"");
+  assertTextIncludes(clientConfig, "your_registered_user_token");
 
   const projectPath = await createUnityProject();
   const initialReadiness = await callTool("easyar_check_sample_readiness", {
