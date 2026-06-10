@@ -20,6 +20,34 @@ const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recogn
 const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
 const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
+const serverName = "mcp-easyar";
+const serverVersion = "0.1.0";
+
+const toolCatalog = [
+  "easyar_server_status",
+  "easyar_list_samples",
+  "easyar_official_info",
+  "easyar_auth_status",
+  "easyar_generate_client_config",
+  "easyar_generate_sample_plan",
+  "easyar_inspect_unity_project",
+  "easyar_check_sample_readiness",
+  "easyar_analyze_unity_log",
+  "easyar_prepare_unity_project",
+  "easyar_create_build_settings_helper",
+  "easyar_create_device_build_helper",
+  "easyar_create_sample_runner",
+  "easyar_create_mono_behaviour",
+  "easyar_write_csharp_file",
+  "easyar_run_unity_method"
+] as const;
+
+const resourceCatalog = [
+  "easyar://samples/catalog",
+  "easyar://official/info",
+  "easyar://unity/checklist",
+  "easyar://workflow/quickstart"
+] as const;
 
 const samples: SampleInfo[] = [
   {
@@ -109,8 +137,8 @@ const quickstartWorkflow = [
 ].join("\n");
 
 const server = new McpServer({
-  name: "mcp-easyar",
-  version: "0.1.0"
+  name: serverName,
+  version: serverVersion
 });
 
 server.resource(
@@ -176,6 +204,51 @@ server.resource(
       }
     ]
   })
+);
+
+server.tool(
+  "easyar_server_status",
+  "Return mcp-easyar server version, capability summary, resources, authorization state, and recommended next steps.",
+  {},
+  async () => {
+    const auth = readAuthConfig();
+    return jsonText({
+      name: serverName,
+      version: serverVersion,
+      repository: "https://github.com/terri1982/mcp-easyar",
+      officialUse: "Designed for registered EasyAR users and official authorized workflows.",
+      authorization: {
+        apiBaseUrl: auth.apiBaseUrl,
+        hasToken: auth.hasToken,
+        readyForAccountScopedContent: auth.hasToken
+      },
+      capabilities: {
+        samples: samples.map((sample) => sample.id),
+        tools: toolCatalog,
+        resources: resourceCatalog,
+        unityAutomation: [
+          "inspect project",
+          "prepare sample helpers",
+          "configure Build Settings",
+          "generate player build helper",
+          "run Unity batch methods",
+          "analyze Unity logs",
+          "write C# scripts"
+        ]
+      },
+      recommendedFirstCalls: [
+        "easyar_auth_status",
+        "easyar_list_samples",
+        "easyar_generate_sample_plan",
+        "easyar_inspect_unity_project",
+        "easyar_check_sample_readiness"
+      ],
+      security: [
+        "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets.",
+        "This server does not bypass EasyAR login, license checks, download authorization, enterprise gates, or rate limits."
+      ]
+    });
+  }
 );
 
 server.tool(

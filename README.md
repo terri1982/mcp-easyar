@@ -11,6 +11,7 @@ EasyAR Official MCP Server helps registered EasyAR users connect AI coding tools
 This MVP focuses on local Unity project assistance:
 
 - inspect Unity project structure and EasyAR-related files
+- report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
 - list common EasyAR Unity sample categories
 - generate an Editor runner script for opening sample scenes
@@ -116,6 +117,7 @@ Use `--private` instead of `--public` if this repository should not be public ye
 ## Tools
 
 - `easyar_list_samples`: list supported sample categories.
+- `easyar_server_status`: return server version, capability summary, resources, authorization state, and recommended first calls.
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
 - `easyar_auth_status`: check EasyAR API environment configuration without returning secrets.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.

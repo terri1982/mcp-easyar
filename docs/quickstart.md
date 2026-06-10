@@ -14,6 +14,7 @@ npm run build
 Ask the MCP server for a client snippet:
 
 ```text
+easyar_server_status
 easyar_generate_client_config client=claude-desktop
 ```
 

@@ -57,6 +57,10 @@ try {
     "easyar_create_mono_behaviour should be listed"
   );
 
+  const status = await callTool("easyar_server_status", {});
+  assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
+  assertTextIncludes(status, "easyar_check_sample_readiness");
+
   const officialInfo = await callTool("easyar_official_info", {});
   assertTextIncludes(officialInfo, "easyarSenseUnityPlugin");
 
