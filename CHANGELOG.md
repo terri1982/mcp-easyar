@@ -9,6 +9,7 @@ Initial public MVP for `mcp-easyar`.
 - MCP stdio server for authorized EasyAR Unity workflows.
 - MCP prompts for focused Image Tracking, Cloud Recognition, and Unity programming assistant workflows.
 - Official EasyAR links, package-version notes, sample catalog, checklist, and quickstart resources.
+- MCP prompts and quickstart resource now start focused sample runs from account materials, Unity environment, and `PREFLIGHT.md`; programming prompt starts from `PROGRAMMING_CONTEXT.md`.
 - Focused sample run-through scope for Image Tracking and Cloud Recognition, with other samples marked deferred.
 - Focused workflow state navigator and `WORKFLOW_STATE.md` artifact generation for next MCP/Unity action selection.
 - Ordered focused sample run sequence generation for Codex/Claude MCP calls and Unity batch methods.

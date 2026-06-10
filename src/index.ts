@@ -236,15 +236,15 @@ const quickstartWorkflow = [
   "4. Use `easyar_check_account` and `easyar_validate_license` after official EasyAR endpoints are configured.",
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
-  "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_write_artifact_index`, `easyar_generate_run_report`, `easyar_audit_sample_scene`, and `easyar_write_support_bundle` for current project status.",
-  "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
-  "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
-  "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
-  "12. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "13. Use `easyar_write_code_plan`, `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, `easyar_write_code_change_summary`, and `easyar_review_csharp_scripts` for project code.",
-  "14. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
-  "15. Use `easyar_write_run_result` after compile, build, or device attempts to preserve handoff evidence and next actions.",
+  "7. Run `easyar_prepare_unity_project`, `easyar_write_unity_environment_report`, and `easyar_write_focused_preflight` before any Unity batch command.",
+  "8. Read `PREFLIGHT.md` first and follow its `nextCall`; do not skip account, local config, import, Unity path, scene, or script blockers.",
+  "9. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads or Unity Package Manager Samples.",
+  "10. Use `easyar_write_local_config_from_env` or fill `ProjectSettings/EasyAR/easyar.local.json` locally without committing secrets.",
+  "11. Run `easyar_write_run_sequence`, `easyar_write_artifact_index`, `easyar_write_run_report`, `easyar_write_scene_audit`, and `easyar_write_support_bundle` for handoff evidence.",
+  "12. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
+  "13. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "14. For project code, write `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md`, then use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, `easyar_review_csharp_scripts`, and `easyar_write_code_change_summary`.",
+  "15. Run `easyar_run_unity_compile_check`, build to a real Android or iOS device, and use `easyar_write_run_result` after compile, build, or device attempts.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -348,10 +348,14 @@ server.prompt(
       `Target platform: ${platform}`,
       "",
       "Start by calling:",
-      `1. easyar_generate_run_report projectPath=${projectPath} sampleId=image-tracking`,
-      `2. easyar_generate_run_sequence projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,
+      `1. easyar_write_account_onboarding projectPath=${projectPath} sampleId=image-tracking`,
+      `2. easyar_write_account_materials projectPath=${projectPath} sampleId=image-tracking`,
+      `3. easyar_write_unity_environment_report projectPath=${projectPath} sampleId=image-tracking`,
+      `4. easyar_prepare_unity_project projectPath=${projectPath} sampleId=image-tracking`,
+      `5. easyar_write_focused_preflight projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,
       "",
-      "Then follow the sequence. Do not skip readiness failures. Image Tracking must have real target image/database assets before device validation.",
+      "Read PREFLIGHT.md and follow its nextCall before running Unity batch commands. Do not skip readiness failures. Image Tracking must have real target image/database assets before device validation.",
+      `After preflight blockers are clear, call easyar_write_run_sequence projectPath=${projectPath} sampleId=image-tracking platform=${platform}.`,
       "If Unity batch fails, call easyar_analyze_latest_unity_log with sampleId=image-tracking."
     ].join("\n")
   )
@@ -371,10 +375,14 @@ server.prompt(
       `Target platform: ${platform}`,
       "",
       "Start by calling:",
-      `1. easyar_generate_run_report projectPath=${projectPath} sampleId=cloud-recognition`,
-      `2. easyar_generate_run_sequence projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
+      `1. easyar_write_account_onboarding projectPath=${projectPath} sampleId=cloud-recognition`,
+      `2. easyar_write_account_materials projectPath=${projectPath} sampleId=cloud-recognition`,
+      `3. easyar_write_unity_environment_report projectPath=${projectPath} sampleId=cloud-recognition`,
+      `4. easyar_prepare_unity_project projectPath=${projectPath} sampleId=cloud-recognition`,
+      `5. easyar_write_focused_preflight projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
       "",
-      "Do not continue to device validation until easyar.cloudRecognition.appId, appKey, and appSecret are configured locally.",
+      "Read PREFLIGHT.md and follow its nextCall before running Unity batch commands. Do not continue to device validation until easyar.cloudRecognition.appId, appKey, and appSecret are configured locally.",
+      `After preflight blockers are clear, call easyar_write_run_sequence projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}.`,
       "If Unity batch or device validation fails, call easyar_analyze_latest_unity_log with sampleId=cloud-recognition."
     ].join("\n")
   )
@@ -392,7 +400,8 @@ server.prompt(
     [
       `Act as the Unity programming assistant for ${sampleId} in project: ${projectPath}`,
       "",
-      "Start by calling easyar_generate_run_report to understand current readiness, local config, and script review state.",
+      "Start by calling easyar_write_focused_preflight, then easyar_write_programming_context to understand current readiness and script context.",
+      "Read PROGRAMMING_CONTEXT.md before CODE_PLAN.md when taking over script work.",
       "When creating or editing C# files, prefer easyar_create_mono_behaviour for common templates and easyar_write_csharp_file for focused patches.",
       "After code changes, call easyar_review_csharp_scripts before asking Unity to compile.",
       "If Unity reports errors, call easyar_analyze_latest_unity_log or easyar_analyze_unity_log with the focused sampleId."

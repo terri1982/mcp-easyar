@@ -276,8 +276,19 @@ try {
       platform: "android"
     }
   });
-  assertPromptIncludes(imageTrackingPrompt, "easyar_generate_run_report");
+  assertPromptIncludes(imageTrackingPrompt, "easyar_write_focused_preflight");
+  assertPromptIncludes(imageTrackingPrompt, "PREFLIGHT.md");
   assertPromptIncludes(imageTrackingPrompt, "sampleId=image-tracking");
+
+  const programmingPrompt = await request("prompts/get", {
+    name: "easyar-unity-programming-assistant",
+    arguments: {
+      projectPath: "/tmp/EasyARProject",
+      sampleId: "cloud-recognition"
+    }
+  });
+  assertPromptIncludes(programmingPrompt, "easyar_write_programming_context");
+  assertPromptIncludes(programmingPrompt, "PROGRAMMING_CONTEXT.md");
 
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
@@ -292,7 +303,9 @@ try {
   const quickstart = await request("resources/read", {
     uri: "easyar://workflow/quickstart"
   });
-  assertResourceIncludes(quickstart, "easyar_check_sample_readiness");
+  assertResourceIncludes(quickstart, "easyar_write_focused_preflight");
+  assertResourceIncludes(quickstart, "PREFLIGHT.md");
+  assertResourceIncludes(quickstart, "PROGRAMMING_CONTEXT.md");
 
   const authStatus = await callTool("easyar_auth_status", {});
   assertTextIncludes(authStatus, "\"hasToken\": false");
