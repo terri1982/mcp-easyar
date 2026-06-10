@@ -234,6 +234,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_client_setup`: write client setup status and config snippet to `EasyARGenerated/CLIENT_SETUP.md` or `Assets/EasyARGenerated/CLIENT_SETUP.md`.
 - `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
+- `easyar_production_validation`: generate the final production evidence matrix across release manifest, deployment readiness, official EasyAR endpoints, verification commands, and focused sample completion.
+- `easyar_write_production_validation`: write the production validation evidence matrix to `PRODUCTION_VALIDATION.md`; it marks the deployment incomplete unless real evidence is present.
 - `easyar_release_manifest`: generate a consumer-facing install/release manifest with package metadata, entrypoints, focused scope, env names, and verification commands.
 - `easyar_write_release_manifest`: write the release manifest to `docs/RELEASE_MANIFEST.md` or a selected path.
 - `easyar_account_onboarding`: guide new or existing EasyAR users through official registration/login, license setup, Cloud Recognition credentials, and local MCP setup without collecting passwords or secrets.

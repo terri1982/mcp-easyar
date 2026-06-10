@@ -237,6 +237,15 @@ easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=and
 
 MCP clients can read `easyar://workflow/focused-scope` or use the `easyar-close-focused-scope` prompt when handing the focused run-through to another AI tool.
 
+Before tagging, publishing, or calling the deployment complete, generate the production evidence matrix:
+
+```text
+easyar_write_deployment_readiness projectPath=/path/to/UnityProject
+easyar_write_production_validation projectPath=/path/to/UnityProject platform=android verificationEvidence=not-provided
+```
+
+`PRODUCTION_VALIDATION.md` is intentionally strict. It stays incomplete until release files, official EasyAR account endpoints, recorded verification commands, official access reports, and both focused sample completion reports all provide real evidence. After the verification commands pass for the release commit, regenerate it with `verificationEvidence=passed`.
+
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
 ```text

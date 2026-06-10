@@ -215,6 +215,14 @@ try {
     "easyar_write_deployment_readiness should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_production_validation"),
+    "easyar_production_validation should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_production_validation"),
+    "easyar_write_production_validation should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_release_manifest"),
     "easyar_release_manifest should be listed"
   );
@@ -530,6 +538,26 @@ try {
   assertTextIncludes(deploymentReadiness, "account-status-endpoint");
   assertTextIncludes(deploymentReadiness, "cloud-credentials-endpoint");
   assertTextIncludes(deploymentReadiness, "\"focusedSamples\"");
+
+  const productionValidation = await callTool("easyar_production_validation", {});
+  assertTextIncludes(productionValidation, "\"productionReady\": false");
+  assertTextIncludes(productionValidation, "\"verificationEvidence\": \"not-provided\"");
+  assertTextIncludes(productionValidation, "focused-scope-run-through");
+  assertTextIncludes(productionValidation, "official-access/cloud-recognition");
+
+  const productionValidationRoot = await createUnityProject();
+  const writtenProductionValidation = await callTool("easyar_write_production_validation", {
+    projectPath: productionValidationRoot
+  });
+  assertTextIncludes(writtenProductionValidation, "PRODUCTION_VALIDATION.md");
+  const productionValidationMarkdown = await readFile(
+    path.join(productionValidationRoot, "Assets", "EasyARGenerated", "PRODUCTION_VALIDATION.md"),
+    "utf8"
+  );
+  assert(productionValidationMarkdown.includes("mcp-easyar Production Validation"), "Production validation markdown should include title");
+  assert(productionValidationMarkdown.includes("Production ready: no"), "Production validation markdown should clearly mark incomplete production readiness");
+  assert(productionValidationMarkdown.includes("Focused Image Tracking and Cloud Recognition run-through"), "Production validation markdown should include focused scope gate");
+  await rm(productionValidationRoot, { recursive: true, force: true });
 
   const releaseManifest = await callTool("easyar_release_manifest", {});
   assertTextIncludes(releaseManifest, "\"name\": \"mcp-easyar\"");

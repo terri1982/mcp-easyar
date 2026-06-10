@@ -10,6 +10,7 @@ const requiredTools = [
   "easyar_write_focused_preflight",
   "easyar_write_completion_report",
   "easyar_write_focused_scope_status",
+  "easyar_write_production_validation",
   "easyar_unity_environment"
 ];
 

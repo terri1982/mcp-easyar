@@ -57,6 +57,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused official access aggregation and `OFFICIAL_ACCESS.md` artifact generation across account, license, downloads, and Cloud Recognition endpoints.
 - Local official API fixture smoke test covering configured endpoint success paths, bearer-token forwarding, response handling, and remote secret redaction.
 - Deployment readiness report generation and `DEPLOYMENT_READINESS.md` artifact writing for release files, official endpoints, Unity path, focused scope, and security checks.
+- Production validation evidence matrix and `PRODUCTION_VALIDATION.md` artifact writing across release manifest, deployment readiness, official EasyAR endpoints, verification commands, official access, and focused sample completion evidence.
 - Official EasyAR Unity Plugin and focused sample import checklist generation with `IMPORT_CHECKLIST.md` artifacts.
 - Unity Package Manager focused sample import guide generation with `SAMPLE_IMPORT_GUIDE.md` artifacts.
 - Unity project inspection and sample readiness diagnostics.
