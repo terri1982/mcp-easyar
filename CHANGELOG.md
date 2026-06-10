@@ -30,6 +30,7 @@ Initial public MVP for `mcp-easyar`.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Client setup validation and `CLIENT_SETUP.md` report generation for Codex, Claude Desktop, and generic stdio MCP clients.
 - Account onboarding guide and `ACCOUNT_ONBOARDING.md` artifact generation for users who have not registered or logged in to EasyAR yet.
+- First-run account route guidance for unregistered, registered-but-not-logged-in, and logged-in EasyAR users, including browser handoff and safe return-to-MCP calls.
 - Account material checklist and `ACCOUNT_MATERIALS.md` artifact generation for license, token, bundle identifier, and Cloud Recognition field storage/share policy.
 - Consumer-facing release/install manifest generation and `docs/RELEASE_MANIFEST.md` artifact writing.
 - First-run onboarding report and `ONBOARDING.md` artifact generation across client setup, official access, release manifest, and focused workflow state.

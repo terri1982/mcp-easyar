@@ -2583,6 +2583,7 @@ async function buildAccountOnboardingReport(
   const mcpSteps = buildAccountMcpSteps(root, sample, platform, needsCloudRecognition);
   const blockers = buildAccountOnboardingBlockers(derivedStage, auth, localConfig, cloudConfig, needsCloudRecognition, root);
   const nextActions = buildAccountOnboardingNextActions(derivedStage, blockers, root, sample, platform, needsCloudRecognition);
+  const firstRunGuide = buildFirstRunAccountGuide(derivedStage, root, sample, platform, needsCloudRecognition);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -2625,6 +2626,7 @@ async function buildAccountOnboardingReport(
       downloadsEndpointConfigured: auth.downloadsEndpointConfigured,
       cloudCredentialsEndpointConfigured: auth.cloudCredentialsEndpointConfigured
     },
+    firstRunGuide,
     humanSteps,
     mcpSteps,
     blockers,
@@ -2636,6 +2638,80 @@ async function buildAccountOnboardingReport(
       "Put licenseKey and Cloud Recognition appId/appKey/appSecret only in ProjectSettings/EasyAR/easyar.local.json or another local secret source.",
       "MCP reports only presence, status, paths, and redacted metadata."
     ]
+  };
+}
+
+function buildFirstRunAccountGuide(
+  stage: string,
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  needsCloudRecognition: boolean
+) {
+  const projectPath = root ?? "/path/to/UnityProject";
+  return {
+    entryQuestion: "Do you already have an EasyAR account?",
+    routes: [
+      {
+        id: "new-user",
+        active: stage === "not-registered",
+        answer: "No, I have not registered yet.",
+        guide:
+          "Open the official EasyAR website registration entry in a browser, create the account, activate it if required, then sign in to the EasyAR development center.",
+        mcpAfterUserReturns: [
+          `easyar_account_onboarding accountStage=registered-not-logged-in sampleId=${sample.id}`,
+          `easyar_write_account_onboarding projectPath=${projectPath} accountStage=registered-not-logged-in sampleId=${sample.id}`
+        ]
+      },
+      {
+        id: "registered-user",
+        active: stage === "registered-not-logged-in",
+        answer: "Yes, but I am not logged in now.",
+        guide:
+          "Log in through the official EasyAR development center in the browser. MCP should not receive the website password or SMS/email verification code.",
+        mcpAfterUserReturns: [
+          `easyar_account_onboarding accountStage=logged-in sampleId=${sample.id}`,
+          `easyar_write_account_materials projectPath=${projectPath} sampleId=${sample.id}`
+        ]
+      },
+      {
+        id: "logged-in-user",
+        active: stage === "logged-in" || stage === "has-license" || stage === "has-cloud-credentials",
+        answer: "Yes, and I can access the development center.",
+        guide:
+          "Create or locate the EasyAR Sense license, then prepare local project credentials. Cloud Recognition also requires appId, appKey, and appSecret from the account service configuration.",
+        mcpAfterUserReturns: [
+          `easyar_prepare_unity_project projectPath=${projectPath} sampleId=${sample.id}`,
+          `easyar_validate_local_config projectPath=${projectPath}`,
+          `easyar_next_workflow_step projectPath=${projectPath} sampleId=${sample.id} platform=${platform}`
+        ]
+      }
+    ],
+    userProvidesToMcp: [
+      "Account state only: not-registered, registered-not-logged-in, logged-in, has-license, or has-cloud-credentials.",
+      "Unity project path and target sample id.",
+      "Presence/status of official materials when asked; secret values stay in local files or secret stores."
+    ],
+    userNeverProvidesToMcp: [
+      "EasyAR website password.",
+      "SMS, email, or authenticator verification codes.",
+      "Raw appKey, appSecret, API token, or license key in chat."
+    ],
+    localSecretHandoff: [
+      "Run easyar_prepare_unity_project to create ProjectSettings/EasyAR/easyar.local.json.example.",
+      "Copy it locally to ProjectSettings/EasyAR/easyar.local.json.",
+      "Fill licenseKey, bundleIdentifier, and Cloud Recognition fields in that local file.",
+      "Run easyar_validate_local_config; the MCP server reports presence and placeholder problems without printing secret values."
+    ],
+    sampleSpecific: needsCloudRecognition
+      ? [
+          "Cloud Recognition needs both the EasyAR Sense license and CRS/Cloud Recognition credentials.",
+          "The first runnable Cloud Recognition gate is complete local config plus imported ImageTracking_CloudRecognition sample assets."
+        ]
+      : [
+          "Image Tracking needs the EasyAR Sense license and imported local target/sample assets.",
+          "Cloud Recognition credentials are not required for this focused sample."
+        ]
   };
 }
 
@@ -6926,6 +7002,35 @@ function buildAccountOnboardingMarkdown(report: Awaited<ReturnType<typeof buildA
     `- API Key docs: ${report.officialLinks.apiKeyDocs}`,
     `- Downloads: ${report.officialLinks.downloads}`,
     `- Samples docs: ${report.officialLinks.samples}`,
+    "",
+    "## First Run Guide",
+    "",
+    `Entry question: ${report.firstRunGuide.entryQuestion}`,
+    "",
+    ...report.firstRunGuide.routes.flatMap((route) => [
+      `### ${route.active ? "[NEXT] " : ""}${route.answer}`,
+      "",
+      `Route id: ${route.id}`,
+      `Guide: ${route.guide}`,
+      "MCP after user returns:",
+      ...route.mcpAfterUserReturns.map((call) => `- ${call}`),
+      ""
+    ]),
+    "### What The User Provides To MCP",
+    "",
+    ...report.firstRunGuide.userProvidesToMcp.map((item) => `- ${item}`),
+    "",
+    "### What The User Never Provides To MCP",
+    "",
+    ...report.firstRunGuide.userNeverProvidesToMcp.map((item) => `- ${item}`),
+    "",
+    "### Local Secret Handoff",
+    "",
+    ...report.firstRunGuide.localSecretHandoff.map((item) => `- ${item}`),
+    "",
+    "### Sample Specific Notes",
+    "",
+    ...report.firstRunGuide.sampleSpecific.map((item) => `- ${item}`),
     "",
     "## Human Steps",
     "",

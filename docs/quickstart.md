@@ -22,6 +22,14 @@ easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-
 
 The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
+For a user who has not registered yet, the MCP flow is:
+
+1. Ask only for account state, for example `accountStage=not-registered`.
+2. Send the user to the official EasyAR website registration entry and development center login in their browser.
+3. After the user returns, guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
+4. For Cloud Recognition, guide them to create or locate CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`.
+5. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, then let `easyar_validate_local_config` report only presence and placeholder problems.
+
 `easyar_write_artifact_index` includes `ACCOUNT_ONBOARDING.md` and `ACCOUNT_MATERIALS.md` in the handoff reading order so another AI tool can see account prerequisites before trying Unity validation.
 
 Ask the MCP server for a client snippet:

@@ -168,6 +168,12 @@ npm run pack:check
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+## First-Time EasyAR Users
+
+`mcp-easyar` treats account setup as a guided browser handoff. If the user has not registered yet, call `easyar_account_onboarding accountStage=not-registered`; the guide sends them to the official EasyAR registration/login pages, then tells them what to do after they return to Codex or Claude. The MCP server never asks for website passwords, verification codes, raw API tokens, license keys, `appKey`, or `appSecret` in chat.
+
+After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
+
 ## Tools
 
 - `easyar_list_samples`: list supported sample categories.
