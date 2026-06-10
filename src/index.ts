@@ -44,6 +44,7 @@ const toolCatalog = [
   "easyar_analyze_unity_log",
   "easyar_analyze_latest_unity_log",
   "easyar_prepare_unity_project",
+  "easyar_create_sample_validation_helper",
   "easyar_create_mobile_settings_helper",
   "easyar_create_build_settings_helper",
   "easyar_create_device_build_helper",
@@ -772,6 +773,7 @@ server.tool(
     const runnerPath = path.join(editorDir, "EasyARSampleRunner.cs");
     const buildSettingsPath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
     const mobileSettingsPath = path.join(editorDir, "EasyARMobileSettingsHelper.cs");
+    const validationPath = path.join(editorDir, "EasyARSampleValidationHelper.cs");
     const runbookPath = focusedSampleRunbookPath(root, sample);
     const configExamplePath = path.join(configDir, "easyar.local.json.example");
     const localConfigPath = path.join(configDir, "easyar.local.json");
@@ -781,6 +783,7 @@ server.tool(
     await writeGeneratedFile(runnerPath, buildSampleRunner(sample), overwrite, written);
     await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
     await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, null), overwrite, written);
+    await writeGeneratedFile(validationPath, buildSampleValidationHelper(sample), overwrite, written);
     await writeGeneratedFile(runbookPath, buildFocusedSampleRunbook(sample), overwrite, written);
     await writeFocusedSampleSupportFiles(root, sample, overwrite, written);
     await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
@@ -800,9 +803,38 @@ server.tool(
         "Do not commit the local config file; .gitignore has been updated to protect it.",
         "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner.",
         `Review ${path.relative(root, runbookPath)} for the focused ${sample.name} run-through checklist.`,
+        "Call EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample in Unity batch mode after importing the official sample scene.",
         "Call EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings in Unity batch mode before device builds.",
         "Call EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the matching sample scene to Build Settings."
       ]
+    });
+  }
+);
+
+server.tool(
+  "easyar_create_sample_validation_helper",
+  "Create a Unity Editor script that validates focused EasyAR sample import, scene, Build Settings, and sample-specific local requirements.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
+  },
+  async ({ projectPath, sampleId, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const editorDir = path.join(root, "Assets", "Editor");
+    const filePath = path.join(editorDir, "EasyARSampleValidationHelper.cs");
+
+    const written: string[] = [];
+    await writeGeneratedFile(filePath, buildSampleValidationHelper(sample), overwrite, written);
+
+    return jsonText({
+      created: written.includes(filePath) ? filePath : null,
+      skipped: written.includes(filePath) ? null : filePath,
+      sample: sample.name,
+      executeMethod: "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample",
+      nextStep: "Run easyar_run_unity_method with the returned executeMethod after importing official EasyAR assets and sample scenes."
     });
   }
 );
@@ -1194,6 +1226,12 @@ function buildFocusedRunSequence(input: {
             arguments: { projectPath },
             expected: "License key, account token, target platform, and optional cloud fields are valid."
           },
+          {
+            step: "Generate Unity-side focused sample validation helper",
+            tool: "easyar_create_sample_validation_helper",
+            arguments: { projectPath, sampleId: sample.id, overwrite: true },
+            expected: "EasyARSampleValidationHelper.cs is generated."
+          },
           ...sampleSpecific
         ]
       },
@@ -1231,6 +1269,16 @@ function buildFocusedRunSequence(input: {
               logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings")
             },
             expected: "Matching official sample scene is enabled in Build Settings."
+          },
+          {
+            step: "Validate focused sample inside Unity",
+            tool: "easyar_run_unity_method",
+            arguments: {
+              projectPath,
+              executeMethod: "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample",
+              logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample")
+            },
+            expected: "Unity confirms EasyAR import signals, matching sample scene, Build Settings, and focused sample requirements."
           }
         ]
       },
@@ -1427,6 +1475,11 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
       detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
     },
     {
+      id: "sample-validation-helper",
+      ok: await exists(path.join(root, "Assets", "Editor", "EasyARSampleValidationHelper.cs")),
+      detail: "Assets/Editor/EasyARSampleValidationHelper.cs exists for Unity-side focused sample validation."
+    },
+    {
       id: "focused-sample-runbook",
       ok: await exists(focusedSampleRunbookPath(root, sample)),
       detail: `${path.relative(root, focusedSampleRunbookPath(root, sample))} exists with sample-specific run-through steps.`
@@ -1471,7 +1524,7 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
   if (checkId === "sample-scene") {
     return `Import the official ${sample.name} sample scene, then rerun easyar_check_sample_readiness.`;
   }
-  if (checkId === "local-config-template" || checkId === "sample-runner" || checkId === "build-settings-helper" || checkId === "mobile-settings-helper") {
+  if (checkId === "local-config-template" || checkId === "sample-runner" || checkId === "build-settings-helper" || checkId === "mobile-settings-helper" || checkId === "sample-validation-helper") {
     return `Run easyar_prepare_unity_project with sampleId "${sample.id}".`;
   }
   if (checkId === "focused-sample-runbook") {
@@ -2342,6 +2395,93 @@ ${sceneNames}
 
 ${switchTarget}
             UnityEngine.Debug.Log("Configured EasyAR Build Settings with sample scene: " + scene);
+        }
+    }
+}
+`;
+}
+
+function buildSampleValidationHelper(sample: SampleInfo): string {
+  const sceneNames = sample.unityScenes.map((scene) => `            "${escapeCsharp(scene)}"`).join(",\n");
+  const sampleValidation = sample.id === "image-tracking"
+    ? `            var targetAssets = AssetDatabase.FindAssets("ImageTarget OR ImageTracker OR target")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => path.IndexOf("Editor", StringComparison.OrdinalIgnoreCase) < 0)
+                .ToArray();
+            if (targetAssets.Length == 0)
+            {
+                throw new InvalidOperationException("No Image Tracking target asset hints found. Add target images, target data, or official Image Tracking sample assets under Assets.");
+            }
+`
+    : sample.id === "cloud-recognition"
+      ? `            var localConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "ProjectSettings", "EasyAR", "easyar.local.json");
+            if (!File.Exists(localConfigPath))
+            {
+                throw new InvalidOperationException("Cloud Recognition requires ProjectSettings/EasyAR/easyar.local.json.");
+            }
+            var localConfig = File.ReadAllText(localConfigPath);
+            if (!ContainsConfiguredJsonString(localConfig, "appId") || !ContainsConfiguredJsonString(localConfig, "appKey") || !ContainsConfiguredJsonString(localConfig, "appSecret"))
+            {
+                throw new InvalidOperationException("Cloud Recognition requires appId, appKey, and appSecret in easyar.local.json.");
+            }
+`
+      : `            throw new InvalidOperationException("This generated validation helper is only focused on Image Tracking and Cloud Recognition.");
+`;
+
+  return `using System;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using UnityEditor;
+
+namespace EasyAR.EditorTools
+{
+    public static class EasyARSampleValidationHelper
+    {
+        private static readonly string[] SceneNameHints =
+        {
+${sceneNames}
+        };
+
+        [MenuItem("Tools/EasyAR/Validate Focused Sample")]
+        public static void ValidateFocusedSample()
+        {
+            var easyarAssets = AssetDatabase.FindAssets("EasyAR")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .ToArray();
+            if (easyarAssets.Length == 0)
+            {
+                throw new InvalidOperationException("No EasyAR asset signals found. Import the official EasyAR Unity Plugin package first.");
+            }
+
+            var scene = AssetDatabase.FindAssets("t:Scene")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .FirstOrDefault(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0));
+            if (string.IsNullOrEmpty(scene))
+            {
+                throw new InvalidOperationException("No matching ${escapeCsharp(sample.name)} scene found. Import the official focused sample scene first.");
+            }
+
+            var sceneInBuildSettings = EditorBuildSettings.scenes
+                .Any(item => item != null && item.enabled && item.path == scene);
+            if (!sceneInBuildSettings)
+            {
+                throw new InvalidOperationException("Matching sample scene is not enabled in Build Settings. Run EasyARBuildSettingsHelper.ConfigureBuildSettings first.");
+            }
+
+${sampleValidation}
+            UnityEngine.Debug.Log("EasyAR focused sample validation passed for ${escapeCsharp(sample.name)}.");
+        }
+
+        private static bool ContainsConfiguredJsonString(string json, string key)
+        {
+            var match = Regex.Match(json, "\\\\\\"" + Regex.Escape(key) + "\\\\\\"\\\\s*:\\\\s*\\\\\\"([^\\\\\\"]*)\\\\\\"");
+            if (!match.Success)
+            {
+                return false;
+            }
+            var value = match.Groups[1].Value.Trim();
+            return value.Length > 0 && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0 && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0;
         }
     }
 }

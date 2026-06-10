@@ -141,6 +141,7 @@ try {
   });
   assertTextIncludes(imageRunSequence, "\"supportedNow\": true");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
+  assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
   assertTextIncludes(imageRunSequence, "\"logPath\"");
   assertTextIncludes(imageRunSequence, "easyar_analyze_latest_unity_log");
   assertTextIncludes(imageRunSequence, "image-target-assets");
@@ -176,6 +177,7 @@ try {
   assertTextIncludes(prepared, "easyar.local.json");
   assertTextIncludes(prepared, "EasyARBuildSettingsHelper.cs");
   assertTextIncludes(prepared, "EasyARMobileSettingsHelper.cs");
+  assertTextIncludes(prepared, "EasyARSampleValidationHelper.cs");
   assertTextIncludes(prepared, "Assets/EasyARGenerated/image-tracking/RUNBOOK.md");
 
   const imageTrackingRunbook = await readFile(
@@ -244,6 +246,21 @@ try {
     mobileSettingsHelper.includes("ConfigureMobileSettings"),
     "Mobile settings helper should include ConfigureMobileSettings"
   );
+  const validationHelper = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARSampleValidationHelper.cs"),
+    "utf8"
+  );
+  assert(
+    validationHelper.includes("ValidateFocusedSample"),
+    "Sample validation helper should include ValidateFocusedSample"
+  );
+
+  const explicitValidationHelper = await callTool("easyar_create_sample_validation_helper", {
+    projectPath,
+    sampleId: "image-tracking",
+    overwrite: true
+  });
+  assertTextIncludes(explicitValidationHelper, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
 
   const iosMobileSettings = await callTool("easyar_create_mobile_settings_helper", {
     projectPath,

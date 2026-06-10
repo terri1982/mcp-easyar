@@ -105,6 +105,13 @@ easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.E
 
 For repeatable diagnostics, pass `logPath=Logs/mcp-easyar-ConfigureBuildSettings.log` or follow the `easyar_generate_run_sequence` output, which includes project-local log paths for Unity batch calls.
 
+After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
+
+```text
+easyar_create_sample_validation_helper projectPath=/path/to/UnityProject sampleId=image-tracking overwrite=true
+easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample
+```
+
 ## 6. Add Project Code
 
 For common sample logic, call:
