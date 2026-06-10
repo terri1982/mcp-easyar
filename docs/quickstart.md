@@ -114,6 +114,8 @@ easyar_create_sample_validation_helper projectPath=/path/to/UnityProject sampleI
 easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample
 ```
 
+The validator ignores generated MCP helper files when checking for official EasyAR import signals and requires the matching focused sample scene to be the first enabled Build Settings scene.
+
 ## 6. Add Project Code
 
 For common sample logic, call:

@@ -312,6 +312,22 @@ try {
     validationHelper.includes("ValidateFocusedSample"),
     "Sample validation helper should include ValidateFocusedSample"
   );
+  assert(
+    validationHelper.includes("Generated MCP helper files do not count"),
+    "Sample validation helper should reject generated MCP helpers as official EasyAR import signals"
+  );
+  assert(
+    validationHelper.includes("IsOfficialEasyARAssetSignal"),
+    "Sample validation helper should filter official EasyAR asset signals"
+  );
+  assert(
+    validationHelper.includes("first enabled Build Settings scene"),
+    "Sample validation helper should verify the matching scene is first in Build Settings"
+  );
+  assert(
+    validationHelper.includes("IsImageTrackingTargetAsset"),
+    "Image Tracking validation helper should filter target assets"
+  );
 
   const explicitValidationHelper = await callTool("easyar_create_sample_validation_helper", {
     projectPath,
@@ -383,6 +399,14 @@ try {
     "utf8"
   );
   assert(cloudRunbook.includes("Cloud Recognition Checklist"), "Cloud Recognition runbook should include focused checklist");
+  const cloudValidationHelper = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARSampleValidationHelper.cs"),
+    "utf8"
+  );
+  assert(
+    cloudValidationHelper.includes("your_"),
+    "Cloud Recognition validation helper should reject your_ placeholder credentials"
+  );
 
   await writeFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),

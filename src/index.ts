@@ -2644,12 +2644,13 @@ function buildSampleValidationHelper(sample: SampleInfo): string {
   const sampleValidation = sample.id === "image-tracking"
     ? `            var targetAssets = AssetDatabase.FindAssets("ImageTarget OR ImageTracker OR target")
                 .Select(AssetDatabase.GUIDToAssetPath)
-                .Where(path => path.IndexOf("Editor", StringComparison.OrdinalIgnoreCase) < 0)
+                .Where(IsImageTrackingTargetAsset)
                 .ToArray();
             if (targetAssets.Length == 0)
             {
                 throw new InvalidOperationException("No Image Tracking target asset hints found. Add target images, target data, or official Image Tracking sample assets under Assets.");
             }
+            UnityEngine.Debug.Log("Validated Image Tracking target asset hints: " + string.Join(", ", targetAssets.Take(5)));
 `
     : sample.id === "cloud-recognition"
       ? `            var localConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "ProjectSettings", "EasyAR", "easyar.local.json");
@@ -2662,6 +2663,7 @@ function buildSampleValidationHelper(sample: SampleInfo): string {
             {
                 throw new InvalidOperationException("Cloud Recognition requires appId, appKey, and appSecret in easyar.local.json.");
             }
+            UnityEngine.Debug.Log("Validated Cloud Recognition local credential presence without printing secret values.");
 `
       : `            throw new InvalidOperationException("This generated validation helper is only focused on Image Tracking and Cloud Recognition.");
 `;
@@ -2686,15 +2688,16 @@ ${sceneNames}
         {
             var easyarAssets = AssetDatabase.FindAssets("EasyAR")
                 .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(IsOfficialEasyARAssetSignal)
                 .ToArray();
             if (easyarAssets.Length == 0)
             {
-                throw new InvalidOperationException("No EasyAR asset signals found. Import the official EasyAR Unity Plugin package first.");
+                throw new InvalidOperationException("No official EasyAR asset signals found. Import the official EasyAR Unity Plugin package first. Generated MCP helper files do not count.");
             }
 
             var scene = AssetDatabase.FindAssets("t:Scene")
                 .Select(AssetDatabase.GUIDToAssetPath)
-                .FirstOrDefault(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0));
+                .FirstOrDefault(IsMatchingSampleScene);
             if (string.IsNullOrEmpty(scene))
             {
                 throw new InvalidOperationException("No matching ${escapeCsharp(sample.name)} scene found. Import the official focused sample scene first.");
@@ -2707,8 +2710,59 @@ ${sceneNames}
                 throw new InvalidOperationException("Matching sample scene is not enabled in Build Settings. Run EasyARBuildSettingsHelper.ConfigureBuildSettings first.");
             }
 
+            var firstEnabledScene = EditorBuildSettings.scenes
+                .Where(item => item != null && item.enabled && !string.IsNullOrEmpty(item.path))
+                .Select(item => item.path)
+                .FirstOrDefault();
+            if (!string.Equals(firstEnabledScene, scene, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Matching sample scene is enabled but is not the first enabled Build Settings scene. Run EasyARBuildSettingsHelper.ConfigureBuildSettings again.");
+            }
+
 ${sampleValidation}
-            UnityEngine.Debug.Log("EasyAR focused sample validation passed for ${escapeCsharp(sample.name)}.");
+            UnityEngine.Debug.Log("EasyAR focused sample validation passed for ${escapeCsharp(sample.name)}. Scene: " + scene + ". EasyAR signals: " + easyarAssets.Length + ".");
+        }
+
+        private static bool IsMatchingSampleScene(string path)
+        {
+            return !IsGeneratedSupportAsset(path)
+                && SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private static bool IsOfficialEasyARAssetSignal(string path)
+        {
+            return !IsGeneratedSupportAsset(path)
+                && !IsGeneratedEditorHelper(path)
+                && path.IndexOf("EasyAR", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsImageTrackingTargetAsset(string path)
+        {
+            if (IsGeneratedSupportAsset(path) || IsGeneratedEditorHelper(path))
+            {
+                return false;
+            }
+
+            var extension = Path.GetExtension(path);
+            var hasTargetExtension = string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".xml", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".etd", StringComparison.OrdinalIgnoreCase);
+            return hasTargetExtension && path.IndexOf("target", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsGeneratedSupportAsset(string path)
+        {
+            return path.Replace('\\\\', '/').StartsWith("Assets/EasyARGenerated/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsGeneratedEditorHelper(string path)
+        {
+            var normalized = path.Replace('\\\\', '/');
+            return normalized.StartsWith("Assets/Editor/EasyAR", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(Path.GetExtension(normalized), ".cs", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool ContainsConfiguredJsonString(string json, string key)
@@ -2719,7 +2773,10 @@ ${sampleValidation}
                 return false;
             }
             var value = match.Groups[1].Value.Trim();
-            return value.Length > 0 && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0 && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0;
+            return value.Length > 0
+                && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
         }
     }
 }

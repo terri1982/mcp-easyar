@@ -154,7 +154,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
 - `easyar_prepare_unity_project`: create a sample runner, focused sample runbook, EasyAR local config template, and secret ignore rules in a Unity project.
-- `easyar_create_sample_validation_helper`: create `Assets/Editor/EasyARSampleValidationHelper.cs` for Unity-side focused sample validation.
+- `easyar_create_sample_validation_helper`: create `Assets/Editor/EasyARSampleValidationHelper.cs` for Unity-side focused sample validation, excluding generated MCP helper files from official EasyAR import signals.
 - `easyar_create_mobile_settings_helper`: create `Assets/Editor/EasyARMobileSettingsHelper.cs` for Android/iOS player settings and camera permission setup.
 - `easyar_create_build_settings_helper`: create `Assets/Editor/EasyARBuildSettingsHelper.cs` for Build Settings automation.
 - `easyar_create_device_build_helper`: create `Assets/Editor/EasyARDeviceBuildHelper.cs` for Unity player builds.

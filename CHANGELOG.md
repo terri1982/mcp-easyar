@@ -15,6 +15,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused sample run report generation across readiness, local config, script review, and next phase.
 - Focused run report Markdown artifact generation inside Unity projects.
 - Focused sample runbooks and support directories generated under `Assets/EasyARGenerated/<sampleId>/`.
+- Unity-side focused sample validation filters generated MCP helper files and verifies the matching sample scene is first in Build Settings.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Authorization status checks that do not expose secret values.
 - Configurable official EasyAR account-status and license-validation endpoint calls.
