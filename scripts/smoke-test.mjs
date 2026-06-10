@@ -636,6 +636,24 @@ try {
   assert(unityEnvironmentMarkdown.includes("EASYAR_UNITY_CANDIDATE_DIRS"), "Unity environment markdown should include candidate dirs variable");
   assert(unityEnvironmentMarkdown.includes("easyar_run_unity_compile_check"), "Unity environment markdown should include compile dry-run");
 
+  const mismatchUnityProject = await createUnityProject();
+  await writeFile(
+    path.join(mismatchUnityProject, "ProjectSettings", "ProjectVersion.txt"),
+    "m_EditorVersion: 6000.4.7f1\n",
+    "utf8"
+  );
+  const mismatchUnityEnvironment = await callTool("easyar_write_unity_environment_report", {
+    projectPath: mismatchUnityProject,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(mismatchUnityEnvironment, "\"readyForUnityBatch\": false");
+  const mismatchUnityEnvironmentMarkdown = await readFile(
+    path.join(mismatchUnityProject, "Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
+    "utf8"
+  );
+  assert(mismatchUnityEnvironmentMarkdown.includes("Recommended path matches project version: no"), "Unity environment markdown should show version mismatch");
+  await rm(mismatchUnityProject, { recursive: true, force: true });
+
   const onboardingReport = await callTool("easyar_onboarding_report", {
     projectPath,
     sampleId: "image-tracking",

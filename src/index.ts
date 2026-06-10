@@ -5052,7 +5052,11 @@ async function buildUnityEnvironmentReport(root: string | null, sample: SampleIn
   const recommendedUnityPath = configuredExists
     ? configuredPath
     : chooseUnityCandidate(candidates, unityVersion);
-  const readyForUnityBatch = Boolean(recommendedUnityPath);
+  const recommendedVersionMatchesProject = unityPathMatchesProjectVersion(recommendedUnityPath, unityVersion);
+  const matchingProjectVersionCandidateExists = unityVersion
+    ? candidates.some((candidate) => candidate.exists && unityPathMatchesProjectVersion(candidate.path, unityVersion))
+    : null;
+  const readyForUnityBatch = Boolean(recommendedUnityPath) && recommendedVersionMatchesProject !== false;
   const escapedRecommendedPath = recommendedUnityPath ? shellSingleQuote(recommendedUnityPath) : null;
   const dryRunCompileCommand = root && sample
     ? `easyar_run_unity_compile_check projectPath=${root} sampleId=${sample.id} unityPath=${recommendedUnityPath ?? "/path/to/Unity"} dryRun=true`
@@ -5076,6 +5080,8 @@ async function buildUnityEnvironmentReport(root: string | null, sample: SampleIn
     pathCommand: "Unity",
     candidates,
     recommendedUnityPath,
+    recommendedVersionMatchesProject,
+    matchingProjectVersionCandidateExists,
     readyForUnityBatch,
     environment: {
       variable: "EASYAR_UNITY_PATH",
@@ -5090,6 +5096,12 @@ async function buildUnityEnvironmentReport(root: string | null, sample: SampleIn
           "Run the dry-run compile command to confirm the Unity batch command shape.",
           "Run easyar_run_unity_compile_check without dryRun after official assets, sample scene, and local config are ready."
         ]
+      : recommendedUnityPath && recommendedVersionMatchesProject === false
+        ? [
+            `Install Unity ${unityVersion} through Unity Hub with Android/iOS build support, or point EASYAR_UNITY_PATH to the matching executable.`,
+            "Do not run Unity batch automation with a different Unity version unless you intentionally upgrade or clone the project first.",
+            "Rerun easyar_write_unity_environment_report after the matching Unity executable exists."
+          ]
       : [
           "Install Unity through Unity Hub with Android/iOS build support as needed.",
           "Open the Unity project once so ProjectSettings and Library metadata are initialized.",
@@ -5109,6 +5121,14 @@ function chooseUnityCandidate(candidates: Array<{ path: string; exists: boolean 
     }
   }
   return existing[0]?.path ?? null;
+}
+
+function unityPathMatchesProjectVersion(unityPath: string | null, unityVersion: string | null): boolean | null {
+  if (!unityPath || !unityVersion) {
+    return null;
+  }
+  const versionNeedle = `${path.sep}${unityVersion}${path.sep}`;
+  return unityPath.includes(versionNeedle);
 }
 
 function shellSingleQuote(value: string): string {
@@ -9695,6 +9715,8 @@ function buildUnityEnvironmentMarkdown(report: Awaited<ReturnType<typeof buildUn
     `Configured path exists: ${report.configuredExists ? "yes" : "no"}`,
     `PATH command fallback: ${report.pathCommand}`,
     `Recommended Unity path: ${report.recommendedUnityPath ?? "not found"}`,
+    `Recommended path matches project version: ${report.recommendedVersionMatchesProject === null ? "unknown" : report.recommendedVersionMatchesProject ? "yes" : "no"}`,
+    `Matching project version executable found: ${report.matchingProjectVersionCandidateExists === null ? "unknown" : report.matchingProjectVersionCandidateExists ? "yes" : "no"}`,
     "",
     "## Candidates",
     "",
