@@ -38,5 +38,8 @@ jobs:
       - name: Install check
         run: npm run install:check
 
+      - name: Package install smoke
+        run: npm run package:smoke
+
       - name: Package dry run
         run: npm run pack:check

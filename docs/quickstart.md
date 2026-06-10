@@ -10,6 +10,8 @@ npm run build
 npm run install:check
 ```
 
+Before publishing or handing the package to another user, also run `npm run package:smoke` to install the local tarball into a temporary consumer project and execute `easyar-mcp-check`.
+
 ## 2. Configure A Client
 
 If you do not have an EasyAR account yet, start with the account guide:

@@ -4150,6 +4150,7 @@ async function buildReleaseManifest() {
     "npm test",
     "npm run bin:smoke",
     "npm run install:check",
+    "npm run package:smoke",
     "npm run pack:check"
   ];
   const mcpEntrypoints = [

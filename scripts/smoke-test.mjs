@@ -537,6 +537,7 @@ try {
   assertTextIncludes(releaseManifest, "\"installProfiles\"");
   assertTextIncludes(releaseManifest, "npm install -g mcp-easyar");
   assertTextIncludes(releaseManifest, "npm run install:check");
+  assertTextIncludes(releaseManifest, "npm run package:smoke");
   assertTextIncludes(releaseManifest, "easyar-mcp-check");
   assertTextIncludes(releaseManifest, "\"command\": \"npx\"");
   assertTextIncludes(releaseManifest, "easyar_check_client_setup");
@@ -554,6 +555,7 @@ try {
   assert(committedReleaseManifest.includes("npm install -g mcp-easyar"), "Committed release manifest should include global install profile");
   assert(committedReleaseManifest.includes("npx -y mcp-easyar"), "Committed release manifest should include npx entrypoint");
   assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
+  assert(committedReleaseManifest.includes("npm run package:smoke"), "Committed release manifest should include package install smoke");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {
