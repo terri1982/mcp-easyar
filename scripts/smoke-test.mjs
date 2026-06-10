@@ -128,6 +128,15 @@ try {
   );
   assert(generatedScript.includes("OnTargetFound"), "Generated script should include OnTargetFound");
 
+  const logAnalysis = await callTool("easyar_analyze_unity_log", {
+    logText: [
+      "Assets/Scripts/Foo.cs(10,7): error CS0246: The type or namespace name 'EasyAR' could not be found",
+      "Camera permission denied by user"
+    ].join("\n")
+  });
+  assertTextIncludes(logAnalysis, "Unity C# compilation error");
+  assertTextIncludes(logAnalysis, "Camera permission problem");
+
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
   console.log("MCP smoke test passed.");

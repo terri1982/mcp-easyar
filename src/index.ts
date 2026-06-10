@@ -380,6 +380,34 @@ server.tool(
 );
 
 server.tool(
+  "easyar_analyze_unity_log",
+  "Analyze Unity Editor or build logs for common EasyAR, permission, license, compile, and build issues.",
+  {
+    logText: z.string().optional().describe("Unity log text to analyze."),
+    logPath: z.string().optional().describe("Path to a Unity Editor.log or build log file."),
+    maxIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ logText, logPath, maxIssues }) => {
+    if (!logText && !logPath) {
+      throw new Error("Provide either logText or logPath.");
+    }
+
+    const text = logText ?? await readLogFile(logPath as string);
+    const issues = analyzeUnityLog(text).slice(0, maxIssues);
+    const summary = summarizeLog(text);
+
+    return jsonText({
+      summary,
+      issueCount: issues.length,
+      issues,
+      nextActions: issues.length > 0
+        ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
+        : ["No known EasyAR/Unity issue patterns were detected. Check the full Unity Console and device logs if the problem persists."]
+    });
+  }
+);
+
+server.tool(
   "easyar_prepare_unity_project",
   "Prepare a Unity project for an authorized EasyAR sample workflow by creating editor helpers, local config templates, and secret ignore rules.",
   {
@@ -683,6 +711,130 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
     return "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json and fill it with official local credentials.";
   }
   return "Review the EasyAR Unity checklist and rerun readiness checks.";
+}
+
+async function readLogFile(logPath: string): Promise<string> {
+  const resolved = path.resolve(process.cwd(), logPath);
+  const info = await stat(resolved);
+  if (!info.isFile()) {
+    throw new Error(`${resolved} is not a file.`);
+  }
+  if (info.size > 5 * 1024 * 1024) {
+    throw new Error("Log file is larger than 5 MiB. Pass a smaller excerpt with logText.");
+  }
+  return readFile(resolved, "utf8");
+}
+
+function summarizeLog(logText: string) {
+  const lines = logText.split(/\r?\n/);
+  return {
+    totalLines: lines.length,
+    errorLines: lines.filter((line) => /\b(error|exception|failed|failure)\b/i.test(line)).length,
+    warningLines: lines.filter((line) => /\b(warning|warn)\b/i.test(line)).length,
+    mentionsEasyAR: /easyar/i.test(logText),
+    mentionsAndroid: /android|gradle|apk/i.test(logText),
+    mentionsIOS: /\bios\b|xcode|provisioning|codesign/i.test(logText)
+  };
+}
+
+function analyzeUnityLog(logText: string) {
+  const rules = [
+    {
+      id: "easyar-license",
+      severity: "high",
+      pattern: /easyar[\s\S]{0,120}(license|key|credential|authorize|authorization|unauthorized|invalid)/i,
+      title: "EasyAR license or credential problem",
+      actions: [
+        "Run easyar_auth_status and confirm account environment variables are configured.",
+        "Check ProjectSettings/EasyAR/easyar.local.json for the official EasyAR license key and cloud credentials.",
+        "Verify the app bundle/package identifier matches the license configuration in the EasyAR account."
+      ]
+    },
+    {
+      id: "camera-permission",
+      severity: "high",
+      pattern: /(camera|webcam)[\s\S]{0,120}(permission|denied|not authorized|unauthorized)|permission[\s\S]{0,120}(camera|webcam)/i,
+      title: "Camera permission problem",
+      actions: [
+        "Enable camera permission in Android Player Settings or iOS Info.plist.",
+        "Build to a real device and grant camera permission when prompted.",
+        "Confirm the target sample requires camera access before testing in Editor."
+      ]
+    },
+    {
+      id: "missing-easyar-plugin",
+      severity: "high",
+      pattern: /(namespace|type).{0,80}EasyAR.{0,80}(does not exist|could not be found)|EasyAR.{0,80}(assembly|plugin).{0,80}(missing|not found)/i,
+      title: "EasyAR Unity plugin is missing or not imported correctly",
+      actions: [
+        "Import the official EasyAR Unity Plugin package from the EasyAR download page.",
+        "Run easyar_check_sample_readiness after import to verify EasyAR assets are visible.",
+        "Reopen Unity so assemblies and imported packages are recompiled."
+      ]
+    },
+    {
+      id: "compile-error",
+      severity: "high",
+      pattern: /\b(CS\d{4}|Compilation failed|compiler error|Script compilation failed)\b/i,
+      title: "Unity C# compilation error",
+      actions: [
+        "Fix the first C# compiler error before investigating runtime EasyAR behavior.",
+        "Use easyar_write_csharp_file or easyar_create_mono_behaviour to patch scripts in the Unity project.",
+        "Re-run Unity compilation after each focused fix."
+      ]
+    },
+    {
+      id: "android-gradle",
+      severity: "medium",
+      pattern: /(gradle|android).{0,160}(failed|exception|sdk|manifest|minSdk|targetSdk|duplicate class)/i,
+      title: "Android/Gradle build problem",
+      actions: [
+        "Check Android SDK, Gradle, minSdkVersion, targetSdkVersion, and manifest permissions.",
+        "Confirm Unity Android Build Support is installed for the selected Unity version.",
+        "Run the generated Build Settings helper with platform=android before building."
+      ]
+    },
+    {
+      id: "ios-signing",
+      severity: "medium",
+      pattern: /(xcode|ios|codesign|provisioning|development team|bundle identifier).{0,160}(failed|error|missing|invalid)/i,
+      title: "iOS signing or Xcode build problem",
+      actions: [
+        "Check bundle identifier, signing team, provisioning profile, and camera usage description.",
+        "Run the generated Build Settings helper with platform=ios before exporting.",
+        "Open the generated Xcode project and inspect signing errors."
+      ]
+    },
+    {
+      id: "scene-missing",
+      severity: "medium",
+      pattern: /(scene|build settings).{0,160}(missing|not found|not.*enabled|could not be loaded)/i,
+      title: "Sample scene is missing from Build Settings or cannot be loaded",
+      actions: [
+        "Run easyar_create_build_settings_helper for the selected sample.",
+        "Run easyar_run_unity_method with EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings.",
+        "Run easyar_check_sample_readiness and confirm matchingScenes is not empty."
+      ]
+    }
+  ];
+
+  const lines = logText.split(/\r?\n/);
+  return rules
+    .filter((rule) => rule.pattern.test(logText))
+    .map((rule) => ({
+      id: rule.id,
+      severity: rule.severity,
+      title: rule.title,
+      evidence: findEvidence(lines, rule.pattern),
+      actions: rule.actions
+    }));
+}
+
+function findEvidence(lines: string[], pattern: RegExp): string[] {
+  return lines
+    .filter((line) => pattern.test(line))
+    .slice(0, 3)
+    .map((line) => line.trim().slice(0, 500));
 }
 
 async function walk(root: string, dirPath: string, pattern: RegExp, found: string[], limit: number): Promise<void> {

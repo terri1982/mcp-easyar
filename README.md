@@ -19,6 +19,7 @@ This MVP focuses on local Unity project assistance:
 - generate Unity MonoBehaviour script templates for common EasyAR workflows
 - write C# scripts safely inside a Unity project
 - run a Unity static editor method in batch mode
+- analyze Unity Editor/build logs for common EasyAR and platform issues
 - expose EasyAR workflow guidance as MCP resources
 - check EasyAR account environment configuration without exposing secrets
 - generate MCP client configuration snippets for Codex and Claude
@@ -126,6 +127,7 @@ Use `--private` instead of `--public` if this repository should not be public ye
 - `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
 - `easyar_run_unity_method`: execute a Unity static editor method in batch mode.
+- `easyar_analyze_unity_log`: analyze Unity Editor/build logs and suggest next debugging actions.
 
 ## Resources
 

@@ -82,3 +82,19 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 ```
 
 When `ready` is `true`, open Unity or use batch mode to run the generated editor helpers, then build to a real Android or iOS device for camera/tracking validation.
+
+## 8. Debug Logs
+
+If Unity compilation, Editor automation, or device builds fail, pass the relevant log excerpt back to the MCP server:
+
+```text
+easyar_analyze_unity_log logText="..."
+```
+
+For local log files:
+
+```text
+easyar_analyze_unity_log logPath=/path/to/Editor.log
+```
+
+The tool classifies common EasyAR license, plugin import, camera permission, C# compile, Android/Gradle, iOS signing, and sample scene issues.
