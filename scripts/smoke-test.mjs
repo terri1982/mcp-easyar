@@ -108,6 +108,14 @@ try {
     "easyar_write_official_access_report should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_check_client_setup"),
+    "easyar_check_client_setup should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_client_setup"),
+    "easyar_write_client_setup should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_run_sequence"),
     "easyar_write_run_sequence should be listed"
   );
@@ -266,6 +274,29 @@ try {
   });
   assertTextIncludes(clientConfig, "\"mcpServers\"");
   assertTextIncludes(clientConfig, "your_registered_user_token");
+
+  const clientSetup = await callTool("easyar_check_client_setup", {
+    client: "claude-desktop",
+    serverPath: path.resolve("dist/index.js")
+  });
+  assertTextIncludes(clientSetup, "\"readyForClientConnection\": true");
+  assertTextIncludes(clientSetup, "\"client\": \"claude-desktop\"");
+  assertTextIncludes(clientSetup, "\"mcpServers\"");
+
+  const clientSetupRoot = await createUnityProject();
+  const writtenClientSetup = await callTool("easyar_write_client_setup", {
+    outputRoot: clientSetupRoot,
+    client: "codex",
+    serverPath: path.resolve("dist/index.js")
+  });
+  assertTextIncludes(writtenClientSetup, "CLIENT_SETUP.md");
+  const clientSetupMarkdown = await readFile(
+    path.join(clientSetupRoot, "Assets", "EasyARGenerated", "CLIENT_SETUP.md"),
+    "utf8"
+  );
+  assert(clientSetupMarkdown.includes("mcp-easyar Client Setup"), "Client setup markdown should include title");
+  assert(clientSetupMarkdown.includes("\"mcpServers\""), "Client setup markdown should include MCP config");
+  await rm(clientSetupRoot, { recursive: true, force: true });
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");

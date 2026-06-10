@@ -46,6 +46,8 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - find and analyze the latest Unity log after a failed batch run
 - expose EasyAR workflow guidance as MCP resources
 - expose MCP prompts for Image Tracking, Cloud Recognition, and Unity programming assistance
+- check Codex/Claude/generic MCP client setup before users paste config
+- write client setup reports for handoff and troubleshooting
 - recommend the next focused workflow step from current project evidence
 - write workflow state handoff artifacts for Codex/Claude continuation
 - check EasyAR account environment configuration without exposing secrets
@@ -166,6 +168,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_check_official_access`: run a focused official account, license, downloads, and sample-specific access check without exposing secrets.
 - `easyar_write_official_access_report`: write the official access check to `Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md`.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
+- `easyar_check_client_setup`: validate Node.js, package/bin metadata, built entrypoint, server path, and generated MCP client config.
+- `easyar_write_client_setup`: write client setup status and config snippet to `EasyARGenerated/CLIENT_SETUP.md` or `Assets/EasyARGenerated/CLIENT_SETUP.md`.
 - `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
 - `easyar_next_workflow_step`: inspect current focused project state and recommend the next MCP/Unity action.

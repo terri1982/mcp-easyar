@@ -82,6 +82,8 @@ const toolCatalog = [
   "easyar_check_official_access",
   "easyar_write_official_access_report",
   "easyar_generate_client_config",
+  "easyar_check_client_setup",
+  "easyar_write_client_setup",
   "easyar_deployment_readiness",
   "easyar_write_deployment_readiness",
   "easyar_generate_sample_plan",
@@ -659,6 +661,52 @@ server.tool(
       env,
       config,
       note: "Replace token placeholders with locally stored official EasyAR account credentials. Do not commit secrets."
+    });
+  }
+);
+
+server.tool(
+  "easyar_check_client_setup",
+  "Check whether a Codex, Claude Desktop, or generic stdio MCP client can be configured for mcp-easyar.",
+  {
+    client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    includeTokenPlaceholder: z.boolean().default(true).describe("Whether the generated config should include EASYAR_API_TOKEN placeholder text.")
+  },
+  async ({ client, serverPath, includeTokenPlaceholder }) => jsonText(await buildClientSetupReport(client, serverPath, includeTokenPlaceholder))
+);
+
+server.tool(
+  "easyar_write_client_setup",
+  "Write a client setup Markdown report for Codex, Claude Desktop, or another stdio MCP client.",
+  {
+    outputRoot: z.string().describe("Directory that should receive CLIENT_SETUP.md."),
+    client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    includeTokenPlaceholder: z.boolean().default(true).describe("Whether the generated config should include EASYAR_API_TOKEN placeholder text."),
+    relativePath: z.string().optional().describe("Optional report path inside outputRoot. Defaults to EasyARGenerated/CLIENT_SETUP.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing client setup report.")
+  },
+  async ({ outputRoot, client, serverPath, includeTokenPlaceholder, relativePath, overwrite }) => {
+    const root = resolveProjectPath(outputRoot);
+    await ensureDirectory(root);
+    const report = await buildClientSetupReport(client, serverPath, includeTokenPlaceholder);
+    const defaultRelativePath = await exists(path.join(root, "Assets"))
+      ? path.join("Assets", "EasyARGenerated", "CLIENT_SETUP.md")
+      : path.join("EasyARGenerated", "CLIENT_SETUP.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildClientSetupMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      client,
+      readyForClientConnection: report.readyForClientConnection,
+      blockerCount: report.blockers.length,
+      nextActions: report.nextActions,
+      note: "The client setup report contains config shape and redacted/placeholder environment metadata only."
     });
   }
 );
@@ -2288,6 +2336,101 @@ function officialAccessRemoteCheck(id: string, required: boolean, result: Awaite
     detail: result.endpoint ? `Endpoint: ${result.endpoint}` : "Endpoint is not configured.",
     nextActions: result.nextActions
   };
+}
+
+async function buildClientSetupReport(
+  client: typeof clientKinds[number],
+  serverPath: string | undefined,
+  includeTokenPlaceholder: boolean
+) {
+  const packageJson = await readPackageMetadata();
+  const entrypoint = path.resolve(process.cwd(), serverPath ?? process.argv[1] ?? path.join("dist", "index.js"));
+  const distEntrypoint = path.resolve(process.cwd(), "dist", "index.js");
+  const auth = readAuthConfig();
+  const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+  const env = {
+    EASYAR_API_BASE_URL: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
+    EASYAR_ACCOUNT_STATUS_ENDPOINT: process.env.EASYAR_ACCOUNT_STATUS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/account/status",
+    EASYAR_LICENSE_VALIDATE_ENDPOINT: process.env.EASYAR_LICENSE_VALIDATE_ENDPOINT ?? "https://www.easyar.cn/path/to/official/license/validate",
+    EASYAR_DOWNLOADS_ENDPOINT: process.env.EASYAR_DOWNLOADS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/downloads",
+    EASYAR_CLOUD_CREDENTIALS_ENDPOINT: process.env.EASYAR_CLOUD_CREDENTIALS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/cloud-recognition/credentials",
+    ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
+  };
+  const checks = [
+    clientSetupCheck("node-version", nodeMajor >= 20, true, `Current Node.js version is ${process.versions.node}; mcp-easyar requires >=20.`),
+    clientSetupCheck("package-name", packageJson.name === serverName, true, `package.json name is ${packageJson.name ?? "missing"}; expected ${serverName}.`),
+    clientSetupCheck("bin-name", packageJson.binName === "easyar-mcp", true, `package.json bin is ${packageJson.binName ?? "missing"}; expected easyar-mcp.`),
+    clientSetupCheck("dist-entrypoint", await exists(distEntrypoint), true, `${path.relative(process.cwd(), distEntrypoint)} exists. Run npm run build if missing.`),
+    clientSetupCheck("server-path-absolute", path.isAbsolute(entrypoint), true, `Resolved server path is ${entrypoint}.`),
+    clientSetupCheck("server-path-exists", await exists(entrypoint), true, `Configured server path ${entrypoint} exists.`),
+    clientSetupCheck("api-base-url", Boolean(auth.apiBaseUrl), true, `EASYAR_API_BASE_URL resolves to ${auth.apiBaseUrl}.`),
+    clientSetupCheck("api-token-placeholder", includeTokenPlaceholder || auth.hasToken, false, includeTokenPlaceholder ? "Generated config includes EASYAR_API_TOKEN placeholder." : "Generated config omits token placeholder; set token through client secret/env configuration."),
+    clientSetupCheck("official-endpoints", auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured && auth.downloadsEndpointConfigured && auth.cloudCredentialsEndpointConfigured, false, "Official account, license, downloads, and Cloud Recognition endpoint environment variables are configured.")
+  ];
+  const blockers = checks.filter((check) => check.required && !check.ok);
+  const warnings = checks.filter((check) => !check.required && !check.ok);
+  const config = buildClientConfig(client, entrypoint, env);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    client,
+    command: "node",
+    args: [entrypoint],
+    serverPath: entrypoint,
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      binName: packageJson.binName,
+      repository: packageJson.repository
+    },
+    node: {
+      version: process.versions.node,
+      required: ">=20"
+    },
+    readyForClientConnection: blockers.length === 0,
+    checks,
+    blockers,
+    warnings,
+    env: {
+      apiBaseUrl: env.EASYAR_API_BASE_URL,
+      hasTokenPlaceholder: "EASYAR_API_TOKEN" in env,
+      accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
+      licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
+      downloadsEndpointConfigured: auth.downloadsEndpointConfigured,
+      cloudCredentialsEndpointConfigured: auth.cloudCredentialsEndpointConfigured
+    },
+    config,
+    nextActions: blockers.length > 0
+      ? Array.from(new Set(blockers.map((blocker) => clientSetupAction(blocker.id))))
+      : [
+          "Paste the generated config into the selected MCP client.",
+          "Replace placeholder token and endpoint values with local official EasyAR credentials.",
+          "Restart the MCP client and call easyar_server_status."
+        ],
+    security: "Do not commit MCP client config files containing EASYAR_API_TOKEN, license keys, Cloud Recognition credentials, signing keys, or provisioning secrets."
+  };
+}
+
+function clientSetupCheck(id: string, ok: boolean, required: boolean, detail: string) {
+  return {
+    id,
+    ok,
+    required,
+    detail
+  };
+}
+
+function clientSetupAction(id: string): string {
+  if (id === "node-version") {
+    return "Install or select Node.js 20+ before running the MCP server.";
+  }
+  if (id === "dist-entrypoint" || id === "server-path-exists") {
+    return "Run npm install && npm run build, then pass the absolute dist/index.js path to easyar_generate_client_config.";
+  }
+  if (id === "package-name" || id === "bin-name") {
+    return "Use the mcp-easyar repository/package, not an old renamed checkout.";
+  }
+  return "Review the generated client setup report and rerun easyar_check_client_setup.";
 }
 
 function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {
@@ -5456,6 +5599,53 @@ function buildOfficialAccessMarkdown(report: Awaited<ReturnType<typeof buildOffi
     "## Blockers",
     "",
     ...markdownIssueList(report.blockers.map((blocker) => `${blocker.id}: ${blocker.summary}`), "No official access blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...report.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    report.security,
+    ""
+  ].join("\n");
+}
+
+function buildClientSetupMarkdown(report: Awaited<ReturnType<typeof buildClientSetupReport>>): string {
+  return [
+    "# mcp-easyar Client Setup",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Client: ${report.client}`,
+    `Ready for client connection: ${report.readyForClientConnection ? "yes" : "no"}`,
+    `Command: ${report.command}`,
+    `Server path: ${report.serverPath}`,
+    "",
+    "## Package",
+    "",
+    `Name: ${report.package.name ?? "unknown"}`,
+    `Version: ${report.package.version ?? "unknown"}`,
+    `Bin: ${report.package.binName ?? "unknown"}`,
+    `Repository: ${report.package.repository ?? "unknown"}`,
+    "",
+    "## Checks",
+    "",
+    ...report.checks.map((check) => `- ${check.ok ? "OK" : "BLOCKED"} ${check.required ? "[required]" : "[recommended]"} ${check.id}: ${check.detail}`),
+    "",
+    "## Config",
+    "",
+    "```json",
+    JSON.stringify(report.config, null, 2),
+    "```",
+    "",
+    "## Environment",
+    "",
+    `API base URL: ${report.env.apiBaseUrl}`,
+    `Token placeholder included: ${report.env.hasTokenPlaceholder ? "yes" : "no"}`,
+    `Account endpoint configured in current env: ${report.env.accountStatusEndpointConfigured ? "yes" : "no"}`,
+    `License endpoint configured in current env: ${report.env.licenseValidationEndpointConfigured ? "yes" : "no"}`,
+    `Downloads endpoint configured in current env: ${report.env.downloadsEndpointConfigured ? "yes" : "no"}`,
+    `Cloud credentials endpoint configured in current env: ${report.env.cloudCredentialsEndpointConfigured ? "yes" : "no"}`,
     "",
     "## Next Actions",
     "",
