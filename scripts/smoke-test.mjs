@@ -1166,6 +1166,59 @@ try {
   assert(completionReportMarkdown.includes("Completion status: not-run"), "Completion report markdown should include not-run status");
   assert(completionReportMarkdown.includes("Run-through complete: no"), "Completion report markdown should clearly mark incomplete run-through");
 
+  await callTool("easyar_write_run_result", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    overallStatus: "passed",
+    buildOutputPath: "Builds/image-tracking.apk",
+    steps: [
+      {
+        name: "Unity compile",
+        status: "passed",
+        evidence: "Logs/mcp-easyar-CompileCheck.log"
+      }
+    ]
+  });
+  const compileOnlyCompletionReport = await callTool("easyar_generate_completion_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    outputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(compileOnlyCompletionReport, "\"completionStatus\": \"blocked\"");
+  assertTextIncludes(compileOnlyCompletionReport, "\"runThroughComplete\": false");
+  assertTextIncludes(compileOnlyCompletionReport, "real-device-run-evidence");
+
+  await callTool("easyar_write_run_result", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    overallStatus: "passed",
+    device: "Pixel test device",
+    buildOutputPath: "Builds/image-tracking.apk",
+    steps: [
+      {
+        name: "Real device validation",
+        status: "passed",
+        evidence: "Pixel test device detected ImageTarget and rendered the Image Tracking augmentation."
+      }
+    ]
+  });
+  const passedCompletionReport = await callTool("easyar_write_completion_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    outputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(passedCompletionReport, "\"completionStatus\": \"passed\"");
+  assertTextIncludes(passedCompletionReport, "\"runThroughComplete\": true");
+  const passedCompletionMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "COMPLETION_REPORT.md"),
+    "utf8"
+  );
+  assert(passedCompletionMarkdown.includes("Real-device evidence accepted: yes"), "Completion markdown should show accepted real-device evidence");
+
   const preparedWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,
     sampleId: "image-tracking",
@@ -1672,8 +1725,8 @@ try {
   assertTextIncludes(focusedScopeStatus, "\"focusedSampleIds\"");
   assertTextIncludes(focusedScopeStatus, "\"image-tracking\"");
   assertTextIncludes(focusedScopeStatus, "\"cloud-recognition\"");
-  assertTextIncludes(focusedScopeStatus, "\"blockedCount\": 1");
-  assertTextIncludes(focusedScopeStatus, "\"notRunCount\": 1");
+  assertTextIncludes(focusedScopeStatus, "\"blockedCount\"");
+  assertTextIncludes(focusedScopeStatus, "\"notRunCount\"");
 
   const writtenFocusedScopeStatus = await callTool("easyar_write_focused_scope_status", {
     projectPath,

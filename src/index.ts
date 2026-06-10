@@ -6628,9 +6628,10 @@ async function buildCompletionReport(
   const preflightPassed = preflight.readyForDeviceBuild;
   const deviceReady = deviceValidation.readyForDeviceValidation;
   const runResultPassed = runResultArtifact.overallStatus === "passed";
+  const realDeviceRunPassed = runResultPassed && runResultArtifact.hasPassedDeviceValidationEvidence;
   const hasRunResult = runResultArtifact.exists;
   const hasBlockingLogIssues = latestLog.issues.some((issue) => issue.severity === "high");
-  const completionStatus = chooseCompletionStatus(hasRunResult, runResultArtifact.overallStatus, preflightPassed, deviceReady, hasBlockingLogIssues);
+  const completionStatus = chooseCompletionStatus(hasRunResult, runResultArtifact.overallStatus, preflightPassed, deviceReady, realDeviceRunPassed, hasBlockingLogIssues);
   const runThroughComplete = completionStatus === "passed";
   const requiredEvidence = [
     {
@@ -6652,6 +6653,12 @@ async function buildCompletionReport(
       detail: "RUN_RESULT.md must exist and record Overall status: passed after real device validation."
     },
     {
+      id: "real-device-run-evidence",
+      required: true,
+      passed: realDeviceRunPassed,
+      detail: "RUN_RESULT.md must include a recorded device and a passed real-device/device-validation step."
+    },
+    {
       id: "latest-log-clean",
       required: false,
       passed: !hasBlockingLogIssues,
@@ -6660,7 +6667,7 @@ async function buildCompletionReport(
     ...sampleDevicePassCriteria(sample).map((criterion, index) => ({
       id: `sample-pass-criterion-${index + 1}`,
       required: true,
-      passed: runResultPassed,
+      passed: realDeviceRunPassed,
       detail: criterion
     }))
   ];
@@ -6682,7 +6689,7 @@ async function buildCompletionReport(
       path: runResultArtifact.relativePath,
       status: runResultArtifact.exists ? runResultArtifact.overallStatus ?? "unknown" : "missing",
       detail: runResultArtifact.exists
-        ? `Recorded overall status: ${runResultArtifact.overallStatus ?? "unknown"}.`
+        ? `Recorded overall status: ${runResultArtifact.overallStatus ?? "unknown"}; real-device evidence: ${runResultArtifact.hasPassedDeviceValidationEvidence ? "yes" : "no"}.`
         : "RUN_RESULT.md has not been written yet."
     },
     {
@@ -6710,7 +6717,13 @@ async function buildCompletionReport(
           action: "Run compile/build/device validation and record the observed result with easyar_write_run_result."
         }]
       : runResultPassed
-        ? []
+        ? runResultArtifact.hasPassedDeviceValidationEvidence
+          ? []
+          : [{
+              id: "run-result/missing-real-device-evidence",
+              detail: "RUN_RESULT.md is passed but does not include a recorded device plus a passed real-device/device-validation step.",
+              action: "Run the focused sample on a real Android or iOS device, then record a passed device validation step with easyar_write_run_result."
+            }]
         : [{
             id: "run-result/not-passed",
             detail: `RUN_RESULT.md overall status is ${runResultArtifact.overallStatus ?? "unknown"}, not passed.`,
@@ -6760,6 +6773,7 @@ function chooseCompletionStatus(
   runResultStatus: string | null,
   preflightPassed: boolean,
   deviceReady: boolean,
+  realDeviceRunPassed: boolean,
   hasBlockingLogIssues: boolean
 ): typeof runResultStatuses[number] {
   if (!hasRunResult) {
@@ -6768,7 +6782,7 @@ function chooseCompletionStatus(
   if (runResultStatus === "failed") {
     return "failed";
   }
-  if (runResultStatus === "passed" && preflightPassed && deviceReady && !hasBlockingLogIssues) {
+  if (runResultStatus === "passed" && preflightPassed && deviceReady && realDeviceRunPassed && !hasBlockingLogIssues) {
     return "passed";
   }
   return "blocked";
@@ -6780,13 +6794,18 @@ async function readRunResultArtifact(root: string, sample: SampleInfo) {
   try {
     const body = await readFile(absolutePath, "utf8");
     const overallStatus = parseRunResultStatus(body);
+    const device = parseMarkdownField(body, "Device");
+    const buildOutputPath = parseMarkdownField(body, "Build output");
+    const passedDeviceValidationStepCount = countPassedDeviceValidationSteps(body);
     return {
       exists: true,
       relativePath,
       overallStatus,
-      device: parseMarkdownField(body, "Device"),
-      buildOutputPath: parseMarkdownField(body, "Build output"),
+      device,
+      buildOutputPath,
       passedStepCount: countMarkdownStepStatuses(body, "passed"),
+      passedDeviceValidationStepCount,
+      hasPassedDeviceValidationEvidence: hasRecordedDevice(device) && passedDeviceValidationStepCount > 0,
       failedStepCount: countMarkdownStepStatuses(body, "failed"),
       blockedStepCount: countMarkdownStepStatuses(body, "blocked"),
       notRunStepCount: countMarkdownStepStatuses(body, "not-run")
@@ -6799,6 +6818,8 @@ async function readRunResultArtifact(root: string, sample: SampleInfo) {
       device: null,
       buildOutputPath: null,
       passedStepCount: 0,
+      passedDeviceValidationStepCount: 0,
+      hasPassedDeviceValidationEvidence: false,
       failedStepCount: 0,
       blockedStepCount: 0,
       notRunStepCount: 0
@@ -6822,6 +6843,18 @@ function parseMarkdownField(markdown: string, field: string): string | null {
 function countMarkdownStepStatuses(markdown: string, status: typeof runResultStatuses[number]): number {
   const escapedStatus = status.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return [...markdown.matchAll(new RegExp(`Status:\\s*${escapedStatus}\\b`, "g"))].length;
+}
+
+function countPassedDeviceValidationSteps(markdown: string): number {
+  const stepBlocks = markdown.split(/\n(?=\d+\.\s+)/g);
+  return stepBlocks.filter((block) =>
+    /Status:\s*passed\b/i.test(block) &&
+    /(real[- ]?device|device validation|on[- ]?device|android device|ios device|iphone|ipad|pixel|camera\/tracking validation|tracking validation)/i.test(block)
+  ).length;
+}
+
+function hasRecordedDevice(device: string | null): boolean {
+  return typeof device === "string" && isNonPlaceholderString(device) && !/^not recorded$/i.test(device.trim());
 }
 
 function buildCompletionNextActions(
@@ -9338,6 +9371,8 @@ function buildCompletionReportMarkdown(report: Awaited<ReturnType<typeof buildCo
     `Device: ${report.parsedRunResult.device ?? "not recorded"}`,
     `Build output: ${report.parsedRunResult.buildOutputPath ?? "not recorded"}`,
     `Passed steps: ${report.parsedRunResult.passedStepCount}`,
+    `Passed device validation steps: ${report.parsedRunResult.passedDeviceValidationStepCount}`,
+    `Real-device evidence accepted: ${report.parsedRunResult.hasPassedDeviceValidationEvidence ? "yes" : "no"}`,
     `Failed steps: ${report.parsedRunResult.failedStepCount}`,
     `Blocked steps: ${report.parsedRunResult.blockedStepCount}`,
     `Not-run steps: ${report.parsedRunResult.notRunStepCount}`,
