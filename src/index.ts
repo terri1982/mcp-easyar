@@ -2479,6 +2479,7 @@ async function buildReleaseManifest() {
     "LICENSE",
     "SECURITY.md",
     "docs/quickstart.md",
+    "docs/RELEASE_MANIFEST.md",
     "assets/easyar-icon.png",
     "dist/index.js",
     "dist/easyar-api.js",

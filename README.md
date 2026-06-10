@@ -143,6 +143,10 @@ npm run pack:check
 
 See [docs/quickstart.md](docs/quickstart.md) for the recommended Codex/Claude to Unity workflow.
 
+## Release Manifest
+
+See [docs/RELEASE_MANIFEST.md](docs/RELEASE_MANIFEST.md) for install commands, MCP entrypoints, focused scope, environment variable names, and release checks.
+
 ## Release Checks
 
 Before publishing a release or npm package:

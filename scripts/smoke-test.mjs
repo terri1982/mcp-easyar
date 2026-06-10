@@ -319,6 +319,14 @@ try {
   assertTextIncludes(releaseManifest, "easyar_check_client_setup");
   assertTextIncludes(releaseManifest, "image-tracking");
   assertTextIncludes(releaseManifest, "cloud-recognition");
+  assertTextIncludes(releaseManifest, "docs/RELEASE_MANIFEST.md");
+
+  const committedReleaseManifest = await readFile(
+    path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
+    "utf8"
+  );
+  assert(committedReleaseManifest.includes("mcp-easyar Release Manifest"), "Committed release manifest should include title");
+  assert(committedReleaseManifest.includes("easyar_check_client_setup"), "Committed release manifest should include first calls/client setup tools");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {
