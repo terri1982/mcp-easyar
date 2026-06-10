@@ -120,6 +120,7 @@ const toolCatalog = [
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
+  "easyar_write_local_config_from_env",
   "easyar_analyze_unity_log",
   "easyar_analyze_latest_unity_log",
   "easyar_prepare_unity_project",
@@ -1832,6 +1833,51 @@ server.tool(
     }
 
     return jsonText(await buildLocalConfigValidationReport(root, target));
+  }
+);
+
+server.tool(
+  "easyar_write_local_config_from_env",
+  "Write ProjectSettings/EasyAR/easyar.local.json from local environment variables without returning secret values.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    targetPlatform: z.enum(["android", "ios", "standalone"]).default("android"),
+    bundleIdentifier: z.string().optional().describe("Optional non-secret bundle/package identifier. Defaults to EASYAR_BUNDLE_IDENTIFIER or sample default."),
+    relativePath: z.string().optional().describe("Optional config path inside the project. Defaults to ProjectSettings/EasyAR/easyar.local.json."),
+    overwrite: z.boolean().default(false).describe("Whether to replace an existing local config file."),
+    allowPartial: z.boolean().default(false).describe("Whether to write when required environment variables are missing. Defaults to false.")
+  },
+  async ({ projectPath, sampleId, targetPlatform, bundleIdentifier, relativePath, overwrite, allowPartial }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+    assertInside(root, target);
+    const report = await buildLocalConfigFromEnvReport(root, sample, targetPlatform, bundleIdentifier, target, overwrite, allowPartial);
+    const written: string[] = [];
+    if (report.canWrite) {
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeGeneratedFile(target, report.contents, overwrite, written);
+    }
+
+    return jsonText({
+      configPath: target,
+      sample: sample.name,
+      canWrite: report.canWrite,
+      written: written.includes(target) ? target : null,
+      skipped: report.canWrite && !written.includes(target) ? target : null,
+      existingFile: report.existingFile,
+      overwrite,
+      allowPartial,
+      requiredMissing: report.requiredMissing,
+      envPresence: report.envPresence,
+      validation: report.canWrite && written.includes(target) ? await buildLocalConfigValidationReport(root, target) : null,
+      nextActions: report.nextActions,
+      security: report.security
+    });
   }
 );
 
@@ -5807,6 +5853,114 @@ async function buildLocalConfigValidationReport(root: string, configPath?: strin
     nextActions: checks
       .filter((check) => !check.ok)
       .map((check) => localConfigAction(check.id))
+  };
+}
+
+async function buildLocalConfigFromEnvReport(
+  root: string,
+  sample: SampleInfo,
+  targetPlatform: "android" | "ios" | "standalone",
+  bundleIdentifierInput: string | undefined,
+  target: string,
+  overwrite: boolean,
+  allowPartial: boolean
+) {
+  const existingFile = await exists(target);
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const envValues = {
+    apiBaseUrl: envFirst(["EASYAR_API_BASE_URL"]) ?? "https://www.easyar.cn",
+    accountToken: envFirst(["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"]),
+    licenseKey: envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"]),
+    cloudAppId: envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"]),
+    cloudAppKey: envFirst(["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"]),
+    cloudAppSecret: envFirst(["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]),
+    bundleIdentifier: bundleIdentifierInput ?? envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)
+  };
+  const envPresence = [
+    envPresenceItem("easyar.apiBaseUrl", ["EASYAR_API_BASE_URL"], isNonPlaceholderString(envValues.apiBaseUrl), "defaulted to https://www.easyar.cn when unset"),
+    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"], isNonPlaceholderString(envValues.accountToken), "required by local validation"),
+    envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envValues.licenseKey), "required for focused sample runs"),
+    envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envValues.bundleIdentifier), bundleIdentifierInput ? "provided as non-secret tool argument" : "defaults to focused sample identifier when unset"),
+    envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envValues.cloudAppId), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
+    envPresenceItem("easyar.cloudRecognition.appKey", ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envValues.cloudAppKey), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
+    envPresenceItem("easyar.cloudRecognition.appSecret", ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envValues.cloudAppSecret), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking")
+  ];
+  const requiredMissing = envPresence
+    .filter((item) =>
+      (item.field === "easyar.accountToken" || item.field === "easyar.licenseKey" || (needsCloudRecognition && item.field.startsWith("easyar.cloudRecognition."))) &&
+      !item.present
+    )
+    .map((item) => item.field);
+  const existingParsed = existingFile ? await readJsonFile(target).catch(() => ({})) : {};
+  const existing = isRecord(existingParsed) ? existingParsed : {};
+  const existingEasyAR = isRecord(existing.easyar) ? existing.easyar : {};
+  const existingUnity = isRecord(existing.unity) ? existing.unity : {};
+  const config = {
+    ...existing,
+    sampleId: sample.id,
+    sampleName: sample.name,
+    easyar: {
+      ...existingEasyAR,
+      apiBaseUrl: envValues.apiBaseUrl,
+      accountToken: envValues.accountToken ?? (typeof existingEasyAR.accountToken === "string" ? existingEasyAR.accountToken : ""),
+      licenseKey: envValues.licenseKey ?? (typeof existingEasyAR.licenseKey === "string" ? existingEasyAR.licenseKey : ""),
+      cloudRecognition: {
+        ...(isRecord(existingEasyAR.cloudRecognition) ? existingEasyAR.cloudRecognition : {}),
+        appId: envValues.cloudAppId ?? "",
+        appKey: envValues.cloudAppKey ?? "",
+        appSecret: envValues.cloudAppSecret ?? ""
+      }
+    },
+    unity: {
+      ...existingUnity,
+      targetPlatform,
+      bundleIdentifier: envValues.bundleIdentifier,
+      notes: sample.setupNotes
+    }
+  };
+  const canWrite = (!existingFile || overwrite) && (allowPartial || requiredMissing.length === 0);
+  const contents = `${JSON.stringify(config, null, 2)}\n`;
+  const nextActions = canWrite
+    ? [
+        `Run easyar_validate_local_config projectPath=${root}.`,
+        `Run easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}.`,
+        targetPlatform === "standalone"
+          ? "Choose android or ios for device validation before calling easyar_next_workflow_step."
+          : `Run easyar_next_workflow_step projectPath=${root} sampleId=${sample.id} platform=${targetPlatform}.`
+      ]
+    : [
+        ...(existingFile && !overwrite ? ["The target local config already exists. Pass overwrite=true only after confirming it is safe to replace or merge from env."] : []),
+        ...(requiredMissing.length > 0 && !allowPartial ? requiredMissing.map((field) => `Set local environment variable(s) for ${field}, then rerun easyar_write_local_config_from_env.`) : []),
+        "Use easyar_account_materials to see each field source and share policy."
+      ];
+
+  return {
+    existingFile,
+    canWrite,
+    contents,
+    requiredMissing,
+    envPresence,
+    nextActions: Array.from(new Set(nextActions)),
+    security: "Secret values are read only from local environment variables and written only to ProjectSettings/EasyAR/easyar.local.json. Returned output lists field presence and env names, never secret values."
+  };
+}
+
+function envFirst(names: string[]): string | undefined {
+  for (const name of names) {
+    const value = process.env[name];
+    if (isNonPlaceholderString(value)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function envPresenceItem(field: string, envNames: string[], present: boolean, note: string) {
+  return {
+    field,
+    envNames,
+    present,
+    note
   };
 }
 

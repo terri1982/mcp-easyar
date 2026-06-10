@@ -134,7 +134,22 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 
 `easyar_prepare_unity_project` also creates a focused runbook under `Assets/EasyARGenerated/<sampleId>/RUNBOOK.md`. For Image Tracking it creates a target-asset staging directory. For Cloud Recognition it creates a cloud credential note directory.
 
-Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials.
+Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials, or write the local file from environment-backed secrets:
+
+```bash
+export EASYAR_API_TOKEN=your_registered_user_token
+export EASYAR_LICENSE_KEY=your_easyar_sense_license_key
+export EASYAR_BUNDLE_IDENTIFIER=com.company.easyarsample
+export EASYAR_CLOUD_APP_ID=your_cloud_recognition_app_id
+export EASYAR_CLOUD_APP_KEY=your_cloud_recognition_app_key
+export EASYAR_CLOUD_APP_SECRET=your_cloud_recognition_app_secret
+```
+
+```text
+easyar_write_local_config_from_env projectPath=/path/to/UnityProject sampleId=cloud-recognition targetPlatform=android
+```
+
+The write tool reads secret values only from the local environment, writes `ProjectSettings/EasyAR/easyar.local.json`, and returns only field presence, missing env names, validation status, and next actions. It does not return the token, license key, `appKey`, or `appSecret`.
 
 Then validate without exposing secrets:
 

@@ -40,6 +40,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - generate focused runbooks and support directories for Image Tracking and Cloud Recognition
 - prepare a Unity project with EasyAR local config templates and secret ignore rules
 - validate local EasyAR config files without exposing secrets
+- write local EasyAR Unity config from environment-backed secrets without returning secret values
 - generate Unity MonoBehaviour script templates for common EasyAR workflows
 - write C# scripts safely inside a Unity project
 - review Unity C# scripts for common EasyAR and AR sample risks
@@ -225,6 +226,7 @@ After registration/login, the user creates or locates the EasyAR Sense license a
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.
+- `easyar_write_local_config_from_env`: write `ProjectSettings/EasyAR/easyar.local.json` from local environment variables such as `EASYAR_API_TOKEN`, `EASYAR_LICENSE_KEY`, and Cloud Recognition env vars without returning secret values.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
 - `easyar_prepare_unity_project`: create a sample runner, focused sample runbook, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_sample_validation_helper`: create `Assets/Editor/EasyARSampleValidationHelper.cs` for Unity-side focused sample validation, excluding generated MCP helper files from official EasyAR import signals.

@@ -12,6 +12,9 @@ const child = spawn(command, args, {
     ...process.env,
     EASYAR_API_BASE_URL: "https://www.easyar.cn",
     EASYAR_API_TOKEN: "",
+    EASYAR_ACCOUNT_TOKEN: "env-test-account-token",
+    EASYAR_LICENSE_KEY: "env-test-license-key",
+    EASYAR_BUNDLE_IDENTIFIER: "com.easyar.envsample",
     EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
     EASYAR_LICENSE_VALIDATE_ENDPOINT: "",
     EASYAR_DOWNLOADS_ENDPOINT: "",
@@ -230,6 +233,10 @@ try {
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_sample_import_guide"),
     "easyar_write_sample_import_guide should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_from_env"),
+    "easyar_write_local_config_from_env should be listed"
   );
 
   const prompts = await request("prompts/list", {});
@@ -663,6 +670,27 @@ try {
     "utf8"
   );
   assert(imageTargetsReadme.includes("requires real target assets"), "Image Tracking target README should not pretend to be a target asset");
+
+  const missingEnvConfig = await callTool("easyar_write_local_config_from_env", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    targetPlatform: "android"
+  });
+  assertTextIncludes(missingEnvConfig, "\"canWrite\": false");
+  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appId");
+  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appKey");
+  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appSecret");
+
+  const envWrittenConfig = await callTool("easyar_write_local_config_from_env", {
+    projectPath,
+    sampleId: "image-tracking",
+    targetPlatform: "android"
+  });
+  assertTextIncludes(envWrittenConfig, "\"canWrite\": true");
+  assertTextIncludes(envWrittenConfig, "easyar.local.json");
+  assertTextIncludes(envWrittenConfig, "\"valid\": true");
+  assert(!extractText(envWrittenConfig).includes("env-test-account-token"), "Env local config tool should not return account token value");
+  assert(!extractText(envWrittenConfig).includes("env-test-license-key"), "Env local config tool should not return license value");
 
   await copyFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
@@ -1306,8 +1334,12 @@ function callTool(name, args) {
 }
 
 function assertTextIncludes(response, expected) {
-  const text = response.result.content.map((item) => item.text ?? "").join("\n");
+  const text = extractText(response);
   assert(text.includes(expected), `Expected response text to include ${expected}`);
+}
+
+function extractText(response) {
+  return response.result.content.map((item) => item.text ?? "").join("\n");
 }
 
 function assertResourceIncludes(response, expected) {

@@ -50,6 +50,7 @@ Initial public MVP for `mcp-easyar`.
 - Latest Unity log discovery and tail analysis for failed Editor/batch runs.
 - Project-local Unity batch log path support for `easyar_run_unity_method` and focused run sequences.
 - EasyAR local config template generation and validation without returning secrets.
+- Environment-backed `easyar.local.json` writing for local Unity projects without returning EasyAR token, license, or Cloud Recognition secret values.
 - Unity Editor helper generation for sample scene opening, mobile player settings, Build Settings configuration, and device/player builds.
 - Unity-side focused sample validation helper for Image Tracking and Cloud Recognition.
 - Unity C# MonoBehaviour templates for image tracking, surface placement, cloud recognition, and lifecycle workflows.
