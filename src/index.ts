@@ -101,6 +101,8 @@ const toolCatalog = [
   "easyar_write_production_validation",
   "easyar_release_manifest",
   "easyar_write_release_manifest",
+  "easyar_first_run_guide",
+  "easyar_write_first_run_guide",
   "easyar_onboarding_report",
   "easyar_write_onboarding_report",
   "easyar_generate_project_handoff",
@@ -586,6 +588,8 @@ server.tool(
         localSecretTarget: "ProjectSettings/EasyAR/easyar.local.json"
       },
       recommendedFirstCalls: [
+        "easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android",
+        "easyar_write_first_run_guide projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android",
         "easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition",
         "easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition",
         "easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition",
@@ -1196,6 +1200,79 @@ server.tool(
       readyForInstallDocs: manifest.readyForInstallDocs,
       missingCount: manifest.missingRequiredFiles.length,
       nextActions: manifest.nextActions
+    });
+  }
+);
+
+server.tool(
+  "easyar_first_run_guide",
+  "Generate the first-screen guide for a new MCP user, including EasyAR registration/login route, focused sample scope, required artifacts, and the first safe MCP calls.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. When provided, the guide can point to project-local artifacts."),
+    sampleId: z.string().optional().describe("Optional focused sample id. Defaults to cloud-recognition because it exercises the full account/config path."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
+    client: z.enum(clientKinds).default("claude-desktop")
+  },
+  async ({ projectPath, sampleId, platform, accountStage, client }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    return jsonText(await buildFirstRunGuide({
+      root,
+      sample,
+      platform,
+      accountStage,
+      client
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_first_run_guide",
+  "Write FIRST_RUN.md, the first-screen guide for a new EasyAR MCP user or a handoff to another AI tool.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, writes to Assets/EasyARGenerated/FIRST_RUN.md by default."),
+    outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
+    sampleId: z.string().optional().describe("Optional focused sample id. Defaults to cloud-recognition because it exercises the full account/config path."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
+    client: z.enum(clientKinds).default("claude-desktop"),
+    relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/FIRST_RUN.md for Unity projects or EasyARGenerated/FIRST_RUN.md for outputRoot."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing first-run guide.")
+  },
+  async ({ projectPath, outputRoot, sampleId, platform, accountStage, client, relativePath, overwrite }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
+    await ensureDirectory(root);
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    const guide = await buildFirstRunGuide({
+      root: projectPath ? root : null,
+      sample,
+      platform,
+      accountStage,
+      client
+    });
+    const defaultRelativePath = projectPath
+      ? path.join("Assets", "EasyARGenerated", "FIRST_RUN.md")
+      : path.join("EasyARGenerated", "FIRST_RUN.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildFirstRunGuideMarkdown(guide), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      accountStage: guide.account.stage,
+      sample: guide.sample.id,
+      readyForUnityAutomation: guide.readyForUnityAutomation,
+      firstQuestion: guide.firstQuestion,
+      topNextCall: guide.topNextCall,
+      artifactOrder: guide.artifactOrder,
+      nextActions: guide.nextActions,
+      security: guide.security
     });
   }
 );
@@ -4181,7 +4258,7 @@ async function buildAccountMaterialsReport(
   ];
   const missingRequired = materials.filter((item) => item.required && !item.present);
   const nextActions = missingRequired.length > 0
-    ? Array.from(new Set(missingRequired.map((item) => `Provide ${item.label} from official EasyAR account flow and store it in ${item.storeIn}.`)))
+    ? Array.from(new Set(missingRequired.map((item) => accountMaterialNextAction(item, localConfigPath))))
     : [
         root
           ? `Run easyar_validate_local_config projectPath=${root}.`
@@ -4208,6 +4285,29 @@ async function buildAccountMaterialsReport(
     nextActions,
     security: "This report never includes secret values. It lists field names, presence, source, storage location, and share policy only."
   };
+}
+
+function accountMaterialNextAction(
+  item: {
+    id: string;
+    label: string;
+    storeIn: string;
+  },
+  localConfigPath: string
+): string {
+  if (item.id === "easyar-account") {
+    return "Register or log in at https://www.easyar.cn/ in the browser, then return to MCP with only the updated account stage.";
+  }
+  if (item.id === "license-key") {
+    return `Create or locate the EasyAR Sense license in the official account and fill easyar.licenseKey in ${localConfigPath}.`;
+  }
+  if (item.id.startsWith("cloud-")) {
+    return `Create or locate the Cloud Recognition/CRS credentials in the official account and fill the required cloud fields in ${localConfigPath}.`;
+  }
+  if (item.id === "bundle-identifier") {
+    return `Choose the Unity package/bundle identifier and make it match the EasyAR license configuration in ${localConfigPath}.`;
+  }
+  return `Prepare ${item.label} from the official EasyAR account flow and store it in ${item.storeIn}.`;
 }
 
 function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: boolean) {
@@ -4919,6 +5019,194 @@ async function buildOnboardingReport(input: {
       ...workflowState.nextActions
     ])).slice(0, 12),
     security: "Onboarding report does not include secret values. Keep official EasyAR tokens, license keys, Cloud Recognition credentials, signing keys, and provisioning secrets out of committed files."
+  };
+}
+
+async function buildFirstRunGuide(input: {
+  root: string | null;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  accountStage: AccountStage;
+  client: typeof clientKinds[number];
+}) {
+  const [accountOnboarding, accountMaterials, localConfig] = await Promise.all([
+    buildAccountOnboardingReport(input.root, input.sample, input.platform, input.accountStage),
+    buildAccountMaterialsReport(input.root, input.sample, input.platform),
+    input.root ? buildLocalConfigValidationReport(input.root) : Promise.resolve(null)
+  ]);
+  const focused = focusedSamples();
+  const stageBlocksUnity = ["unknown", "not-registered", "registered-not-logged-in"].includes(accountOnboarding.stage);
+  const missingMaterials = accountMaterials.missingRequired;
+  const localConfigValid = localConfig?.valid ?? false;
+  const readyForUnityAutomation = Boolean(input.root) && !stageBlocksUnity && missingMaterials.length === 0 && localConfigValid;
+  const topNextCall = firstRunTopNextCall(input.root, input.sample, input.platform, accountOnboarding.stage, localConfigValid, missingMaterials);
+  const artifactOrder = [
+    path.join("Assets", "EasyARGenerated", "FIRST_RUN.md"),
+    path.join("Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md"),
+    path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
+    path.join("Assets", "EasyARGenerated", "LOCAL_CONFIG_HANDOFF.md"),
+    path.join("Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"),
+    path.join("Assets", "EasyARGenerated", input.sample.id, "PREFLIGHT.md")
+  ];
+  const firstCalls = [
+    `easyar_write_first_run_guide projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
+    `easyar_write_account_onboarding projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
+    `easyar_write_account_materials projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id} platform=${input.platform}`,
+    `easyar_write_local_config_handoff projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
+    `easyar_prepare_unity_project projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id}`,
+    `easyar_validate_local_config projectPath=${input.root ?? "/path/to/UnityProject"}`,
+    `easyar_write_project_handoff projectPath=${input.root ?? "/path/to/UnityProject"} platform=${input.platform}`,
+    `easyar_write_focused_preflight projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id} platform=${input.platform}`
+  ];
+  const blockers = [
+    ...(!input.root
+      ? [{
+          id: "project-path",
+          detail: "No Unity project path was provided.",
+          action: "Provide projectPath so MCP can write FIRST_RUN.md and inspect local EasyAR config."
+        }]
+      : []),
+    ...(stageBlocksUnity
+      ? [{
+          id: `account/${accountOnboarding.stage}`,
+          detail: `Current account stage is ${accountOnboarding.stage}.`,
+          action: "Complete the browser-only EasyAR registration/login/license route, then rerun this guide with the updated accountStage."
+        }]
+      : []),
+    ...(missingMaterials.length > 0
+      ? [{
+          id: "account/materials",
+          detail: `Missing account material(s): ${missingMaterials.join(", ")}.`,
+          action: "Run easyar_write_account_materials and fill required EasyAR account values locally."
+        }]
+      : []),
+    ...(input.root && localConfig && !localConfig.valid
+      ? localConfig.checks.filter((check) => !check.ok).map((check) => ({
+          id: `config/${check.id}`,
+          detail: check.detail,
+          action: localConfigAction(check.id)
+        }))
+      : [])
+  ];
+  const browserRoute = accountOnboarding.firstRunGuide.routes.find((route) => route.active)
+    ?? accountOnboarding.firstRunGuide.routes[0];
+  const nextActions = Array.from(new Set([
+    topNextCall.tool === "easyar_write_account_onboarding"
+      ? "Open https://www.easyar.cn/ in a browser, register or log in through the official entry, then return to MCP with the updated account stage."
+      : `Run ${topNextCall.tool} with ${JSON.stringify(topNextCall.arguments)}.`,
+    ...accountOnboarding.nextActions,
+    ...accountMaterials.nextActions,
+    ...(localConfig && !localConfig.valid ? localConfig.nextActions : []),
+    "Do not run Unity batch automation until FIRST_RUN.md, LOCAL_CONFIG_HANDOFF.md, and PREFLIGHT.md agree that account and local config gates are clear."
+  ])).slice(0, 14);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    client: input.client,
+    platform: input.platform,
+    firstQuestion: "Do you already have an EasyAR account?",
+    readyForUnityAutomation,
+    topNextCall,
+    focusedScope: {
+      activeSamples: focused.map((sample) => sample.id),
+      deferredSamples: deferredSamples().map((sample) => sample.id),
+      note: "Current run-through work is intentionally limited to Image Tracking and Cloud Recognition until the user asks to continue other samples."
+    },
+    sample: {
+      id: input.sample.id,
+      name: input.sample.name,
+      needsCloudRecognition: input.sample.id === "cloud-recognition"
+    },
+    account: {
+      requestedStage: input.accountStage,
+      stage: accountOnboarding.stage,
+      browserRoute,
+      officialLinks: accountOnboarding.officialLinks
+    },
+    accountMaterials: {
+      readyForLocalConfigValidation: accountMaterials.readyForLocalConfigValidation,
+      missingRequired: missingMaterials,
+      materials: accountMaterials.materials.map((item) => ({
+        label: item.label,
+        required: item.required,
+        present: item.present,
+        source: item.source,
+        storeIn: item.storeIn,
+        sharePolicy: item.sharePolicy
+      }))
+    },
+    localConfig: localConfig
+      ? {
+          valid: localConfig.valid,
+          configPath: localConfig.configPath,
+          failedChecks: localConfig.checks.filter((check) => !check.ok).map((check) => check.id)
+        }
+      : {
+          valid: false,
+          configPath: input.root ? path.join(input.root, "ProjectSettings", "EasyAR", "easyar.local.json") : "ProjectSettings/EasyAR/easyar.local.json",
+          failedChecks: ["project-path"]
+        },
+    firstCalls,
+    artifactOrder,
+    blockers: uniqueBlockers(blockers),
+    nextActions,
+    security: [
+      "Registration, login, password reset, email activation, and verification codes stay in the official EasyAR browser session.",
+      "FIRST_RUN.md reports routes, paths, field presence, and next tool calls only.",
+      "Do not paste or commit EasyAR website passwords, API tokens, license keys, appKey, appSecret, signing keys, provisioning profiles, or raw private logs."
+    ]
+  };
+}
+
+function firstRunTopNextCall(
+  root: string | null,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  accountStage: AccountStage,
+  localConfigValid: boolean,
+  missingMaterials: string[]
+) {
+  const projectPath = root ?? "/path/to/UnityProject";
+  if (!root) {
+    return {
+      tool: "easyar_write_first_run_guide",
+      arguments: {
+        projectPath,
+        accountStage,
+        sampleId: sample.id,
+        platform
+      }
+    };
+  }
+  if (["unknown", "not-registered", "registered-not-logged-in"].includes(accountStage)) {
+    return {
+      tool: "easyar_write_account_onboarding",
+      arguments: {
+        projectPath,
+        accountStage,
+        sampleId: sample.id,
+        platform
+      }
+    };
+  }
+  if (missingMaterials.length > 0 || !localConfigValid) {
+    return {
+      tool: "easyar_write_local_config_handoff",
+      arguments: {
+        projectPath,
+        accountStage,
+        sampleId: sample.id,
+        platform
+      }
+    };
+  }
+  return {
+    tool: "easyar_write_project_handoff",
+    arguments: {
+      projectPath,
+      platform
+    }
   };
 }
 
@@ -11256,6 +11544,94 @@ function buildProjectHandoffMarkdown(handoff: Awaited<ReturnType<typeof buildPro
     "## Security",
     "",
     handoff.security,
+    ""
+  ].join("\n");
+}
+
+function buildFirstRunGuideMarkdown(guide: Awaited<ReturnType<typeof buildFirstRunGuide>>): string {
+  return [
+    "# EasyAR First Run",
+    "",
+    `Generated at: ${guide.generatedAt}`,
+    `Project: ${guide.projectPath ?? "not provided"}`,
+    `Client: ${guide.client}`,
+    `Platform: ${guide.platform}`,
+    `Ready for Unity automation: ${guide.readyForUnityAutomation ? "yes" : "no"}`,
+    "",
+    "## First Question",
+    "",
+    guide.firstQuestion,
+    "",
+    "## Top Next Call",
+    "",
+    `Tool: \`${guide.topNextCall.tool}\``,
+    `Arguments: \`${JSON.stringify(guide.topNextCall.arguments)}\``,
+    "",
+    "## Focused Scope",
+    "",
+    `Active samples: ${guide.focusedScope.activeSamples.join(", ")}`,
+    `Deferred samples: ${guide.focusedScope.deferredSamples.join(", ")}`,
+    guide.focusedScope.note,
+    "",
+    "## Selected Sample",
+    "",
+    `Sample: ${guide.sample.name} (${guide.sample.id})`,
+    `Needs Cloud Recognition credentials: ${guide.sample.needsCloudRecognition ? "yes" : "no"}`,
+    "",
+    "## Official Browser Route",
+    "",
+    `Requested account stage: ${guide.account.requestedStage}`,
+    `Current account stage: ${guide.account.stage}`,
+    `EasyAR website: ${guide.account.officialLinks.website}`,
+    `Register/login entry: ${guide.account.officialLinks.registerAndLogin}`,
+    `Development center: ${guide.account.officialLinks.developCenter}`,
+    "",
+    `Route: ${guide.account.browserRoute.answer}`,
+    `Guide: ${guide.account.browserRoute.guide}`,
+    "Browser actions:",
+    ...guide.account.browserRoute.browserActions.map((action) => `- ${action}`),
+    `Return prompt: ${guide.account.browserRoute.returnPrompt}`,
+    "",
+    "## Account Materials",
+    "",
+    `Ready for local config validation: ${guide.accountMaterials.readyForLocalConfigValidation ? "yes" : "no"}`,
+    `Missing required: ${guide.accountMaterials.missingRequired.length > 0 ? guide.accountMaterials.missingRequired.join(", ") : "none"}`,
+    "",
+    ...guide.accountMaterials.materials.flatMap((item) => [
+      `### ${item.label}`,
+      "",
+      `Required: ${item.required ? "yes" : "no"}`,
+      `Present: ${item.present ? "yes" : "no"}`,
+      `Source: ${item.source}`,
+      `Store in: ${item.storeIn}`,
+      `Share policy: ${item.sharePolicy}`,
+      ""
+    ]),
+    "## Local Config",
+    "",
+    `Config path: ${guide.localConfig.configPath}`,
+    `Valid: ${guide.localConfig.valid ? "yes" : "no"}`,
+    `Failed checks: ${guide.localConfig.failedChecks.length > 0 ? guide.localConfig.failedChecks.join(", ") : "none"}`,
+    "",
+    "## First MCP Calls",
+    "",
+    ...guide.firstCalls.map((call) => `- ${call}`),
+    "",
+    "## Artifact Reading Order",
+    "",
+    ...guide.artifactOrder.map((artifact) => `- ${artifact}`),
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(guide.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No first-run blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...guide.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    ...guide.security.map((item) => `- ${item}`),
     ""
   ].join("\n");
 }

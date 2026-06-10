@@ -194,11 +194,11 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## First-Time EasyAR Users
 
-`mcp-easyar` treats account setup as a guided browser handoff. If the user has not registered yet, call `easyar_account_onboarding accountStage=not-registered`; the guide sends them to the official EasyAR registration/login pages, then tells them what to do after they return to Codex or Claude. The MCP server never asks for website passwords, verification codes, raw API tokens, license keys, `appKey`, or `appSecret` in chat.
+`mcp-easyar` treats account setup as a guided browser handoff. If the user has not registered yet, start with `easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition`; the guide chooses the first safe MCP call, sends the user to the official EasyAR registration/login pages, and explains what to do after they return to Codex or Claude. The MCP server never asks for website passwords, verification codes, raw API tokens, license keys, `appKey`, or `appSecret` in chat.
 
 After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
 
-For Unity-project handoff, call `easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`. It writes `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`, combining the official browser registration/login path, account materials checklist, manual `easyar.local.json` steps, environment-backed writer command, and validation chain.
+For Unity-project handoff, call `easyar_write_first_run_guide projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`, then `easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`. These write `Assets/EasyARGenerated/FIRST_RUN.md` and `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`, combining the official browser registration/login path, focused sample scope, account materials checklist, manual `easyar.local.json` steps, environment-backed writer command, and validation chain.
 
 For brand-new users, the intended conversation is:
 
@@ -210,14 +210,15 @@ For brand-new users, the intended conversation is:
 
 The first MCP screen is intentionally account-stage driven:
 
-1. `easyar_server_status` shows `preflightFirst=true` and suggests `easyar_account_onboarding accountStage=not-registered` as a valid starting point.
-2. `easyar_write_account_onboarding` creates `ACCOUNT_ONBOARDING.md` so another AI tool or human operator can resume the same browser handoff.
-3. `easyar_write_account_materials` lists which official materials are needed, where to find them, where to store them locally, and whether they are safe to share.
-4. `easyar_write_local_config_handoff` creates `LOCAL_CONFIG_HANDOFF.md`, the safest bridge from EasyAR website registration/login to local secret storage.
-5. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
-6. `easyar_validate_local_config` checks only presence and placeholders.
-7. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
-8. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
+1. `easyar_server_status` shows `preflightFirst=true` and suggests `easyar_first_run_guide accountStage=not-registered` as a valid starting point.
+2. `easyar_write_first_run_guide` creates `FIRST_RUN.md`, the first-screen route for new users, focused scope, top next call, artifact reading order, and Unity-automation gate.
+3. `easyar_write_account_onboarding` creates `ACCOUNT_ONBOARDING.md` so another AI tool or human operator can resume the same browser handoff.
+4. `easyar_write_account_materials` lists which official materials are needed, where to find them, where to store them locally, and whether they are safe to share.
+5. `easyar_write_local_config_handoff` creates `LOCAL_CONFIG_HANDOFF.md`, the safest bridge from EasyAR website registration/login to local secret storage.
+6. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
+7. `easyar_validate_local_config` checks only presence and placeholders.
+8. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
+9. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
 
 ## Tools
 
@@ -242,6 +243,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_production_validation`: write the production validation evidence matrix to `PRODUCTION_VALIDATION.md`; it marks the deployment incomplete unless real evidence is present.
 - `easyar_release_manifest`: generate a consumer-facing install/release manifest with package metadata, entrypoints, focused scope, env names, and verification commands.
 - `easyar_write_release_manifest`: write the release manifest to `docs/RELEASE_MANIFEST.md` or a selected path.
+- `easyar_first_run_guide`: generate the first-screen guide for new MCP users across account stage, official browser route, focused scope, local config, and the first safe MCP calls.
+- `easyar_write_first_run_guide`: write `FIRST_RUN.md` to `Assets/EasyARGenerated/FIRST_RUN.md` or `EasyARGenerated/FIRST_RUN.md`.
 - `easyar_account_onboarding`: guide new or existing EasyAR users through official registration/login, license setup, Cloud Recognition credentials, and local MCP setup without collecting passwords or secrets.
 - `easyar_write_account_onboarding`: write the account onboarding guide to `Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md` or `EasyARGenerated/ACCOUNT_ONBOARDING.md`.
 - `easyar_account_materials`: generate a field-by-field checklist of EasyAR account materials, source locations, local storage targets, and share policies.

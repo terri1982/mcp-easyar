@@ -237,6 +237,14 @@ try {
     "easyar_write_release_manifest should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_first_run_guide"),
+    "easyar_first_run_guide should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_first_run_guide"),
+    "easyar_write_first_run_guide should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_onboarding_report"),
     "easyar_onboarding_report should be listed"
   );
@@ -387,6 +395,7 @@ try {
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "\"preflightFirst\": true");
+  assertTextIncludes(status, "easyar_first_run_guide accountStage=not-registered");
   assertTextIncludes(status, "easyar_account_onboarding accountStage=not-registered");
   assertTextIncludes(status, "easyar_write_focused_preflight");
   assertTextIncludes(status, "PREFLIGHT.md");
@@ -436,6 +445,45 @@ try {
   assertTextIncludes(officialApiContract, "\"appSecretPresent\"");
   assertTextIncludes(officialApiContract, "\"readyForProductionOfficialAccess\": false");
   assertTextIncludes(officialApiContract, "Responses must not include raw license keys");
+
+  const firstRunGuide = await callTool("easyar_first_run_guide", {
+    sampleId: "cloud-recognition",
+    accountStage: "not-registered",
+    platform: "android"
+  });
+  assertTextIncludes(firstRunGuide, "\"firstQuestion\": \"Do you already have an EasyAR account?\"");
+  assertTextIncludes(firstRunGuide, "\"stage\": \"not-registered\"");
+  assertTextIncludes(firstRunGuide, "\"readyForUnityAutomation\": false");
+  assertTextIncludes(firstRunGuide, "\"tool\": \"easyar_write_first_run_guide\"");
+  assertTextIncludes(firstRunGuide, "https://www.easyar.cn/");
+  assertTextIncludes(firstRunGuide, "image-tracking");
+  assertTextIncludes(firstRunGuide, "cloud-recognition");
+  assertTextIncludes(firstRunGuide, "FIRST_RUN.md");
+  assertTextIncludes(firstRunGuide, "Do not paste or commit");
+
+  const firstRunGuideRoot = await createUnityProject();
+  const writtenFirstRunGuide = await callTool("easyar_write_first_run_guide", {
+    projectPath: firstRunGuideRoot,
+    sampleId: "cloud-recognition",
+    accountStage: "not-registered",
+    platform: "android"
+  });
+  assertTextIncludes(writtenFirstRunGuide, "FIRST_RUN.md");
+  assertTextIncludes(writtenFirstRunGuide, "\"readyForUnityAutomation\": false");
+  assertTextIncludes(writtenFirstRunGuide, "\"tool\": \"easyar_write_account_onboarding\"");
+  const firstRunGuideMarkdown = await readFile(
+    path.join(firstRunGuideRoot, "Assets", "EasyARGenerated", "FIRST_RUN.md"),
+    "utf8"
+  );
+  assert(firstRunGuideMarkdown.includes("EasyAR First Run"), "First-run markdown should include title");
+  assert(firstRunGuideMarkdown.includes("Ready for Unity automation: no"), "First-run markdown should block Unity automation for unregistered users");
+  assert(firstRunGuideMarkdown.includes("Tool: `easyar_write_account_onboarding`"), "First-run markdown should include top next onboarding call");
+  assert(firstRunGuideMarkdown.includes("Active samples: image-tracking, cloud-recognition"), "First-run markdown should include focused sample scope");
+  assert(firstRunGuideMarkdown.includes("Artifact Reading Order"), "First-run markdown should include artifact reading order");
+  assert(firstRunGuideMarkdown.includes("https://www.easyar.cn/"), "First-run markdown should include official website");
+  assert(!firstRunGuideMarkdown.includes("env-test-account-token"), "First-run markdown should not include account token");
+  assert(!firstRunGuideMarkdown.includes("env-test-license-key"), "First-run markdown should not include license key");
+  await rm(firstRunGuideRoot, { recursive: true, force: true });
 
   const accountOnboarding = await callTool("easyar_account_onboarding", {
     sampleId: "cloud-recognition",
