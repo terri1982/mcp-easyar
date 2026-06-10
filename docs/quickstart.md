@@ -320,6 +320,8 @@ Before a real npm publish or release tag, enforce the final production gate:
 EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
 ```
 
+For the npm package, use the manual GitHub Actions `Release` workflow after configuring the protected `npm-publish` environment. The workflow runs the strict gate before `npm publish --provenance`, so package publishing cannot bypass official endpoint and real-device evidence.
+
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
 ```text

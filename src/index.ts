@@ -4031,6 +4031,7 @@ async function buildDeploymentReadiness(projectPath: string | null, unityPath?: 
       check("package-files-docs", packageJson.files.includes("docs"), "warning", "package.json files includes docs."),
       check("package-files-logo", packageJson.files.includes("assets/easyar-icon.png"), "warning", "package.json files includes assets/easyar-icon.png."),
       check("ci-workflow", await exists(path.join(process.cwd(), ".github", "workflows", "ci.yml")), "blocker", "GitHub Actions CI workflow .github/workflows/ci.yml exists."),
+      check("release-workflow", await exists(path.join(process.cwd(), ".github", "workflows", "release.yml")), "blocker", "GitHub Actions Release workflow .github/workflows/release.yml exists."),
       check("readme", await fileContains(path.join(process.cwd(), "README.md"), "mcp-easyar"), "blocker", "README.md uses the mcp-easyar project name."),
       check("readme-install-profiles", await fileContains(path.join(process.cwd(), "README.md"), "entrypointMode=package-bin") && await fileContains(path.join(process.cwd(), "README.md"), "entrypointMode=npx"), "warning", "README.md documents package-bin and npx client entrypoint modes."),
       check("release-manifest-install-profiles", await fileContains(path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"), "Install Profiles") && await fileContains(path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"), "npm install -g mcp-easyar"), "warning", "docs/RELEASE_MANIFEST.md documents local, package-bin, and npx install profiles."),
@@ -5548,7 +5549,8 @@ async function buildReleaseManifest() {
     "dist/index.js",
     "dist/easyar-api.js",
     ".github/ISSUE_TEMPLATE/focused-sample-run.yml",
-    ".github/workflows/ci.yml"
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml"
   ];
   const requiredFileStatuses = await Promise.all(requiredFiles.map(async (relativePath) => ({
     path: relativePath,
@@ -5680,6 +5682,7 @@ async function buildReleaseManifest() {
       ? missingRequiredFiles.map((relativePath) => `Restore or generate required release file: ${relativePath}`)
       : [
           "Run verification commands before publishing or tagging a release.",
+          "Use the manual GitHub Actions Release workflow for npm publishing after configuring the protected npm-publish environment.",
           "Use easyar_check_client_setup to validate the MCP client config path or selected package/npx entrypoint before giving it to Codex or Claude.",
           "Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files."
         ],

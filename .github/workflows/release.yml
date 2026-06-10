@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: npm dist-tag to publish
+        required: true
+        default: latest
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Strict release gate
+        run: npm run release:check
+        env:
+          EASYAR_RELEASE_REQUIRE_PRODUCTION_READY: "1"
+          EASYAR_API_BASE_URL: ${{ vars.EASYAR_API_BASE_URL }}
+          EASYAR_ACCOUNT_STATUS_ENDPOINT: ${{ vars.EASYAR_ACCOUNT_STATUS_ENDPOINT }}
+          EASYAR_LICENSE_VALIDATE_ENDPOINT: ${{ vars.EASYAR_LICENSE_VALIDATE_ENDPOINT }}
+          EASYAR_DOWNLOADS_ENDPOINT: ${{ vars.EASYAR_DOWNLOADS_ENDPOINT }}
+          EASYAR_CLOUD_CREDENTIALS_ENDPOINT: ${{ vars.EASYAR_CLOUD_CREDENTIALS_ENDPOINT }}
+          EASYAR_UNITY_PATH: ${{ vars.EASYAR_UNITY_PATH }}
+          EASYAR_API_TOKEN: ${{ secrets.EASYAR_API_TOKEN }}
+
+      - name: Publish to npm with provenance
+        run: npm publish --provenance --access public --tag "${{ inputs.npm_tag }}"

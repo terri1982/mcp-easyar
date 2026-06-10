@@ -1,6 +1,6 @@
 # mcp-easyar Release Manifest
 
-Generated at: 2026-06-10T14:25:03.710Z
+Generated at: 2026-06-10T16:29:21.761Z
 Package: mcp-easyar 0.1.0
 Bin: easyar-mcp
 Node: >=20
@@ -106,11 +106,16 @@ Entrypoint mode: `npx`
 - OK dist/easyar-api.js
 - OK .github/ISSUE_TEMPLATE/focused-sample-run.yml
 - OK .github/workflows/ci.yml
+- OK .github/workflows/release.yml
 
 ## Package Files
 
 - dist
-- docs
+- docs/OFFICIAL_API_CONTRACT.md
+- docs/OFFICIAL_API_HANDOFF.md
+- docs/quickstart.md
+- docs/RELEASE_MANIFEST.md
+- docs/troubleshooting.md
 - assets/easyar-icon.png
 - .env.example
 - README.md
@@ -127,6 +132,7 @@ Entrypoint mode: `npx`
 - `package:smoke`: `npm run build && node scripts/package-install-smoke.mjs`
 - `pack:check`: `npm run build && npm pack --dry-run`
 - `postbuild`: `chmod +x dist/index.js dist/install-check.js`
+- `release:check`: `node scripts/release-check.mjs`
 - `start`: `node dist/index.js`
 - `test`: `npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs`
 - `typecheck`: `tsc --noEmit`
@@ -134,6 +140,7 @@ Entrypoint mode: `npx`
 ## Next Actions
 
 - Run verification commands before publishing or tagging a release.
+- Use the manual GitHub Actions Release workflow for npm publishing after configuring the protected npm-publish environment.
 - Use easyar_check_client_setup to validate the MCP client config path or selected package/npx entrypoint before giving it to Codex or Claude.
 - Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files.
 

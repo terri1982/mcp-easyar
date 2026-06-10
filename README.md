@@ -193,6 +193,8 @@ npm run release:check
 
 `release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command.
 
+Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment.
+
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## First-Time EasyAR Users
