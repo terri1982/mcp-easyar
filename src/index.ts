@@ -10724,7 +10724,7 @@ function sampleSpecificLogRules(sample: SampleInfo | null): UnityLogRule[] {
       {
         id: "image-tracking-target-load",
         severity: "high",
-        pattern: /(image\s*target|imagetarget|target).{0,160}(not\s*found|missing|load(ed)?\s*failed|cannot\s*load|invalid|empty)/i,
+        pattern: /(image\s*target|imagetarget|target\s*(database|asset|image|file|data)).{0,160}(not\s*found|missing|load(ed)?\s*failed|cannot\s*load|invalid|empty)/i,
         title: "Image Tracking target asset cannot be loaded",
         actions: [
           "Check Assets/EasyARGenerated/image-tracking/RUNBOOK.md.",

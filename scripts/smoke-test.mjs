@@ -1987,6 +1987,12 @@ try {
   assertTextIncludes(imageTrackingLogAnalysis, "image-tracking-target-load");
   assertTextIncludes(imageTrackingLogAnalysis, "\"id\": \"image-tracking\"");
 
+  const nativeExtensionNoticeAnalysis = await callTool("easyar_analyze_unity_log", {
+    sampleId: "image-tracking",
+    logText: "Native extension for Android target not found\nNative extension for OSXStandalone target not found"
+  });
+  assertTextExcludes(nativeExtensionNoticeAnalysis, "image-tracking-target-load");
+
   const cloudLogAnalysis = await callTool("easyar_analyze_unity_log", {
     sampleId: "cloud-recognition",
     logText: "CloudRecognizer unauthorized: appKey invalid"
@@ -2322,6 +2328,11 @@ function callTool(name, args) {
 function assertTextIncludes(response, expected) {
   const text = extractText(response);
   assert(text.includes(expected), `Expected response text to include ${expected}`);
+}
+
+function assertTextExcludes(response, unexpected) {
+  const text = extractText(response);
+  assert(!text.includes(unexpected), `Expected response text to exclude ${unexpected}`);
 }
 
 function extractText(response) {
