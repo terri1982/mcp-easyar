@@ -83,6 +83,16 @@ easyar_check_official_access projectPath=/path/to/UnityProject sampleId=cloud-re
 easyar_write_deployment_readiness
 ```
 
+## Fixture Smoke Test
+
+The repository includes a local HTTP fixture that exercises the same MCP official-access tools against configured endpoint URLs:
+
+```bash
+node scripts/official-api-fixture-smoke.mjs
+```
+
+`npm test` runs this fixture after building the server. The fixture proves request shape, bearer-token forwarding, endpoint success handling, and response redaction for CI. It is not a substitute for validating real EasyAR production endpoints and registered-user entitlements.
+
 ## Security
 
 This contract is schema and deployment guidance only. It intentionally contains no EasyAR account token, license key, `appKey`, `appSecret`, or user password.
