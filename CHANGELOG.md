@@ -9,6 +9,8 @@ Initial public MVP for `mcp-easyar`.
 - MCP stdio server for authorized EasyAR Unity workflows.
 - MCP prompts for focused Image Tracking, Cloud Recognition, and Unity programming assistant workflows.
 - Official EasyAR links, package-version notes, sample catalog, checklist, and quickstart resources.
+- Official API contract resource at `easyar://official/api-contract` and `docs/OFFICIAL_API_CONTRACT.md` for account, license, downloads, and Cloud Recognition endpoint integration.
+- Focused scope workflow resource at `easyar://workflow/focused-scope` and prompts for official endpoint validation and focused scope close-out.
 - MCP prompts and quickstart resource now start focused sample runs from account materials, Unity environment, and `PREFLIGHT.md`; programming prompt starts from `PROGRAMMING_CONTEXT.md`.
 - Server status now exposes a `preflightFirst` onboarding route so unregistered users can start from official EasyAR registration before local config and Unity validation.
 - Generated `easyar.local.json.example` now includes registration/login instructions, never-share guidance, and environment variable names for license and Cloud Recognition local secrets.
@@ -32,6 +34,8 @@ Initial public MVP for `mcp-easyar`.
 - Focused support bundle and `SUPPORT_BUNDLE.md` artifact generation across run sequence, run report, scene audit, and latest Unity log diagnostics.
 - Focused real-device validation checklist and `DEVICE_VALIDATION.md` artifact generation for Image Tracking and Cloud Recognition pass criteria.
 - Focused run result and `RUN_RESULT.md` artifact generation for compile, build, and device validation handoff.
+- Focused completion report and `COMPLETION_REPORT.md` artifact generation to classify each focused sample as `passed`, `blocked`, `failed`, or `not-run`.
+- Focused scope status and `FOCUSED_SCOPE_STATUS.md` artifact generation to aggregate Image Tracking and Cloud Recognition completion state without expanding deferred samples.
 - Redacted GitHub issue report and `ISSUE_REPORT.md` artifact generation for focused sample failures.
 - GitHub issue template and focused Image Tracking / Cloud Recognition troubleshooting guide.
 - Focused Unity programming context and `PROGRAMMING_CONTEXT.md` artifact generation before C# planning or edits.
@@ -51,6 +55,7 @@ Initial public MVP for `mcp-easyar`.
 - Configurable official EasyAR downloads endpoint calls for account-scoped SDK/sample package discovery.
 - Configurable official EasyAR Cloud Recognition credential metadata endpoint calls without returning secrets.
 - Focused official access aggregation and `OFFICIAL_ACCESS.md` artifact generation across account, license, downloads, and Cloud Recognition endpoints.
+- Local official API fixture smoke test covering configured endpoint success paths, bearer-token forwarding, response handling, and remote secret redaction.
 - Deployment readiness report generation and `DEPLOYMENT_READINESS.md` artifact writing for release files, official endpoints, Unity path, focused scope, and security checks.
 - Official EasyAR Unity Plugin and focused sample import checklist generation with `IMPORT_CHECKLIST.md` artifacts.
 - Unity Package Manager focused sample import guide generation with `SAMPLE_IMPORT_GUIDE.md` artifacts.
@@ -73,6 +78,8 @@ Initial public MVP for `mcp-easyar`.
 - Unity batch method execution helper.
 - Unity Editor/build log analysis for EasyAR license, plugin import, camera permission, compile, Android/Gradle, iOS signing, and scene setup issues.
 - GitHub Actions CI with build, typecheck, MCP smoke test, executable bin smoke test, and package dry run.
+- User-facing `easyar-mcp-check` install verification bin plus `npm run install:check` for non-secret MCP capability checks after installation.
+- Local tarball package install smoke test via `npm run package:smoke`, validating installed `easyar-mcp` and `easyar-mcp-check` bins from the packed package.
 - Package publishing whitelist for runtime artifacts, docs, license, security policy, and logo.
 
 ### Security

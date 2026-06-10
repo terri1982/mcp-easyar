@@ -1,7 +1,7 @@
 # mcp-easyar Release Manifest
 
 Package: `mcp-easyar` 0.1.0  
-Bin: `easyar-mcp`  
+Bins: `easyar-mcp`, `easyar-mcp-check`
 Node: `>=20`  
 Repository: `https://github.com/terri1982/mcp-easyar`
 
@@ -112,6 +112,7 @@ npm run pack:check
 - `LICENSE`
 - `SECURITY.md`
 - `docs/quickstart.md`
+- `docs/OFFICIAL_API_CONTRACT.md`
 - `docs/RELEASE_MANIFEST.md`
 - `docs/troubleshooting.md`
 - `assets/easyar-icon.png`
