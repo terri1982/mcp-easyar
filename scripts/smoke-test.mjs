@@ -292,6 +292,14 @@ try {
     prompts.result.prompts.some((prompt) => prompt.name === "easyar-run-cloud-recognition"),
     "easyar-run-cloud-recognition prompt should be listed"
   );
+  assert(
+    prompts.result.prompts.some((prompt) => prompt.name === "easyar-validate-official-endpoints"),
+    "easyar-validate-official-endpoints prompt should be listed"
+  );
+  assert(
+    prompts.result.prompts.some((prompt) => prompt.name === "easyar-close-focused-scope"),
+    "easyar-close-focused-scope prompt should be listed"
+  );
 
   const imageTrackingPrompt = await request("prompts/get", {
     name: "easyar-run-image-tracking",
@@ -314,6 +322,26 @@ try {
   assertPromptIncludes(programmingPrompt, "easyar_write_programming_context");
   assertPromptIncludes(programmingPrompt, "PROGRAMMING_CONTEXT.md");
 
+  const officialEndpointPrompt = await request("prompts/get", {
+    name: "easyar-validate-official-endpoints",
+    arguments: {
+      projectPath: "/tmp/EasyARProject",
+      platform: "android"
+    }
+  });
+  assertPromptIncludes(officialEndpointPrompt, "easyar://official/api-contract");
+  assertPromptIncludes(officialEndpointPrompt, "easyar_check_official_access");
+
+  const focusedScopePrompt = await request("prompts/get", {
+    name: "easyar-close-focused-scope",
+    arguments: {
+      projectPath: "/tmp/EasyARProject",
+      platform: "android"
+    }
+  });
+  assertPromptIncludes(focusedScopePrompt, "easyar://workflow/focused-scope");
+  assertPromptIncludes(focusedScopePrompt, "easyar_write_focused_scope_status");
+
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "\"preflightFirst\": true");
@@ -335,6 +363,20 @@ try {
   assertResourceIncludes(quickstart, "easyar_write_focused_preflight");
   assertResourceIncludes(quickstart, "PREFLIGHT.md");
   assertResourceIncludes(quickstart, "PROGRAMMING_CONTEXT.md");
+
+  const officialApiContractResource = await request("resources/read", {
+    uri: "easyar://official/api-contract"
+  });
+  assertResourceIncludes(officialApiContractResource, "mcp-easyar Official API Contract");
+  assertResourceIncludes(officialApiContractResource, "cloud-credentials-discovery");
+  assertResourceIncludes(officialApiContractResource, "Responses must not include raw license keys");
+
+  const focusedScopeResource = await request("resources/read", {
+    uri: "easyar://workflow/focused-scope"
+  });
+  assertResourceIncludes(focusedScopeResource, "EasyAR Focused Scope Workflow");
+  assertResourceIncludes(focusedScopeResource, "easyar_write_focused_scope_status");
+  assertResourceIncludes(focusedScopeResource, "allFocusedSamplesComplete=true");
 
   const authStatus = await callTool("easyar_auth_status", {});
   assertTextIncludes(authStatus, "\"hasToken\": false");

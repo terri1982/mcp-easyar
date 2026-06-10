@@ -158,8 +158,10 @@ const toolCatalog = [
 const resourceCatalog = [
   "easyar://samples/catalog",
   "easyar://official/info",
+  "easyar://official/api-contract",
   "easyar://unity/checklist",
-  "easyar://workflow/quickstart"
+  "easyar://workflow/quickstart",
+  "easyar://workflow/focused-scope"
 ] as const;
 
 const samples: SampleInfo[] = [
@@ -307,6 +309,20 @@ server.resource(
 );
 
 server.resource(
+  "easyar-official-api-contract",
+  "easyar://official/api-contract",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: buildOfficialApiContractMarkdown(buildOfficialApiContract(undefined, true))
+      }
+    ]
+  })
+);
+
+server.resource(
   "easyar-unity-checklist",
   "easyar://unity/checklist",
   async (uri) => ({
@@ -338,6 +354,37 @@ server.resource(
         uri: uri.href,
         mimeType: "text/markdown",
         text: quickstartWorkflow
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-focused-scope-workflow",
+  "easyar://workflow/focused-scope",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: [
+          "# EasyAR Focused Scope Workflow",
+          "",
+          "Current focused sample scope:",
+          "",
+          "- image-tracking",
+          "- cloud-recognition",
+          "",
+          "Deferred samples stay out of the run-through scope until the user explicitly asks to continue.",
+          "",
+          "Recommended close-out sequence:",
+          "",
+          "1. Run `easyar_write_completion_report` for `image-tracking`.",
+          "2. Run `easyar_write_completion_report` for `cloud-recognition`.",
+          "3. Run `easyar_write_focused_scope_status`.",
+          "4. Read `Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md` first when another AI tool takes over.",
+          "5. Treat the focused scope as complete only when `allFocusedSamplesComplete=true`."
+        ].join("\n")
       }
     ]
   })
@@ -393,6 +440,58 @@ server.prompt(
       "Read PREFLIGHT.md and follow its nextCall before running Unity batch commands. Do not continue to device validation until easyar.cloudRecognition.appId, appKey, and appSecret are configured locally.",
       `After preflight blockers are clear, call easyar_write_run_sequence projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}.`,
       "If Unity batch or device validation fails, call easyar_analyze_latest_unity_log with sampleId=cloud-recognition."
+    ].join("\n")
+  )
+);
+
+server.prompt(
+  "easyar-validate-official-endpoints",
+  "Guide Codex or Claude through official EasyAR endpoint and registered-user access validation.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android")
+  },
+  ({ projectPath, platform }) => promptText(
+    "Official EasyAR endpoint validation",
+    [
+      `Validate official EasyAR account endpoints for project: ${projectPath}`,
+      `Target platform: ${platform}`,
+      "",
+      "Start by reading `easyar://official/api-contract`.",
+      "",
+      "Then call:",
+      "1. easyar_auth_status",
+      "2. easyar_generate_official_api_contract",
+      `3. easyar_check_official_access projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,
+      `4. easyar_check_official_access projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
+      "5. easyar_write_deployment_readiness",
+      "",
+      "Do not ask the user to paste EASYAR_API_TOKEN, licenseKey, appKey, or appSecret in chat. Report only endpoint readiness, status codes, redacted metadata, and next actions."
+    ].join("\n")
+  )
+);
+
+server.prompt(
+  "easyar-close-focused-scope",
+  "Guide Codex or Claude through closing out Image Tracking and Cloud Recognition focused sample status.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android")
+  },
+  ({ projectPath, platform }) => promptText(
+    "Focused EasyAR scope close-out",
+    [
+      `Close out the current focused EasyAR sample scope for project: ${projectPath}`,
+      `Target platform: ${platform}`,
+      "",
+      "Read `easyar://workflow/focused-scope` first.",
+      "",
+      "Then call:",
+      `1. easyar_write_completion_report projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,
+      `2. easyar_write_completion_report projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
+      `3. easyar_write_focused_scope_status projectPath=${projectPath} platform=${platform}`,
+      "",
+      "Read FOCUSED_SCOPE_STATUS.md. If allFocusedSamplesComplete is false, follow the per-sample next actions. Do not start deferred samples unless the user asks to continue."
     ].join("\n")
   )
 );

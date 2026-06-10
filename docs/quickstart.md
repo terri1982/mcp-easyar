@@ -69,6 +69,8 @@ easyar_generate_official_api_contract
 easyar_write_official_api_contract workspacePath=/path/to/workspace
 ```
 
+MCP clients can also read `easyar://official/api-contract` or use the `easyar-validate-official-endpoints` prompt before validating registered-user endpoint access.
+
 You can inspect local Unity path discovery with:
 
 ```text
@@ -224,6 +226,8 @@ easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=and
 ```
 
 `FOCUSED_SCOPE_STATUS.md` reports whether both focused samples are complete and lists the next action for each incomplete sample. Deferred samples stay out of this status until the user asks to continue.
+
+MCP clients can read `easyar://workflow/focused-scope` or use the `easyar-close-focused-scope` prompt when handing the focused run-through to another AI tool.
 
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
