@@ -215,11 +215,12 @@ The first MCP screen is intentionally account-stage driven:
 3. `easyar_write_account_onboarding` creates `ACCOUNT_ONBOARDING.md` so another AI tool or human operator can resume the same browser handoff.
 4. `easyar_write_account_materials` lists which official materials are needed, where to find them, where to store them locally, and whether they are safe to share.
 5. `easyar_write_local_config_handoff` creates `LOCAL_CONFIG_HANDOFF.md`, the safest bridge from EasyAR website registration/login to local secret storage.
-6. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
-7. `easyar_validate_local_config` checks only presence and placeholders.
-8. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
-9. Before recording device evidence, `easyar_write_device_run_result_form` creates `DEVICE_RUN_RESULT_FORM.md`, a fillable real-device evidence form plus safe `easyar_write_run_result` argument templates.
-10. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
+6. `easyar_write_local_config_form` creates `LOCAL_CONFIG_FORM.md`, a field-by-field local JSON fill form with placeholders, source pages, env alternatives, and validation calls.
+7. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
+8. `easyar_validate_local_config` checks only presence and placeholders.
+9. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
+10. Before recording device evidence, `easyar_write_device_run_result_form` creates `DEVICE_RUN_RESULT_FORM.md`, a fillable real-device evidence form plus safe `easyar_write_run_result` argument templates.
+11. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
 
 ## Tools
 
@@ -292,6 +293,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.
+- `easyar_generate_local_config_form`: generate a fillable `easyar.local.json` form with field sources, placeholders, environment alternatives, and validation calls.
+- `easyar_write_local_config_form`: write the local config form to `Assets/EasyARGenerated/LOCAL_CONFIG_FORM.md` without writing secret values.
 - `easyar_write_local_config_from_env`: write `ProjectSettings/EasyAR/easyar.local.json` from local environment variables such as `EASYAR_API_TOKEN`, `EASYAR_LICENSE_KEY`, and Cloud Recognition env vars without returning secret values.
 - `easyar_local_config_handoff`: generate a first-run handoff from EasyAR website registration/login to safe local `easyar.local.json` setup and validation.
 - `easyar_write_local_config_handoff`: write the first-run local config handoff to `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`.

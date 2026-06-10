@@ -146,6 +146,8 @@ const toolCatalog = [
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
+  "easyar_generate_local_config_form",
+  "easyar_write_local_config_form",
   "easyar_write_local_config_from_env",
   "easyar_local_config_handoff",
   "easyar_write_local_config_handoff",
@@ -2656,6 +2658,61 @@ server.tool(
     }
 
     return jsonText(await buildLocalConfigValidationReport(root, target));
+  }
+);
+
+server.tool(
+  "easyar_generate_local_config_form",
+  "Generate a fillable ProjectSettings/EasyAR/easyar.local.json form with field sources, placeholders, env alternatives, and validation calls.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known."),
+    bundleIdentifier: z.string().optional().describe("Optional non-secret bundle/package identifier to show in the JSON skeleton.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage, bundleIdentifier }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildLocalConfigForm(root, sample, platform, accountStage, bundleIdentifier));
+  }
+);
+
+server.tool(
+  "easyar_write_local_config_form",
+  "Write a fillable local config form to Assets/EasyARGenerated/LOCAL_CONFIG_FORM.md without writing secret values.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known."),
+    bundleIdentifier: z.string().optional().describe("Optional non-secret bundle/package identifier to show in the JSON skeleton."),
+    relativePath: z.string().optional().describe("Optional form path inside the project. Defaults to Assets/EasyARGenerated/LOCAL_CONFIG_FORM.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing local config form.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage, bundleIdentifier, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const form = await buildLocalConfigForm(root, sample, platform, accountStage, bundleIdentifier);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(root, "Assets", "EasyARGenerated", "LOCAL_CONFIG_FORM.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildLocalConfigFormMarkdown(form), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      platform,
+      localConfigValid: form.localConfig.valid,
+      missingRequiredFields: form.missingRequiredFields,
+      nextActions: form.nextActions,
+      note: "The form contains placeholders, field presence, and validation calls only. It does not write or return secret values."
+    });
   }
 );
 
@@ -7433,6 +7490,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
   const priority = [
     "ACCOUNT_ONBOARDING.md",
     "ACCOUNT_MATERIALS.md",
+    "LOCAL_CONFIG_FORM.md",
     "UNITY_ENVIRONMENT.md",
     "FOCUSED_SCOPE_STATUS.md",
     "PREFLIGHT.md",
@@ -7445,6 +7503,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "SCENE_AUDIT.md",
     "SUPPORT_BUNDLE.md",
     "DEVICE_VALIDATION.md",
+    "DEVICE_RUN_RESULT_FORM.md",
     "RUN_RESULT.md",
     "COMPLETION_REPORT.md",
     "ISSUE_REPORT.md",
@@ -7491,6 +7550,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
       purpose: "Field-by-field EasyAR account material source, storage, and sharing policy checklist.",
       generateWith: `easyar_write_account_materials sampleId=${sample.id}`
+    },
+    {
+      name: "Local Config Form",
+      relativePath: path.join(base, "LOCAL_CONFIG_FORM.md"),
+      purpose: "Fillable easyar.local.json field form with placeholders, source map, env alternatives, and validation calls.",
+      generateWith: `easyar_write_local_config_form sampleId=${sample.id}`
     },
     {
       name: "Unity Environment",
@@ -7593,6 +7658,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "DEVICE_VALIDATION.md"),
       purpose: "Real-device test steps, pass criteria, and evidence prompts.",
       generateWith: `easyar_write_device_validation_checklist sampleId=${sample.id}`
+    },
+    {
+      name: "Device Run Result Form",
+      relativePath: path.join(base, "DEVICE_RUN_RESULT_FORM.md"),
+      purpose: "Fillable real-device result form and safe easyar_write_run_result templates.",
+      generateWith: `easyar_write_device_run_result_form sampleId=${sample.id}`
     },
     {
       name: "Code Plan",
@@ -9626,6 +9697,216 @@ async function buildLocalConfigFromEnvReport(
     nextActions: Array.from(new Set(nextActions)),
     security: "Secret values are read only from local environment variables and written only to ProjectSettings/EasyAR/easyar.local.json. Returned output lists field presence and env names, never secret values."
   };
+}
+
+async function buildLocalConfigForm(
+  root: string,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone",
+  accountStage: AccountStage,
+  bundleIdentifierInput?: string
+) {
+  const [accountMaterials, localConfig, onboarding] = await Promise.all([
+    buildAccountMaterialsReport(root, sample, platform),
+    buildLocalConfigValidationReport(root),
+    buildAccountOnboardingReport(root, sample, platform, accountStage)
+  ]);
+  const configPath = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+  const examplePath = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example");
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const checkOk = (id: string) => localConfig.checks.some((check) => check.id === id && check.ok);
+  const materialPresent = (id: string) => accountMaterials.materials.some((item) => item.id === id && item.present);
+  const bundleIdentifier = bundleIdentifierInput ?? defaultBundleIdentifier(sample);
+  const fields = [
+    localConfigFormField({
+      id: "api-base-url",
+      jsonPath: "easyar.apiBaseUrl",
+      label: "EasyAR API base URL",
+      required: true,
+      present: checkOk("api-base-url"),
+      source: "Official EasyAR service base URL.",
+      envNames: ["EASYAR_API_BASE_URL"],
+      placeholder: "https://www.easyar.cn",
+      sharePolicy: "Safe as an endpoint URL; not a secret.",
+      userAction: "Keep the default unless the official deployment gives a different API base URL."
+    }),
+    localConfigFormField({
+      id: "account-token",
+      jsonPath: "easyar.accountToken",
+      label: "EasyAR account/API token",
+      required: true,
+      present: checkOk("account-token"),
+      source: "Official EasyAR account API token or account-scoped secret store after registration/login.",
+      envNames: ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"],
+      placeholder: "<paste locally from EasyAR account secret store>",
+      sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source files.",
+      userAction: "Store locally in easyar.local.json or use the environment-backed writer."
+    }),
+    localConfigFormField({
+      id: "license-key",
+      jsonPath: "easyar.licenseKey",
+      label: "EasyAR Sense license key",
+      required: true,
+      present: checkOk("license-key") || materialPresent("license-key"),
+      source: `EasyAR development center license entry for ${platform}; it must match the app bundle/package identifier.`,
+      envNames: ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"],
+      placeholder: "<paste locally from EasyAR license page>",
+      sharePolicy: "Secret or account-scoped value. Never commit or paste publicly.",
+      userAction: "Create or locate the license after official EasyAR registration/login."
+    }),
+    localConfigFormField({
+      id: "target-platform",
+      jsonPath: "unity.targetPlatform",
+      label: "Unity target platform",
+      required: true,
+      present: checkOk("target-platform"),
+      source: "Focused run target selected in MCP.",
+      envNames: [],
+      placeholder: platform,
+      sharePolicy: "Usually safe to share.",
+      userAction: "Use android or ios before real-device validation."
+    }),
+    localConfigFormField({
+      id: "bundle-identifier",
+      jsonPath: "unity.bundleIdentifier",
+      label: "Unity bundle/package identifier",
+      required: true,
+      present: checkOk("bundle-identifier") && materialPresent("bundle-identifier"),
+      source: "Unity Player Settings and the matching EasyAR license configuration.",
+      envNames: ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"],
+      placeholder: bundleIdentifier,
+      sharePolicy: "Usually safe, but avoid public exposure if the app identifier is private.",
+      userAction: "Make this match the identifier used when creating the EasyAR license."
+    }),
+    localConfigFormField({
+      id: "cloud-app-id",
+      jsonPath: "easyar.cloudRecognition.appId",
+      label: "Cloud Recognition appId",
+      required: needsCloudRecognition,
+      present: materialPresent("cloud-app-id"),
+      source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+      envNames: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
+      placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
+      sharePolicy: needsCloudRecognition ? "Sensitive account-scoped config. MCP reports presence only." : "Leave empty for Image Tracking.",
+      userAction: needsCloudRecognition ? "Fill together with appKey and appSecret." : "Leave empty unless this project also runs Cloud Recognition."
+    }),
+    localConfigFormField({
+      id: "cloud-app-key",
+      jsonPath: "easyar.cloudRecognition.appKey",
+      label: "Cloud Recognition appKey",
+      required: needsCloudRecognition,
+      present: materialPresent("cloud-app-key"),
+      source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+      envNames: ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
+      placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
+      sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
+      userAction: needsCloudRecognition ? "Fill together with appId and appSecret." : "Leave empty unless this project also runs Cloud Recognition."
+    }),
+    localConfigFormField({
+      id: "cloud-app-secret",
+      jsonPath: "easyar.cloudRecognition.appSecret",
+      label: "Cloud Recognition appSecret",
+      required: needsCloudRecognition,
+      present: materialPresent("cloud-app-secret"),
+      source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+      envNames: ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"],
+      placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
+      sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
+      userAction: needsCloudRecognition ? "Fill together with appId and appKey." : "Leave empty unless this project also runs Cloud Recognition."
+    })
+  ];
+  const missingRequiredFields = fields.filter((field) => field.required && !field.present).map((field) => field.jsonPath);
+  const jsonSkeleton = {
+    sampleId: sample.id,
+    sampleName: sample.name,
+    easyar: {
+      apiBaseUrl: "https://www.easyar.cn",
+      accountToken: "<paste locally; never send to MCP chat>",
+      licenseKey: "<paste locally; never send to MCP chat>",
+      cloudRecognition: {
+        appId: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : "",
+        appKey: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : "",
+        appSecret: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : ""
+      }
+    },
+    unity: {
+      targetPlatform: platform,
+      bundleIdentifier,
+      notes: sample.setupNotes
+    }
+  };
+  const envBackedWrite = {
+    tool: "easyar_write_local_config_from_env",
+    arguments: {
+      projectPath: root,
+      sampleId: sample.id,
+      targetPlatform: platform,
+      bundleIdentifier
+    },
+    requiredEnvNames: fields
+      .filter((field) => field.required && field.envNames.length > 0)
+      .flatMap((field) => field.envNames)
+  };
+  const validationChain = [
+    `easyar_validate_local_config projectPath=${root}`,
+    `easyar_write_account_materials projectPath=${root} sampleId=${sample.id} platform=${platform}`,
+    `easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=${platform}`,
+    `easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}`,
+    `easyar_next_workflow_step projectPath=${root} sampleId=${sample.id} platform=${platform}`
+  ];
+  const nextActions = missingRequiredFields.length > 0
+    ? [
+        ...(onboarding.stage === "not-registered" ? ["Register or log in at https://www.easyar.cn/ before filling account-scoped values."] : []),
+        `Copy ${path.relative(root, examplePath)} to ${path.relative(root, configPath)} if the local file does not exist.`,
+        `Fill missing required field(s) locally: ${missingRequiredFields.join(", ")}.`,
+        `Run ${validationChain[0]}.`
+      ]
+    : [
+        `Run ${validationChain[0]}.`,
+        `Run ${validationChain[2]} and continue with the focused sample workflow.`
+      ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    accountStage: onboarding.stage,
+    configPath,
+    examplePath,
+    localConfig: {
+      exists: await exists(configPath),
+      valid: localConfig.valid,
+      failedChecks: localConfig.checks.filter((check) => !check.ok).map((check) => check.id)
+    },
+    readyToValidate: missingRequiredFields.length === 0,
+    fields,
+    missingRequiredFields,
+    jsonSkeleton,
+    envBackedWrite,
+    validationChain,
+    nextActions: Array.from(new Set(nextActions)),
+    security: "This form returns only field names, placeholders, presence status, and validation calls. Actual account tokens, license keys, appKey, and appSecret must stay in local files or local environment variables."
+  };
+}
+
+function localConfigFormField(input: {
+  id: string;
+  jsonPath: string;
+  label: string;
+  required: boolean;
+  present: boolean;
+  source: string;
+  envNames: string[];
+  placeholder: string;
+  sharePolicy: string;
+  userAction: string;
+}) {
+  return input;
 }
 
 async function buildLocalConfigHandoffReport(
@@ -11792,6 +12073,75 @@ function buildAccountMaterialsMarkdown(report: Awaited<ReturnType<typeof buildAc
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildLocalConfigFormMarkdown(form: Awaited<ReturnType<typeof buildLocalConfigForm>>): string {
+  return [
+    "# EasyAR Local Config Form",
+    "",
+    `Generated at: ${form.generatedAt}`,
+    `Project: ${form.projectPath}`,
+    `Sample: ${form.sample.name} (${form.sample.id})`,
+    `Platform: ${form.platform}`,
+    `Account stage: ${form.accountStage}`,
+    `Config path: ${form.configPath}`,
+    `Example path: ${form.examplePath}`,
+    `Local config exists: ${form.localConfig.exists ? "yes" : "no"}`,
+    `Local config valid: ${form.localConfig.valid ? "yes" : "no"}`,
+    `Ready to validate: ${form.readyToValidate ? "yes" : "no"}`,
+    "",
+    "## Fields To Fill Locally",
+    "",
+    ...form.fields.flatMap((field) => [
+      `### ${field.label}`,
+      "",
+      `JSON path: ${field.jsonPath}`,
+      `Required for this sample: ${field.required ? "yes" : "no"}`,
+      `Present now: ${field.present ? "yes" : "no"}`,
+      `Source: ${field.source}`,
+      `Env alternative: ${field.envNames.length > 0 ? field.envNames.join(" or ") : "none"}`,
+      `Placeholder: ${field.placeholder === "" ? "(leave empty)" : field.placeholder}`,
+      `Share policy: ${field.sharePolicy}`,
+      `Action: ${field.userAction}`,
+      ""
+    ]),
+    "## Missing Required Fields",
+    "",
+    ...markdownIssueList(form.missingRequiredFields, "No required fields are missing."),
+    "",
+    "## JSON Skeleton",
+    "",
+    "Copy the example file to easyar.local.json, then use this shape locally. Replace placeholders outside chat.",
+    "",
+    "```json",
+    JSON.stringify(form.jsonSkeleton, null, 2),
+    "```",
+    "",
+    "## Environment-Backed Write",
+    "",
+    `Tool: ${form.envBackedWrite.tool}`,
+    `Arguments: ${JSON.stringify(form.envBackedWrite.arguments)}`,
+    "",
+    "Required env names:",
+    ...Array.from(new Set(form.envBackedWrite.requiredEnvNames)).map((name) => `- ${name}`),
+    "",
+    "## Validation Chain",
+    "",
+    ...form.validationChain.map((call, index) => `${index + 1}. ${call}`),
+    "",
+    "## Failed Current Checks",
+    "",
+    ...markdownIssueList(form.localConfig.failedChecks, "No current local config checks are failing."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(form.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    form.security,
     ""
   ].join("\n");
 }

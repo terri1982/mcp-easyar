@@ -13,6 +13,7 @@ const requiredTools = [
   "easyar_write_project_handoff",
   "easyar_write_remaining_work_report",
   "easyar_write_local_config_handoff",
+  "easyar_write_local_config_form",
   "easyar_write_config_integration_audit",
   "easyar_write_focused_preflight",
   "easyar_create_local_config_bridge",

@@ -24,9 +24,10 @@ easyar_account_materials sampleId=cloud-recognition
 easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition
 easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition
 easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
+easyar_write_local_config_form projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
 ```
 
-The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file, the environment-backed writer command, and the validation chain. MCP does not ask for EasyAR website passwords and does not store account credentials.
+The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 For a user who has not registered yet, the MCP flow is:
 
@@ -186,7 +187,10 @@ For a handoff document that another AI tool or teammate can resume from:
 
 ```text
 easyar_write_local_config_handoff projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android accountStage=not-registered
+easyar_write_local_config_form projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android accountStage=not-registered
 ```
+
+`LOCAL_CONFIG_FORM.md` is the safest thing to hand to a first-time user after registration/login: it shows each JSON path, required status for the selected sample, placeholder, official source, env-var alternative, and validation command without containing secret values.
 
 ```bash
 export EASYAR_API_TOKEN=your_registered_user_token

@@ -341,6 +341,14 @@ try {
     "easyar_import_sample_from_package_cache should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_local_config_form"),
+    "easyar_generate_local_config_form should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_form"),
+    "easyar_write_local_config_form should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_from_env"),
     "easyar_write_local_config_from_env should be listed"
   );
@@ -885,6 +893,42 @@ try {
   assert(localConfigHandoffMarkdown.includes("never returns secret values"), "Local config handoff markdown should include security policy");
   assert(!localConfigHandoffMarkdown.includes("env-test-account-token"), "Local config handoff markdown should not include account token value");
   assert(!localConfigHandoffMarkdown.includes("env-test-license-key"), "Local config handoff markdown should not include license value");
+
+  const localConfigForm = await callTool("easyar_generate_local_config_form", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountStage: "not-registered",
+    bundleIdentifier: "com.easyar.testsample"
+  });
+  assertTextIncludes(localConfigForm, "\"readyToValidate\": false");
+  assertTextIncludes(localConfigForm, "easyar.cloudRecognition.appSecret");
+  assertTextIncludes(localConfigForm, "EASYAR_CLOUD_APP_SECRET");
+  assertTextIncludes(localConfigForm, "jsonSkeleton");
+  assertTextIncludes(localConfigForm, "https://www.easyar.cn");
+  assert(!extractText(localConfigForm).includes("env-test-account-token"), "Local config form should not include account token value");
+  assert(!extractText(localConfigForm).includes("env-test-license-key"), "Local config form should not include license value");
+
+  const writtenLocalConfigForm = await callTool("easyar_write_local_config_form", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountStage: "not-registered",
+    bundleIdentifier: "com.easyar.testsample"
+  });
+  assertTextIncludes(writtenLocalConfigForm, "LOCAL_CONFIG_FORM.md");
+  const localConfigFormMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "LOCAL_CONFIG_FORM.md"),
+    "utf8"
+  );
+  assert(localConfigFormMarkdown.includes("EasyAR Local Config Form"), "Local config form markdown should include title");
+  assert(localConfigFormMarkdown.includes("Fields To Fill Locally"), "Local config form markdown should include field section");
+  assert(localConfigFormMarkdown.includes("easyar.cloudRecognition.appSecret"), "Local config form markdown should list cloud appSecret path");
+  assert(localConfigFormMarkdown.includes("Environment-Backed Write"), "Local config form markdown should include env-backed write section");
+  assert(localConfigFormMarkdown.includes("easyar_validate_local_config"), "Local config form markdown should include validation chain");
+  assert(localConfigFormMarkdown.includes("com.easyar.testsample"), "Local config form markdown should include non-secret bundle identifier");
+  assert(!localConfigFormMarkdown.includes("env-test-account-token"), "Local config form markdown should not include account token value");
+  assert(!localConfigFormMarkdown.includes("env-test-license-key"), "Local config form markdown should not include license value");
 
   const initialWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,
@@ -2132,6 +2176,7 @@ try {
   assertTextIncludes(artifactIndex, "ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_MATERIALS.md");
+  assertTextIncludes(artifactIndex, "LOCAL_CONFIG_FORM.md");
   assertTextIncludes(artifactIndex, "UNITY_ENVIRONMENT.md");
   assertTextIncludes(artifactIndex, "FOCUSED_SCOPE_STATUS.md");
   assertTextIncludes(artifactIndex, "PREFLIGHT.md");
@@ -2140,6 +2185,7 @@ try {
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
   assertTextIncludes(artifactIndex, "SAMPLE_IMPORT_GUIDE.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
+  assertTextIncludes(artifactIndex, "DEVICE_RUN_RESULT_FORM.md");
   assertTextIncludes(artifactIndex, "COMPLETION_REPORT.md");
   assertTextIncludes(artifactIndex, "ISSUE_REPORT.md");
   assertTextIncludes(artifactIndex, "PROGRAMMING_CONTEXT.md");
@@ -2160,10 +2206,12 @@ try {
   assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
   assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
   assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
+  assert(artifactIndexMarkdown.includes("LOCAL_CONFIG_FORM.md"), "Artifact index markdown should list local config form");
   assert(artifactIndexMarkdown.includes("UNITY_ENVIRONMENT.md"), "Artifact index markdown should list Unity environment");
   assert(artifactIndexMarkdown.includes("FOCUSED_SCOPE_STATUS.md"), "Artifact index markdown should list focused scope status");
   assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
+  assert(artifactIndexMarkdown.includes("DEVICE_RUN_RESULT_FORM.md"), "Artifact index markdown should list device run result form");
   assert(artifactIndexMarkdown.includes("COMPLETION_REPORT.md"), "Artifact index markdown should list completion report");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
   assert(artifactIndexMarkdown.includes("PROGRAMMING_CONTEXT.md"), "Artifact index markdown should list programming context");
