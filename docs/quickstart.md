@@ -22,6 +22,8 @@ easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-
 
 The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
+`easyar_write_artifact_index` includes `ACCOUNT_ONBOARDING.md` and `ACCOUNT_MATERIALS.md` in the handoff reading order so another AI tool can see account prerequisites before trying Unity validation.
+
 Ask the MCP server for a client snippet:
 
 ```text

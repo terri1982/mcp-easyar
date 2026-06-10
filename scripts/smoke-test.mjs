@@ -641,6 +641,8 @@ try {
     "utf8"
   );
   assert(imageTrackingRunbook.includes("Image Tracking Checklist"), "Image Tracking runbook should include focused checklist");
+  assert(imageTrackingRunbook.includes("easyar_write_account_onboarding"), "Image Tracking runbook should include account onboarding step");
+  assert(imageTrackingRunbook.includes("easyar_write_account_materials"), "Image Tracking runbook should include account materials step");
   const imageTargetsReadme = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "Targets", "README.md"),
     "utf8"
@@ -881,6 +883,8 @@ try {
     "utf8"
   );
   assert(cloudRunbook.includes("Cloud Recognition Checklist"), "Cloud Recognition runbook should include focused checklist");
+  assert(cloudRunbook.includes("easyar_write_account_onboarding"), "Cloud runbook should include account onboarding step");
+  assert(cloudRunbook.includes("easyar_write_account_materials"), "Cloud runbook should include account materials step");
   const cloudValidationHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARSampleValidationHelper.cs"),
     "utf8"
@@ -1195,6 +1199,8 @@ try {
   });
   assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
   assertTextIncludes(artifactIndex, "ONBOARDING.md");
+  assertTextIncludes(artifactIndex, "ACCOUNT_ONBOARDING.md");
+  assertTextIncludes(artifactIndex, "ACCOUNT_MATERIALS.md");
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
@@ -1215,6 +1221,8 @@ try {
   assert(artifactIndexMarkdown.includes("EasyAR Focused Artifact Index - Cloud Recognition"), "Artifact index markdown should include title");
   assert(artifactIndexMarkdown.includes("Recommended Reading Order"), "Artifact index markdown should include reading order");
   assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
+  assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
+  assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
 
   await rm(projectPath, { recursive: true, force: true });

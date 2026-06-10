@@ -199,7 +199,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_import_checklist`: write the official import checklist to `Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md`.
 - `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.
 - `easyar_write_run_sequence`: write the focused run sequence to `Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md`.
-- `easyar_generate_artifact_index`: generate an index of focused handoff artifacts and recommended reading order.
+- `easyar_generate_artifact_index`: generate an index of focused handoff artifacts, including account onboarding/materials, and recommended reading order.
 - `easyar_write_artifact_index`: write the focused artifact index to `Assets/EasyARGenerated/<sampleId>/ARTIFACT_INDEX.md`.
 - `easyar_generate_run_report`: summarize focused sample readiness, local config validation, script review, and next phase.
 - `easyar_write_run_report`: write the focused sample run report to `Assets/EasyARGenerated/<sampleId>/RUN_REPORT.md`.

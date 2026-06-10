@@ -4364,6 +4364,18 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       generateWith: `easyar_write_onboarding_report sampleId=${sample.id}`
     },
     {
+      name: "Account Onboarding",
+      relativePath: path.join("Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md"),
+      purpose: "Official EasyAR registration/login, license, Cloud Recognition, and local secret setup guide.",
+      generateWith: `easyar_write_account_onboarding sampleId=${sample.id}`
+    },
+    {
+      name: "Account Materials",
+      relativePath: path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
+      purpose: "Field-by-field EasyAR account material source, storage, and sharing policy checklist.",
+      generateWith: `easyar_write_account_materials sampleId=${sample.id}`
+    },
+    {
       name: "Workflow State",
       relativePath: path.join(base, "WORKFLOW_STATE.md"),
       purpose: "Current focused workflow phase, blockers, and next MCP call.",
@@ -7705,10 +7717,11 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
     "",
     "## Before Unity",
     "",
-    "1. Import the official EasyAR Unity Plugin and matching official sample scenes.",
-    "2. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json`.",
-    "3. Fill the local EasyAR license key and account-scoped values without committing the file.",
-    "4. Run `easyar_validate_local_config` and `easyar_check_sample_readiness`.",
+    "1. Run `easyar_write_account_onboarding` and `easyar_write_account_materials` if the EasyAR account, license, or Cloud Recognition credentials are not ready.",
+    "2. Import the official EasyAR Unity Plugin and matching official sample scenes.",
+    "3. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json`.",
+    "4. Fill the local EasyAR license key and account-scoped values without committing the file.",
+    "5. Run `easyar_validate_local_config` and `easyar_check_sample_readiness`.",
     "",
     "## Unity Automation",
     "",
