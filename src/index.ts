@@ -6,6 +6,7 @@ import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promi
 import { constants } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { createEasyARApiClient } from "./easyar-api.js";
 
 type SampleInfo = {
   id: string;
@@ -22,6 +23,7 @@ const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
+const easyarApi = createEasyARApiClient();
 
 const toolCatalog = [
   "easyar_server_status",
@@ -221,7 +223,8 @@ server.tool(
       authorization: {
         apiBaseUrl: auth.apiBaseUrl,
         hasToken: auth.hasToken,
-        readyForAccountScopedContent: auth.hasToken
+        readyForAccountScopedContent: auth.hasToken,
+        accountScopedFeatures: easyarApi.accountScopedFeatures()
       },
       capabilities: {
         samples: samples.map((sample) => sample.id),
@@ -760,12 +763,7 @@ function findSample(sampleId: string): SampleInfo {
 }
 
 function readAuthConfig() {
-  const token = process.env.EASYAR_API_TOKEN;
-  return {
-    apiBaseUrl: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
-    hasToken: Boolean(token),
-    tokenPreview: token ? `${token.slice(0, 4)}...${token.slice(-4)}` : null
-  };
+  return easyarApi.authStatus();
 }
 
 function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {

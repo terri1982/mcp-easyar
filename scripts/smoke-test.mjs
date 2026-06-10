@@ -63,6 +63,7 @@ try {
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "easyar_check_sample_readiness");
+  assertTextIncludes(status, "account-scoped SDK download discovery");
 
   const officialInfo = await callTool("easyar_official_info", {});
   assertTextIncludes(officialInfo, "easyarSenseUnityPlugin");
