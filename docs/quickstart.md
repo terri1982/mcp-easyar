@@ -62,6 +62,8 @@ easyar_write_client_setup outputRoot=/path/to/report-folder client=claude-deskto
 easyar_onboarding_report projectPath=/path/to/UnityProject sampleId=image-tracking client=claude-desktop platform=android
 ```
 
+For copyable Codex, Claude Desktop, local-dist, package-bin, and npx setup profiles, see `docs/client-setup.md`.
+
 `CLIENT_SETUP.md` includes the config destination, acceptance checklist, first smoke calls such as `easyar_server_status`, and client-specific troubleshooting steps. Use it before handing a Codex or Claude setup to another user.
 
 `easyar_server_status` also returns a `preflightFirst` onboarding block. The recommended first-call sequence is account guide, account materials, Unity environment report, project preparation, focused preflight, and then reading `PREFLIGHT.md`.

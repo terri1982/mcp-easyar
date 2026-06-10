@@ -749,6 +749,16 @@ try {
   assert(clientSetupMarkdown.includes("Troubleshooting"), "Client setup markdown should include troubleshooting");
   await rm(clientSetupRoot, { recursive: true, force: true });
 
+  const committedClientSetupGuide = await readFile(
+    path.join(process.cwd(), "docs", "client-setup.md"),
+    "utf8"
+  );
+  assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
+  assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
+  assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
+  assert(committedClientSetupGuide.includes("easyar-mcp-check"), "Client setup guide should include install check bin");
+  assert(committedClientSetupGuide.includes("Never paste these values into chat"), "Client setup guide should include secret handling");
+
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
   assertTextIncludes(deploymentReadiness, "\"ready\": false");
@@ -798,6 +808,7 @@ try {
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_CONTRACT.md");
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_HANDOFF.md");
   assertTextIncludes(releaseManifest, "docs/openapi/easyar-mcp-account-api.openapi.json");
+  assertTextIncludes(releaseManifest, "docs/client-setup.md");
 
   const committedReleaseManifest = await readFile(
     path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
@@ -816,6 +827,7 @@ try {
   assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
   assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");
   assert(committedReleaseManifest.includes("docs/openapi/easyar-mcp-account-api.openapi.json"), "Committed release manifest should include OpenAPI contract");
+  assert(committedReleaseManifest.includes("docs/client-setup.md"), "Committed release manifest should include client setup guide");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {
@@ -832,6 +844,7 @@ try {
   assert(releaseManifestMarkdown.includes("Install Profiles"), "Release manifest markdown should include install profiles");
   assert(releaseManifestMarkdown.includes("entrypointMode=package-bin"), "Release manifest markdown should include package-bin client config");
   assert(releaseManifestMarkdown.includes("docs/openapi/easyar-mcp-account-api.openapi.json"), "Release manifest markdown should include OpenAPI contract");
+  assert(releaseManifestMarkdown.includes("docs/client-setup.md"), "Release manifest markdown should include client setup guide");
   await rm(releaseManifestRoot, { recursive: true, force: true });
 
   const unityEnvironment = await callTool("easyar_unity_environment", {});

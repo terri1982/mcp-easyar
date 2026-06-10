@@ -171,6 +171,8 @@ npm run pack:check
 
 See [docs/quickstart.md](docs/quickstart.md) for the recommended Codex/Claude to Unity workflow.
 
+See [docs/client-setup.md](docs/client-setup.md) for Codex, Claude Desktop, local-dist, package-bin, and npx setup profiles.
+
 See [docs/troubleshooting.md](docs/troubleshooting.md) for focused Image Tracking and Cloud Recognition diagnostics.
 
 ## Release Manifest

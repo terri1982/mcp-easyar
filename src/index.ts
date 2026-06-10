@@ -5695,6 +5695,7 @@ async function buildReleaseManifest() {
     "docs/OFFICIAL_API_CONTRACT.md",
     "docs/OFFICIAL_API_HANDOFF.md",
     "docs/openapi/easyar-mcp-account-api.openapi.json",
+    "docs/client-setup.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
     "assets/easyar-icon.png",
