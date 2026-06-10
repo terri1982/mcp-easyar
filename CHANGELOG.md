@@ -15,6 +15,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused artifact index and `ARTIFACT_INDEX.md` generation for handoff artifact reading order.
 - Focused artifact index includes root account onboarding and account material artifacts before sample-specific handoff work.
 - Focused run sequence Markdown artifact generation inside Unity projects.
+- Focused preflight gate and `PREFLIGHT.md` artifact generation across account, local config, Unity executable, import, scene, and script readiness.
 - Focused sample run report generation across readiness, local config, script review, and next phase.
 - Focused run report Markdown artifact generation inside Unity projects.
 - Focused sample scene audit and `SCENE_AUDIT.md` artifact generation for scene candidates, Build Settings hints, and sample blockers.

@@ -38,6 +38,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - generate an Editor helper for Unity-side focused sample validation
 - generate an Editor helper for Android/iOS/Standalone player builds
 - generate focused runbooks and support directories for Image Tracking and Cloud Recognition
+- generate a single focused preflight gate across account, local config, Unity path, imports, scene readiness, and script review
 - prepare a Unity project with EasyAR local config templates and secret ignore rules
 - validate local EasyAR config files without exposing secrets
 - write local EasyAR Unity config from environment-backed secrets without returning secret values
@@ -202,6 +203,8 @@ After registration/login, the user creates or locates the EasyAR Sense license a
 - `easyar_write_account_materials`: write the account materials checklist to `Assets/EasyARGenerated/ACCOUNT_MATERIALS.md` or `EasyARGenerated/ACCOUNT_MATERIALS.md`.
 - `easyar_onboarding_report`: generate a first-run project onboarding report across client setup, official access, release manifest, and workflow state.
 - `easyar_write_onboarding_report`: write the onboarding report to `Assets/EasyARGenerated/<sampleId>/ONBOARDING.md`.
+- `easyar_generate_focused_preflight`: generate a single focused preflight gate across account materials, local config, Unity executable setup, sample imports, scene readiness, and script review.
+- `easyar_write_focused_preflight`: write the focused preflight gate to `Assets/EasyARGenerated/<sampleId>/PREFLIGHT.md`.
 - `easyar_next_workflow_step`: inspect current focused project state and recommend the next MCP/Unity action.
 - `easyar_write_workflow_state`: write current workflow phase, blockers, and next call to `Assets/EasyARGenerated/<sampleId>/WORKFLOW_STATE.md`.
 - `easyar_generate_import_checklist`: generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.

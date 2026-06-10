@@ -95,6 +95,8 @@ const toolCatalog = [
   "easyar_onboarding_report",
   "easyar_write_onboarding_report",
   "easyar_generate_sample_plan",
+  "easyar_generate_focused_preflight",
+  "easyar_write_focused_preflight",
   "easyar_next_workflow_step",
   "easyar_write_workflow_state",
   "easyar_generate_import_checklist",
@@ -1043,6 +1045,68 @@ server.tool(
     ].join("\n");
 
     return markdownText(plan);
+  }
+);
+
+server.tool(
+  "easyar_generate_focused_preflight",
+  "Generate a focused Image Tracking or Cloud Recognition preflight gate across account, config, Unity, import, scene, and script readiness.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, platform, outputPath, maxScriptIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    return jsonText(await buildFocusedPreflight(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_focused_preflight",
+  "Write the focused sample preflight gate as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    relativePath: z.string().optional().describe("Optional preflight path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/PREFLIGHT.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing preflight artifact.")
+  },
+  async ({ projectPath, sampleId, platform, outputPath, relativePath, maxScriptIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    const preflight = await buildFocusedPreflight(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "PREFLIGHT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildFocusedPreflightMarkdown(preflight), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      readyForUnityBatch: preflight.readyForUnityBatch,
+      readyForDeviceBuild: preflight.readyForDeviceBuild,
+      blockerCount: preflight.blockers.length,
+      nextCall: preflight.nextCall,
+      nextActions: preflight.nextActions,
+      note: "The preflight artifact summarizes readiness only and does not contain secret values."
+    });
   }
 );
 
@@ -4641,6 +4705,145 @@ async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScript
   };
 }
 
+async function buildFocusedPreflight(
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  outputPath: string,
+  maxScriptIssues: number
+) {
+  const [
+    accountMaterials,
+    unityEnvironment,
+    localConfig,
+    importChecklist,
+    sampleImportGuide,
+    readiness,
+    sceneAudit,
+    scriptReview,
+    workflowState
+  ] = await Promise.all([
+    buildAccountMaterialsReport(root, sample, platform),
+    buildUnityEnvironmentReport(root, sample),
+    buildLocalConfigValidationReport(root),
+    buildImportChecklist(root, sample),
+    buildSampleImportGuide(root, sample),
+    buildSampleReadinessReport(root, sample),
+    buildSampleSceneAudit(root, sample, 25),
+    buildScriptReviewReport(root, undefined, 80, maxScriptIssues),
+    buildWorkflowState(root, sample, platform, outputPath, maxScriptIssues)
+  ]);
+  const checks = [
+    preflightCheck("sample-focus", sample.implementationStatus === "focused", "sample", `${sample.name} status is ${sample.implementationStatus}.`, "Use image-tracking or cloud-recognition for the current focused run-through."),
+    preflightCheck("account-materials", accountMaterials.missingRequired.length === 0, "account", accountMaterials.missingRequired.length > 0 ? `Missing account material(s): ${accountMaterials.missingRequired.join(", ")}.` : "Required account materials are present or not required.", "Run easyar_write_account_onboarding and easyar_write_account_materials, then prepare official account values."),
+    preflightCheck("local-config", localConfig.valid, "config", localConfig.valid ? "Local EasyAR config is valid." : `Local config failing check(s): ${localConfig.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_write_local_config_from_env or fill ProjectSettings/EasyAR/easyar.local.json locally, then validate again."),
+    preflightCheck("unity-environment", unityEnvironment.readyForUnityBatch, "unity", unityEnvironment.readyForUnityBatch ? `Unity batch path ready: ${unityEnvironment.recommendedUnityPath}.` : "No Unity executable path is ready for batch automation.", "Run easyar_write_unity_environment_report and set EASYAR_UNITY_PATH or pass unityPath explicitly."),
+    preflightCheck("official-imports", importChecklist.readyForFocusedPreparation, "import", importChecklist.readyForFocusedPreparation ? "Official plugin and focused import requirements are present." : `Missing import item(s): ${importChecklist.items.filter((item) => item.required && !item.ok).map((item) => item.id).join(", ")}.`, "Run easyar_generate_sample_import_guide and import the focused official sample through Unity Package Manager Samples."),
+    preflightCheck("sample-readiness", readiness.ready, "readiness", readiness.ready ? "Focused sample readiness checks passed." : `Readiness failing check(s): ${readiness.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_prepare_unity_project, import official assets, and rerun easyar_check_sample_readiness."),
+    preflightCheck("scene-build-settings", sceneAudit.readyForUnityValidation, "scene", sceneAudit.readyForUnityValidation ? "Scene audit is ready for Unity validation." : `Scene blocker(s): ${sceneAudit.blockers.map((blocker) => blocker.id).join(", ")}.`, "Run easyar_create_build_settings_helper and execute the generated Build Settings helper in Unity batch mode."),
+    preflightCheck("script-review", scriptReview.issueCount === 0, "code", scriptReview.issueCount === 0 ? "No static C# script issues were found." : `Static script review found ${scriptReview.issueCount} issue(s).`, "Fix script review issues, then write CODE_CHANGE.md and run Unity compile check.")
+  ];
+  const blockers = checks.filter((check) => !check.ok);
+  const readyForUnityBatch = blockers.every((blocker) => !["sample", "account", "config", "unity", "import", "readiness", "code"].includes(blocker.area)) && sceneAudit.readyForUnityValidation;
+  const readyForDeviceBuild = blockers.length === 0;
+  const nextCall = blockers.length > 0
+    ? preflightNextCall(blockers[0], root, sample, platform)
+    : {
+        tool: "easyar_run_unity_compile_check",
+        arguments: {
+          projectPath: root,
+          sampleId: sample.id,
+          logPath: path.join("Logs", "mcp-easyar-CompileCheck.log")
+        }
+      };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    outputPath,
+    readyForUnityBatch,
+    readyForDeviceBuild,
+    checks,
+    blockers,
+    nextCall,
+    nextActions: blockers.length > 0
+      ? Array.from(new Set(blockers.map((blocker) => blocker.action)))
+      : [
+          "Run easyar_run_unity_compile_check.",
+          "Run easyar_create_device_build_helper and EasyARDeviceBuildHelper.Build.",
+          "Install on a real device and record the result with easyar_write_run_result."
+        ],
+    summaries: {
+      missingAccountMaterials: accountMaterials.missingRequired,
+      unityRecommendedPath: unityEnvironment.recommendedUnityPath,
+      importReady: importChecklist.readyForFocusedPreparation,
+      packageCacheSamples: sampleImportGuide.packageCacheSamples,
+      localConfigValid: localConfig.valid,
+      readinessReady: readiness.ready,
+      sceneReady: sceneAudit.readyForUnityValidation,
+      scriptIssueCount: scriptReview.issueCount,
+      workflowPhase: workflowState.phase,
+      workflowBlocked: workflowState.blocked
+    },
+    references: {
+      accountMaterials: path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
+      unityEnvironment: path.join("Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
+      importChecklist: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "IMPORT_CHECKLIST.md")),
+      sampleImportGuide: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "SAMPLE_IMPORT_GUIDE.md")),
+      workflowState: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "WORKFLOW_STATE.md")),
+      runReport: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "RUN_REPORT.md")),
+      sceneAudit: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "SCENE_AUDIT.md"))
+    },
+    security: "Focused preflight reports field presence, paths, blockers, and next calls only. It does not include EasyAR tokens, license keys, Cloud Recognition secrets, signing keys, or provisioning secrets."
+  };
+}
+
+function preflightCheck(id: string, ok: boolean, area: string, detail: string, action: string) {
+  return {
+    id,
+    ok,
+    area,
+    detail,
+    action
+  };
+}
+
+function preflightNextCall(
+  blocker: ReturnType<typeof preflightCheck>,
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number]
+) {
+  if (blocker.id === "account-materials") {
+    return { tool: "easyar_write_account_materials", arguments: { projectPath: root, sampleId: sample.id, platform } };
+  }
+  if (blocker.id === "local-config") {
+    return { tool: "easyar_validate_local_config", arguments: { projectPath: root } };
+  }
+  if (blocker.id === "unity-environment") {
+    return { tool: "easyar_write_unity_environment_report", arguments: { projectPath: root, sampleId: sample.id } };
+  }
+  if (blocker.id === "official-imports") {
+    return { tool: "easyar_write_sample_import_guide", arguments: { projectPath: root, sampleId: sample.id } };
+  }
+  if (blocker.id === "sample-readiness") {
+    return { tool: "easyar_check_sample_readiness", arguments: { projectPath: root, sampleId: sample.id } };
+  }
+  if (blocker.id === "scene-build-settings") {
+    return { tool: "easyar_write_scene_audit", arguments: { projectPath: root, sampleId: sample.id } };
+  }
+  if (blocker.id === "script-review") {
+    return { tool: "easyar_review_csharp_scripts", arguments: { projectPath: root } };
+  }
+  return { tool: "easyar_next_workflow_step", arguments: { projectPath: root, sampleId: sample.id, platform } };
+}
+
 async function buildArtifactIndex(root: string, sample: SampleInfo) {
   const artifacts = await Promise.all(focusedArtifactDefinitions(root, sample).map(async (artifact, index) => {
     const absolutePath = path.join(root, artifact.relativePath);
@@ -4717,6 +4920,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join("Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
       purpose: "Unity executable discovery, EASYAR_UNITY_PATH setup, and batch compile dry-run guidance.",
       generateWith: `easyar_write_unity_environment_report sampleId=${sample.id}`
+    },
+    {
+      name: "Focused Preflight",
+      relativePath: path.join(base, "PREFLIGHT.md"),
+      purpose: "Single focused gate across account, local config, Unity path, imports, scene readiness, and script review.",
+      generateWith: `easyar_write_focused_preflight sampleId=${sample.id}`
     },
     {
       name: "Workflow State",
@@ -6650,6 +6859,60 @@ function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRu
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildFocusedPreflightMarkdown(preflight: Awaited<ReturnType<typeof buildFocusedPreflight>>): string {
+  return [
+    `# EasyAR Focused Preflight - ${preflight.sample.name}`,
+    "",
+    `Generated at: ${preflight.generatedAt}`,
+    `Project: ${preflight.projectPath}`,
+    `Sample id: ${preflight.sample.id}`,
+    `Status: ${preflight.sample.implementationStatus}`,
+    `Platform: ${preflight.platform}`,
+    `Output path: ${preflight.outputPath}`,
+    `Ready for Unity batch: ${preflight.readyForUnityBatch ? "yes" : "no"}`,
+    `Ready for device build: ${preflight.readyForDeviceBuild ? "yes" : "no"}`,
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(preflight.blockers.map((blocker) => `${blocker.area}/${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No focused preflight blockers."),
+    "",
+    "## Next Call",
+    "",
+    `Tool: \`${preflight.nextCall.tool}\``,
+    `Arguments: \`${JSON.stringify(preflight.nextCall.arguments)}\``,
+    "",
+    "## Checks",
+    "",
+    ...preflight.checks.map((check) => `- ${check.ok ? "OK" : "BLOCKED"} [${check.area}] ${check.id}: ${check.detail}`),
+    "",
+    "## Summaries",
+    "",
+    `Missing account materials: ${preflight.summaries.missingAccountMaterials.length > 0 ? preflight.summaries.missingAccountMaterials.join(", ") : "none"}`,
+    `Unity recommended path: ${preflight.summaries.unityRecommendedPath ?? "not found"}`,
+    `Import ready: ${preflight.summaries.importReady ? "yes" : "no"}`,
+    `PackageCache samples: ${preflight.summaries.packageCacheSamples.length > 0 ? preflight.summaries.packageCacheSamples.join(", ") : "none"}`,
+    `Local config valid: ${preflight.summaries.localConfigValid ? "yes" : "no"}`,
+    `Readiness ready: ${preflight.summaries.readinessReady ? "yes" : "no"}`,
+    `Scene ready: ${preflight.summaries.sceneReady ? "yes" : "no"}`,
+    `Script issue count: ${preflight.summaries.scriptIssueCount}`,
+    `Workflow phase: ${preflight.summaries.workflowPhase}`,
+    `Workflow blocked: ${preflight.summaries.workflowBlocked ? "yes" : "no"}`,
+    "",
+    "## Related Artifacts",
+    "",
+    ...Object.entries(preflight.references).map(([name, relativePath]) => `- ${name}: ${relativePath}`),
+    "",
+    "## Next Actions",
+    "",
+    ...preflight.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    preflight.security,
     ""
   ].join("\n");
 }

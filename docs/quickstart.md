@@ -100,6 +100,8 @@ Call:
 easyar_list_samples
 easyar_generate_sample_plan sampleId=image-tracking platform=android
 easyar_next_workflow_step projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
+easyar_generate_focused_preflight projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
+easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_generate_sample_import_guide projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_sample_import_guide projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_workflow_state projectPath=/path/to/UnityProject sampleId=image-tracking platform=android

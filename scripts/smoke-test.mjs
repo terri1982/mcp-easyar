@@ -199,6 +199,14 @@ try {
     "easyar_write_onboarding_report should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_focused_preflight"),
+    "easyar_generate_focused_preflight should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_focused_preflight"),
+    "easyar_write_focused_preflight should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_account_onboarding"),
     "easyar_account_onboarding should be listed"
   );
@@ -619,6 +627,30 @@ try {
   assert(cloudRunSequenceMarkdown.includes("EasyAR Focused Run Sequence - Cloud Recognition"), "Cloud run sequence markdown should include title");
   assert(cloudRunSequenceMarkdown.includes("cloud-recognition-credentials"), "Cloud run sequence markdown should include credential readiness");
   assert(cloudRunSequenceMarkdown.includes("Builds/iOS/cloud-recognition"), "Cloud run sequence markdown should include iOS output path");
+
+  const focusedPreflight = await callTool("easyar_generate_focused_preflight", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(focusedPreflight, "\"readyForUnityBatch\": false");
+  assertTextIncludes(focusedPreflight, "\"blockers\"");
+  assertTextIncludes(focusedPreflight, "\"nextCall\"");
+  assertTextIncludes(focusedPreflight, "local-config");
+
+  const writtenPreflight = await callTool("easyar_write_focused_preflight", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(writtenPreflight, "PREFLIGHT.md");
+  const preflightMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "PREFLIGHT.md"),
+    "utf8"
+  );
+  assert(preflightMarkdown.includes("EasyAR Focused Preflight - Image Tracking"), "Preflight markdown should include title");
+  assert(preflightMarkdown.includes("Next Call"), "Preflight markdown should include next call");
+  assert(preflightMarkdown.includes("Related Artifacts"), "Preflight markdown should include related artifacts");
 
   const initialRunReport = await callTool("easyar_generate_run_report", {
     projectPath,
@@ -1287,6 +1319,7 @@ try {
   assertTextIncludes(artifactIndex, "ACCOUNT_ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_MATERIALS.md");
   assertTextIncludes(artifactIndex, "UNITY_ENVIRONMENT.md");
+  assertTextIncludes(artifactIndex, "PREFLIGHT.md");
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
@@ -1311,6 +1344,7 @@ try {
   assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
   assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
   assert(artifactIndexMarkdown.includes("UNITY_ENVIRONMENT.md"), "Artifact index markdown should list Unity environment");
+  assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
 
