@@ -31,6 +31,7 @@ npm start
 
 - Built entrypoint: `node /absolute/path/to/mcp-easyar/dist/index.js`
 - Package bin: `easyar-mcp`
+- npx package: `npx -y mcp-easyar`
 
 ## Verification Commands
 

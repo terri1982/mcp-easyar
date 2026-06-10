@@ -389,6 +389,16 @@ try {
   assertTextIncludes(clientConfig, "\"mcpServers\"");
   assertTextIncludes(clientConfig, "your_registered_user_token");
 
+  const npxClientConfig = await callTool("easyar_generate_client_config", {
+    client: "codex",
+    entrypointMode: "npx",
+    includeTokenPlaceholder: false
+  });
+  assertTextIncludes(npxClientConfig, "\"entrypointMode\": \"npx\"");
+  assertTextIncludes(npxClientConfig, "\"command\": \"npx\"");
+  assertTextIncludes(npxClientConfig, "mcp-easyar");
+  assert(!extractText(npxClientConfig).includes("your_registered_user_token"), "npx client config should omit token placeholder when requested");
+
   const clientSetup = await callTool("easyar_check_client_setup", {
     client: "claude-desktop",
     serverPath: path.resolve("dist/index.js")
@@ -396,6 +406,14 @@ try {
   assertTextIncludes(clientSetup, "\"readyForClientConnection\": true");
   assertTextIncludes(clientSetup, "\"client\": \"claude-desktop\"");
   assertTextIncludes(clientSetup, "\"mcpServers\"");
+
+  const packageBinClientSetup = await callTool("easyar_check_client_setup", {
+    client: "generic-json",
+    entrypointMode: "package-bin"
+  });
+  assertTextIncludes(packageBinClientSetup, "\"entrypointMode\": \"package-bin\"");
+  assertTextIncludes(packageBinClientSetup, "\"command\": \"easyar-mcp\"");
+  assertTextIncludes(packageBinClientSetup, "\"serverPath\": null");
 
   const clientSetupRoot = await createUnityProject();
   const writtenClientSetup = await callTool("easyar_write_client_setup", {
@@ -410,6 +428,7 @@ try {
   );
   assert(clientSetupMarkdown.includes("mcp-easyar Client Setup"), "Client setup markdown should include title");
   assert(clientSetupMarkdown.includes("\"mcpServers\""), "Client setup markdown should include MCP config");
+  assert(clientSetupMarkdown.includes("Entrypoint mode: local-dist"), "Client setup markdown should include entrypoint mode");
   await rm(clientSetupRoot, { recursive: true, force: true });
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
@@ -422,6 +441,7 @@ try {
   const releaseManifest = await callTool("easyar_release_manifest", {});
   assertTextIncludes(releaseManifest, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(releaseManifest, "\"binName\": \"easyar-mcp\"");
+  assertTextIncludes(releaseManifest, "\"command\": \"npx\"");
   assertTextIncludes(releaseManifest, "easyar_check_client_setup");
   assertTextIncludes(releaseManifest, "image-tracking");
   assertTextIncludes(releaseManifest, "cloud-recognition");
@@ -433,6 +453,7 @@ try {
   );
   assert(committedReleaseManifest.includes("mcp-easyar Release Manifest"), "Committed release manifest should include title");
   assert(committedReleaseManifest.includes("easyar_check_client_setup"), "Committed release manifest should include first calls/client setup tools");
+  assert(committedReleaseManifest.includes("npx -y mcp-easyar"), "Committed release manifest should include npx entrypoint");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {
@@ -470,10 +491,12 @@ try {
     projectPath,
     sampleId: "image-tracking",
     client: "claude-desktop",
+    entrypointMode: "npx",
     platform: "android",
     serverPath: path.resolve("dist/index.js")
   });
   assertTextIncludes(onboardingReport, "\"readyForFirstRun\": false");
+  assertTextIncludes(onboardingReport, "\"entrypointMode\": \"npx\"");
   assertTextIncludes(onboardingReport, "\"area\": \"official-access\"");
   assertTextIncludes(onboardingReport, "\"tool\": \"easyar_check_official_access\"");
 

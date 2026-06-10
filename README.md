@@ -131,7 +131,7 @@ Use the same stdio command:
 node /absolute/path/to/mcp-easyar/dist/index.js
 ```
 
-You can also ask the MCP server for a config snippet with `easyar_generate_client_config`.
+You can also ask the MCP server for a config snippet with `easyar_generate_client_config`. The default `entrypointMode=local-dist` uses `node /absolute/path/to/dist/index.js`; `entrypointMode=package-bin` uses the installed `easyar-mcp` bin; `entrypointMode=npx` uses `npx -y mcp-easyar`.
 
 ## Local Development
 

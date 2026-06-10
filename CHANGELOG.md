@@ -14,6 +14,7 @@ Initial public MVP for `mcp-easyar`.
 - Generated `easyar.local.json.example` now includes registration/login instructions, never-share guidance, and environment variable names for license and Cloud Recognition local secrets.
 - Unity batch compile and method tools now return focused log diagnostics plus a suggested `easyar_write_run_result` handoff when `sampleId` is provided.
 - Focused run sequences now pass `sampleId` and `platform` to Unity batch steps so generated commands produce `RUN_RESULT.md` handoff suggestions.
+- Client config and setup reports now support `local-dist`, `package-bin`, and `npx` entrypoint modes for Codex, Claude Desktop, and generic stdio clients.
 - Focused sample run-through scope for Image Tracking and Cloud Recognition, with other samples marked deferred.
 - Focused workflow state navigator and `WORKFLOW_STATE.md` artifact generation for next MCP/Unity action selection.
 - Ordered focused sample run sequence generation for Codex/Claude MCP calls and Unity batch methods.

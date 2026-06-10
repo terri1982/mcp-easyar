@@ -66,6 +66,7 @@ const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
 const mobilePlatforms = ["android", "ios"] as const;
 const runResultStatuses = ["passed", "failed", "blocked", "not-run"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
+const clientEntrypointModes = ["local-dist", "package-bin", "npx"] as const;
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
 const easyarApi = createEasyARApiClient();
@@ -817,11 +818,11 @@ server.tool(
   "Generate MCP client configuration snippets for connecting Codex, Claude Desktop, or another stdio MCP client.",
   {
     client: z.enum(clientKinds).describe("Target MCP client config style."),
-    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint."),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint."),
     includeTokenPlaceholder: z.boolean().default(true).describe("Whether to include EASYAR_API_TOKEN placeholder text.")
   },
-  async ({ client, serverPath, includeTokenPlaceholder }) => {
-    const entrypoint = serverPath ?? process.argv[1] ?? "dist/index.js";
+  async ({ client, entrypointMode, serverPath, includeTokenPlaceholder }) => {
     const env = {
       EASYAR_API_BASE_URL: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
       EASYAR_ACCOUNT_STATUS_ENDPOINT: process.env.EASYAR_ACCOUNT_STATUS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/account/status",
@@ -830,12 +831,14 @@ server.tool(
       EASYAR_CLOUD_CREDENTIALS_ENDPOINT: process.env.EASYAR_CLOUD_CREDENTIALS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/cloud-recognition/credentials",
       ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
     };
-    const config = buildClientConfig(client, entrypoint, env);
+    const launch = buildClientLaunch(entrypointMode, serverPath);
+    const config = buildClientConfig(client, launch, env);
 
     return jsonText({
       client,
-      command: "node",
-      args: [entrypoint],
+      entrypointMode,
+      command: launch.command,
+      args: launch.args,
       env,
       config,
       note: "Replace token placeholders with locally stored official EasyAR account credentials. Do not commit secrets."
@@ -848,10 +851,11 @@ server.tool(
   "Check whether a Codex, Claude Desktop, or generic stdio MCP client can be configured for mcp-easyar.",
   {
     client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
-    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
     includeTokenPlaceholder: z.boolean().default(true).describe("Whether the generated config should include EASYAR_API_TOKEN placeholder text.")
   },
-  async ({ client, serverPath, includeTokenPlaceholder }) => jsonText(await buildClientSetupReport(client, serverPath, includeTokenPlaceholder))
+  async ({ client, entrypointMode, serverPath, includeTokenPlaceholder }) => jsonText(await buildClientSetupReport(client, entrypointMode, serverPath, includeTokenPlaceholder))
 );
 
 server.tool(
@@ -860,15 +864,16 @@ server.tool(
   {
     outputRoot: z.string().describe("Directory that should receive CLIENT_SETUP.md."),
     client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
-    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
     includeTokenPlaceholder: z.boolean().default(true).describe("Whether the generated config should include EASYAR_API_TOKEN placeholder text."),
     relativePath: z.string().optional().describe("Optional report path inside outputRoot. Defaults to EasyARGenerated/CLIENT_SETUP.md."),
     overwrite: z.boolean().default(true).describe("Whether to replace an existing client setup report.")
   },
-  async ({ outputRoot, client, serverPath, includeTokenPlaceholder, relativePath, overwrite }) => {
+  async ({ outputRoot, client, entrypointMode, serverPath, includeTokenPlaceholder, relativePath, overwrite }) => {
     const root = resolveProjectPath(outputRoot);
     await ensureDirectory(root);
-    const report = await buildClientSetupReport(client, serverPath, includeTokenPlaceholder);
+    const report = await buildClientSetupReport(client, entrypointMode, serverPath, includeTokenPlaceholder);
     const defaultRelativePath = await exists(path.join(root, "Assets"))
       ? path.join("Assets", "EasyARGenerated", "CLIENT_SETUP.md")
       : path.join("EasyARGenerated", "CLIENT_SETUP.md");
@@ -982,12 +987,13 @@ server.tool(
     projectPath: z.string().describe("Unity project path."),
     sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
     client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
     platform: z.enum(["android", "ios"]).default("android"),
-    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
     outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
     maxScriptIssues: z.number().int().positive().max(100).default(25)
   },
-  async ({ projectPath, sampleId, client, platform, serverPath, outputPath, maxScriptIssues }) => {
+  async ({ projectPath, sampleId, client, entrypointMode, platform, serverPath, outputPath, maxScriptIssues }) => {
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
     const sample = findSample(sampleId);
@@ -998,6 +1004,7 @@ server.tool(
       root,
       sample,
       client,
+      entrypointMode,
       platform,
       serverPath,
       outputPath: outputPath ?? defaultOutput,
@@ -1013,14 +1020,15 @@ server.tool(
     projectPath: z.string().describe("Unity project path."),
     sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
     client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
     platform: z.enum(["android", "ios"]).default("android"),
-    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
     outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
     relativePath: z.string().optional().describe("Optional onboarding path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/ONBOARDING.md."),
     maxScriptIssues: z.number().int().positive().max(100).default(25),
     overwrite: z.boolean().default(true).describe("Whether to replace an existing onboarding report.")
   },
-  async ({ projectPath, sampleId, client, platform, serverPath, outputPath, relativePath, maxScriptIssues, overwrite }) => {
+  async ({ projectPath, sampleId, client, entrypointMode, platform, serverPath, outputPath, relativePath, maxScriptIssues, overwrite }) => {
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
     const sample = findSample(sampleId);
@@ -1031,6 +1039,7 @@ server.tool(
       root,
       sample,
       client,
+      entrypointMode,
       platform,
       serverPath,
       outputPath: outputPath ?? defaultOutput,
@@ -3496,11 +3505,13 @@ function officialAccessRemoteCheck(id: string, required: boolean, result: Awaite
 
 async function buildClientSetupReport(
   client: typeof clientKinds[number],
+  entrypointMode: typeof clientEntrypointModes[number],
   serverPath: string | undefined,
   includeTokenPlaceholder: boolean
 ) {
   const packageJson = await readPackageMetadata();
-  const entrypoint = path.resolve(process.cwd(), serverPath ?? process.argv[1] ?? path.join("dist", "index.js"));
+  const launch = buildClientLaunch(entrypointMode, serverPath);
+  const entrypoint = launch.entrypoint ? path.resolve(process.cwd(), launch.entrypoint) : null;
   const distEntrypoint = path.resolve(process.cwd(), "dist", "index.js");
   const auth = readAuthConfig();
   const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
@@ -3516,22 +3527,24 @@ async function buildClientSetupReport(
     clientSetupCheck("node-version", nodeMajor >= 20, true, `Current Node.js version is ${process.versions.node}; mcp-easyar requires >=20.`),
     clientSetupCheck("package-name", packageJson.name === serverName, true, `package.json name is ${packageJson.name ?? "missing"}; expected ${serverName}.`),
     clientSetupCheck("bin-name", packageJson.binName === "easyar-mcp", true, `package.json bin is ${packageJson.binName ?? "missing"}; expected easyar-mcp.`),
-    clientSetupCheck("dist-entrypoint", await exists(distEntrypoint), true, `${path.relative(process.cwd(), distEntrypoint)} exists. Run npm run build if missing.`),
-    clientSetupCheck("server-path-absolute", path.isAbsolute(entrypoint), true, `Resolved server path is ${entrypoint}.`),
-    clientSetupCheck("server-path-exists", await exists(entrypoint), true, `Configured server path ${entrypoint} exists.`),
+    clientSetupCheck("entrypoint-mode", clientEntrypointModes.includes(entrypointMode), true, `Entrypoint mode is ${entrypointMode}.`),
+    clientSetupCheck("dist-entrypoint", entrypointMode !== "local-dist" || await exists(distEntrypoint), true, entrypointMode === "local-dist" ? `${path.relative(process.cwd(), distEntrypoint)} exists. Run npm run build if missing.` : "Not required for package-bin or npx entrypoint mode."),
+    clientSetupCheck("server-path-absolute", entrypointMode !== "local-dist" || Boolean(entrypoint && path.isAbsolute(entrypoint)), true, entrypoint ? `Resolved server path is ${entrypoint}.` : "No local server path is required for this entrypoint mode."),
+    clientSetupCheck("server-path-exists", entrypointMode !== "local-dist" || Boolean(entrypoint && await exists(entrypoint)), true, entrypoint ? `Configured server path ${entrypoint} exists.` : "No local server path is required for this entrypoint mode."),
     clientSetupCheck("api-base-url", Boolean(auth.apiBaseUrl), true, `EASYAR_API_BASE_URL resolves to ${auth.apiBaseUrl}.`),
     clientSetupCheck("api-token-placeholder", includeTokenPlaceholder || auth.hasToken, false, includeTokenPlaceholder ? "Generated config includes EASYAR_API_TOKEN placeholder." : "Generated config omits token placeholder; set token through client secret/env configuration."),
     clientSetupCheck("official-endpoints", auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured && auth.downloadsEndpointConfigured && auth.cloudCredentialsEndpointConfigured, false, "Official account, license, downloads, and Cloud Recognition endpoint environment variables are configured.")
   ];
   const blockers = checks.filter((check) => check.required && !check.ok);
   const warnings = checks.filter((check) => !check.required && !check.ok);
-  const config = buildClientConfig(client, entrypoint, env);
+  const config = buildClientConfig(client, launch, env);
 
   return {
     generatedAt: new Date().toISOString(),
     client,
-    command: "node",
-    args: [entrypoint],
+    entrypointMode,
+    command: launch.command,
+    args: launch.args,
     serverPath: entrypoint,
     package: {
       name: packageJson.name,
@@ -3640,6 +3653,11 @@ async function buildReleaseManifest() {
       label: "Package bin",
       command: binName,
       args: []
+    },
+    {
+      label: "npx package",
+      command: "npx",
+      args: ["-y", packageJson.name ?? serverName]
     }
   ];
 
@@ -3696,7 +3714,7 @@ async function buildReleaseManifest() {
       ? missingRequiredFiles.map((relativePath) => `Restore or generate required release file: ${relativePath}`)
       : [
           "Run verification commands before publishing or tagging a release.",
-          "Use easyar_check_client_setup to validate the MCP client config path before giving it to Codex or Claude.",
+          "Use easyar_check_client_setup to validate the MCP client config path or selected package/npx entrypoint before giving it to Codex or Claude.",
           "Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files."
         ],
     security: "The release manifest is safe to commit. It lists required environment variable names and placeholder commands, not secret values."
@@ -3707,6 +3725,7 @@ async function buildOnboardingReport(input: {
   root: string;
   sample: SampleInfo;
   client: typeof clientKinds[number];
+  entrypointMode: typeof clientEntrypointModes[number];
   platform: typeof mobilePlatforms[number];
   serverPath?: string;
   outputPath: string;
@@ -3714,7 +3733,7 @@ async function buildOnboardingReport(input: {
 }) {
   const [releaseManifest, clientSetup, officialAccess, workflowState] = await Promise.all([
     buildReleaseManifest(),
-    buildClientSetupReport(input.client, input.serverPath, true),
+    buildClientSetupReport(input.client, input.entrypointMode, input.serverPath, true),
     buildOfficialAccessReport(input.root, input.sample, input.platform, "unity-samples"),
     buildWorkflowState(input.root, input.sample, input.platform, input.outputPath, input.maxScriptIssues)
   ]);
@@ -3778,6 +3797,7 @@ async function buildOnboardingReport(input: {
     },
     firstCalls: releaseManifest.firstCalls,
     clientSetup: {
+      entrypointMode: clientSetup.entrypointMode,
       serverPath: clientSetup.serverPath,
       command: clientSetup.command,
       args: clientSetup.args,
@@ -3807,13 +3827,39 @@ async function buildOnboardingReport(input: {
   };
 }
 
-function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {
+function buildClientLaunch(entrypointMode: typeof clientEntrypointModes[number], serverPath: string | undefined) {
+  if (entrypointMode === "package-bin") {
+    return {
+      mode: entrypointMode,
+      command: "easyar-mcp",
+      args: [] as string[],
+      entrypoint: null as string | null
+    };
+  }
+  if (entrypointMode === "npx") {
+    return {
+      mode: entrypointMode,
+      command: "npx",
+      args: ["-y", "mcp-easyar"] as string[],
+      entrypoint: null as string | null
+    };
+  }
+  const entrypoint = serverPath ?? process.argv[1] ?? path.join("dist", "index.js");
+  return {
+    mode: "local-dist" as const,
+    command: "node",
+    args: [entrypoint],
+    entrypoint
+  };
+}
+
+function buildClientConfig(client: typeof clientKinds[number], launch: ReturnType<typeof buildClientLaunch>, env: Record<string, string>) {
   if (client === "codex") {
     return {
       mcpServers: {
         easyar: {
-          command: "node",
-          args: [entrypoint],
+          command: launch.command,
+          args: launch.args,
           env
         }
       }
@@ -3824,8 +3870,8 @@ function buildClientConfig(client: typeof clientKinds[number], entrypoint: strin
     return {
       mcpServers: {
         easyar: {
-          command: "node",
-          args: [entrypoint],
+          command: launch.command,
+          args: launch.args,
           env
         }
       }
@@ -3835,8 +3881,8 @@ function buildClientConfig(client: typeof clientKinds[number], entrypoint: strin
   return {
     name: "easyar",
     transport: "stdio",
-    command: "node",
-    args: [entrypoint],
+    command: launch.command,
+    args: launch.args,
     env
   };
 }
@@ -8347,9 +8393,11 @@ function buildClientSetupMarkdown(report: Awaited<ReturnType<typeof buildClientS
     "",
     `Generated at: ${report.generatedAt}`,
     `Client: ${report.client}`,
+    `Entrypoint mode: ${report.entrypointMode}`,
     `Ready for client connection: ${report.readyForClientConnection ? "yes" : "no"}`,
     `Command: ${report.command}`,
-    `Server path: ${report.serverPath}`,
+    `Args: ${JSON.stringify(report.args)}`,
+    `Server path: ${report.serverPath ?? "not required for this mode"}`,
     "",
     "## Package",
     "",
@@ -8487,9 +8535,10 @@ function buildOnboardingMarkdown(report: Awaited<ReturnType<typeof buildOnboardi
     "",
     "## Client Setup",
     "",
+    `Entrypoint mode: ${report.clientSetup.entrypointMode}`,
     `Command: ${report.clientSetup.command}`,
     `Args: ${report.clientSetup.args.join(" ")}`,
-    `Server path: ${report.clientSetup.serverPath}`,
+    `Server path: ${report.clientSetup.serverPath ?? "not required for this mode"}`,
     `Warnings: ${report.clientSetup.warnings.length > 0 ? report.clientSetup.warnings.join(", ") : "none"}`,
     "",
     "## Official Access Checks",
