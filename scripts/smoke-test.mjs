@@ -7,6 +7,11 @@ const command = process.env.MCP_EASYAR_SMOKE_COMMAND ?? process.execPath;
 const args = process.env.MCP_EASYAR_SMOKE_COMMAND
   ? []
   : [path.resolve("dist/index.js")];
+const unityCandidateRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-unity-candidates-"));
+const fakeHubUnityPath = path.join(unityCandidateRoot, "2022.3.62f1", "Unity.app", "Contents", "MacOS", "Unity");
+await mkdir(path.dirname(fakeHubUnityPath), { recursive: true });
+await writeFile(fakeHubUnityPath, "#!/bin/sh\nexit 0\n", "utf8");
+await chmod(fakeHubUnityPath, 0o755);
 const child = spawn(command, args, {
   env: {
     ...process.env,
@@ -18,7 +23,8 @@ const child = spawn(command, args, {
     EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
     EASYAR_LICENSE_VALIDATE_ENDPOINT: "",
     EASYAR_DOWNLOADS_ENDPOINT: "",
-    EASYAR_CLOUD_CREDENTIALS_ENDPOINT: ""
+    EASYAR_CLOUD_CREDENTIALS_ENDPOINT: "",
+    EASYAR_UNITY_CANDIDATE_DIRS: unityCandidateRoot
   },
   stdio: ["pipe", "pipe", "pipe"]
 });
@@ -607,6 +613,8 @@ try {
   const unityEnvironment = await callTool("easyar_unity_environment", {});
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
   assertTextIncludes(unityEnvironment, "\"readyForUnityBatch\"");
+  assertTextIncludes(unityEnvironment, fakeHubUnityPath);
+  assertTextIncludes(unityEnvironment, "\"recommendedUnityPath\"");
 
   const projectPath = await createUnityProject();
   const writtenUnityEnvironment = await callTool("easyar_write_unity_environment_report", {
@@ -621,6 +629,7 @@ try {
   );
   assert(unityEnvironmentMarkdown.includes("EasyAR Unity Environment"), "Unity environment markdown should include title");
   assert(unityEnvironmentMarkdown.includes("EASYAR_UNITY_PATH"), "Unity environment markdown should include env variable");
+  assert(unityEnvironmentMarkdown.includes("EASYAR_UNITY_CANDIDATE_DIRS"), "Unity environment markdown should include candidate dirs variable");
   assert(unityEnvironmentMarkdown.includes("easyar_run_unity_compile_check"), "Unity environment markdown should include compile dry-run");
 
   const onboardingReport = await callTool("easyar_onboarding_report", {
@@ -1708,9 +1717,11 @@ try {
   );
 
   await rm(projectPath, { recursive: true, force: true });
+  await rm(unityCandidateRoot, { recursive: true, force: true });
   child.kill();
   console.log("MCP smoke test passed.");
 } catch (error) {
+  await rm(unityCandidateRoot, { recursive: true, force: true });
   child.kill();
   console.error(stderr);
   console.error(error);

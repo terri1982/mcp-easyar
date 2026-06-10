@@ -4975,7 +4975,12 @@ async function findFiles(root: string, relativeDirs: string[], pattern: RegExp, 
 }
 
 async function findUnityCandidates() {
+  const configuredCandidateDirs = (process.env.EASYAR_UNITY_CANDIDATE_DIRS ?? "")
+    .split(path.delimiter)
+    .map((item) => item.trim())
+    .filter(isNonEmptyString);
   const candidates = [
+    ...configuredCandidateDirs,
     "/Applications/Unity/Hub/Editor",
     path.join(process.env.PROGRAMFILES ?? "C:\\Program Files", "Unity", "Hub", "Editor"),
     path.join(process.env.HOME ?? "", "Unity", "Hub", "Editor"),
@@ -4987,16 +4992,17 @@ async function findUnityCandidates() {
     if (!candidate || !await exists(candidate)) {
       continue;
     }
-    await collectUnityExecutables(candidate, executablePaths, 3);
+    await collectUnityExecutables(candidate, executablePaths, 6);
   }
 
   executablePaths.add("Unity");
-  return Promise.all(
+  const result = await Promise.all(
     Array.from(executablePaths).map(async (candidatePath) => ({
       path: candidatePath,
       exists: candidatePath === "Unity" ? false : await exists(candidatePath)
     }))
   );
+  return result.sort((left, right) => Number(right.exists) - Number(left.exists) || left.path.localeCompare(right.path));
 }
 
 async function collectUnityExecutables(dirPath: string, found: Set<string>, depth: number): Promise<void> {
@@ -5024,10 +5030,10 @@ async function buildUnityEnvironmentReport(root: string | null, sample: SampleIn
   const configuredPath = process.env.EASYAR_UNITY_PATH ?? null;
   const configuredExists = configuredPath ? await exists(configuredPath) : false;
   const candidates = await findUnityCandidates();
+  const unityVersion = root ? await readUnityVersion(root) : null;
   const recommendedUnityPath = configuredExists
     ? configuredPath
-    : candidates.find((candidate) => candidate.exists)?.path ?? null;
-  const unityVersion = root ? await readUnityVersion(root) : null;
+    : chooseUnityCandidate(candidates, unityVersion);
   const readyForUnityBatch = Boolean(recommendedUnityPath);
   const escapedRecommendedPath = recommendedUnityPath ? shellSingleQuote(recommendedUnityPath) : null;
   const dryRunCompileCommand = root && sample
@@ -5056,7 +5062,8 @@ async function buildUnityEnvironmentReport(root: string | null, sample: SampleIn
     environment: {
       variable: "EASYAR_UNITY_PATH",
       exportCommand: escapedRecommendedPath ? `export EASYAR_UNITY_PATH=${escapedRecommendedPath}` : "export EASYAR_UNITY_PATH=/path/to/Unity",
-      clientConfigHint: "Set EASYAR_UNITY_PATH in the MCP client environment or pass unityPath explicitly to Unity batch tools."
+      candidateDirsVariable: "EASYAR_UNITY_CANDIDATE_DIRS",
+      clientConfigHint: "Set EASYAR_UNITY_PATH in the MCP client environment or pass unityPath explicitly to Unity batch tools. Set EASYAR_UNITY_CANDIDATE_DIRS only when Unity is installed outside common Unity Hub locations."
     },
     dryRunCompileCommand,
     nextActions: readyForUnityBatch
@@ -5072,6 +5079,18 @@ async function buildUnityEnvironmentReport(root: string | null, sample: SampleIn
         ],
     security: "Unity environment reports contain executable paths and commands only. They do not include EasyAR account tokens, license keys, Cloud Recognition credentials, or signing secrets."
   };
+}
+
+function chooseUnityCandidate(candidates: Array<{ path: string; exists: boolean }>, unityVersion: string | null): string | null {
+  const existing = candidates.filter((candidate) => candidate.exists);
+  if (unityVersion) {
+    const versionNeedle = `${path.sep}${unityVersion}${path.sep}`;
+    const versionMatch = existing.find((candidate) => candidate.path.includes(versionNeedle));
+    if (versionMatch) {
+      return versionMatch.path;
+    }
+  }
+  return existing[0]?.path ?? null;
 }
 
 function shellSingleQuote(value: string): string {
@@ -9501,6 +9520,7 @@ function buildUnityEnvironmentMarkdown(report: Awaited<ReturnType<typeof buildUn
     "## MCP Client Environment",
     "",
     `Variable: ${report.environment.variable}`,
+    `Candidate dirs variable: ${report.environment.candidateDirsVariable}`,
     `Export command: ${report.environment.exportCommand}`,
     `Client config hint: ${report.environment.clientConfigHint}`,
     "",

@@ -66,6 +66,7 @@ EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/
 EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
 EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
+EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
 ```
 
 The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, `appKey`, or `appSecret`.
