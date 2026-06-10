@@ -135,6 +135,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_run_result"),
     "easyar_write_run_result should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_deployment_readiness"),
+    "easyar_deployment_readiness should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_deployment_readiness"),
+    "easyar_write_deployment_readiness should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -214,10 +222,28 @@ try {
   assertTextIncludes(clientConfig, "\"mcpServers\"");
   assertTextIncludes(clientConfig, "your_registered_user_token");
 
+  const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
+  assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
+  assertTextIncludes(deploymentReadiness, "\"ready\": false");
+  assertTextIncludes(deploymentReadiness, "account-status-endpoint");
+  assertTextIncludes(deploymentReadiness, "cloud-credentials-endpoint");
+  assertTextIncludes(deploymentReadiness, "\"focusedSamples\"");
+
   const unityEnvironment = await callTool("easyar_unity_environment", {});
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
 
   const projectPath = await createUnityProject();
+  const writtenDeploymentReadiness = await callTool("easyar_write_deployment_readiness", {
+    projectPath
+  });
+  assertTextIncludes(writtenDeploymentReadiness, "DEPLOYMENT_READINESS.md");
+  const deploymentReadinessMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "DEPLOYMENT_READINESS.md"),
+    "utf8"
+  );
+  assert(deploymentReadinessMarkdown.includes("mcp-easyar Deployment Readiness"), "Deployment readiness markdown should include title");
+  assert(deploymentReadinessMarkdown.includes("account-status-endpoint"), "Deployment readiness markdown should include endpoint blockers");
+
   const imageRunSequence = await callTool("easyar_generate_run_sequence", {
     projectPath,
     sampleId: "image-tracking",

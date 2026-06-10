@@ -45,6 +45,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - check EasyAR account environment configuration without exposing secrets
 - call configured official EasyAR account/license validation endpoints without exposing secrets
 - generate MCP client configuration snippets for Codex and Claude
+- generate and write deployment readiness reports for GitHub release, official endpoint, Unity path, and security checks
 
 The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
 
@@ -155,6 +156,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_discover_downloads`: call a configured official downloads endpoint for account-scoped SDK/sample package discovery without returning tokens.
 - `easyar_discover_cloud_credentials`: call a configured official Cloud Recognition endpoint for account-scoped credential metadata without returning secrets.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
+- `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
+- `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
 - `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.
 - `easyar_write_run_sequence`: write the focused run sequence to `Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md`.
 - `easyar_generate_artifact_index`: generate an index of focused handoff artifacts and recommended reading order.
