@@ -446,13 +446,55 @@ server.tool(
           "review C# scripts"
         ]
       },
+      onboarding: {
+        preflightFirst: true,
+        firstQuestion: "Do you already have an EasyAR account?",
+        supportedAccountStages: [
+          "not-registered",
+          "registered-not-logged-in",
+          "logged-in",
+          "has-license",
+          "has-cloud-credentials"
+        ],
+        newUserRoute: [
+          "Call easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition or sampleId=image-tracking.",
+          "Open the official EasyAR website/development center in a browser for registration and login.",
+          "Return to MCP after login; do not paste website passwords, verification codes, appKey, appSecret, API token, or license key into chat.",
+          "Run easyar_prepare_unity_project to create ProjectSettings/EasyAR/easyar.local.json.example.",
+          "Fill ProjectSettings/EasyAR/easyar.local.json locally, then run easyar_validate_local_config.",
+          "Run easyar_write_focused_preflight and read PREFLIGHT.md before Unity automation."
+        ],
+        localSecretTarget: "ProjectSettings/EasyAR/easyar.local.json"
+      },
       recommendedFirstCalls: [
-        "easyar_auth_status",
-        "easyar_check_account",
-        "easyar_list_samples",
-        "easyar_generate_sample_plan",
-        "easyar_inspect_unity_project",
-        "easyar_check_sample_readiness"
+        "easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition",
+        "easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition",
+        "easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition",
+        "easyar_write_unity_environment_report projectPath=/path/to/UnityProject sampleId=cloud-recognition",
+        "easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=cloud-recognition",
+        "easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android",
+        "Read Assets/EasyARGenerated/cloud-recognition/PREFLIGHT.md and follow its nextCall"
+      ],
+      focusedSampleFirstCalls: {
+        imageTracking: [
+          "easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=image-tracking",
+          "easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=image-tracking",
+          "easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=image-tracking platform=android",
+          "Read Assets/EasyARGenerated/image-tracking/PREFLIGHT.md"
+        ],
+        cloudRecognition: [
+          "easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition",
+          "easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition",
+          "easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=cloud-recognition",
+          "Fill easyar.cloudRecognition.appId, appKey, and appSecret locally in ProjectSettings/EasyAR/easyar.local.json",
+          "easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android",
+          "Read Assets/EasyARGenerated/cloud-recognition/PREFLIGHT.md"
+        ]
+      },
+      programmingFirstCalls: [
+        "easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=image-tracking platform=android",
+        "easyar_write_programming_context projectPath=/path/to/UnityProject sampleId=image-tracking",
+        "Read Assets/EasyARGenerated/image-tracking/PROGRAMMING_CONTEXT.md before CODE_PLAN.md"
       ],
       security: [
         "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets.",

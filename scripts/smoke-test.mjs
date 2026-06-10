@@ -292,7 +292,12 @@ try {
 
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
-  assertTextIncludes(status, "easyar_check_sample_readiness");
+  assertTextIncludes(status, "\"preflightFirst\": true");
+  assertTextIncludes(status, "easyar_account_onboarding accountStage=not-registered");
+  assertTextIncludes(status, "easyar_write_focused_preflight");
+  assertTextIncludes(status, "PREFLIGHT.md");
+  assertTextIncludes(status, "easyar_write_programming_context");
+  assertTextIncludes(status, "PROGRAMMING_CONTEXT.md");
   assertTextIncludes(status, "\"focusedSamples\"");
   assertTextIncludes(status, "\"cloud-recognition\"");
   assertTextIncludes(status, "account-scoped SDK download discovery");

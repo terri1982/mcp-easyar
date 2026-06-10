@@ -179,6 +179,15 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
 
+The first MCP screen is intentionally account-stage driven:
+
+1. `easyar_server_status` shows `preflightFirst=true` and suggests `easyar_account_onboarding accountStage=not-registered` as a valid starting point.
+2. `easyar_write_account_onboarding` creates `ACCOUNT_ONBOARDING.md` so another AI tool or human operator can resume the same browser handoff.
+3. `easyar_write_account_materials` lists which official materials are needed, where to find them, where to store them locally, and whether they are safe to share.
+4. `easyar_prepare_unity_project` creates the local `easyar.local.json.example`.
+5. `easyar_validate_local_config` checks only presence and placeholders.
+6. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
+
 ## Tools
 
 - `easyar_list_samples`: list supported sample categories.
