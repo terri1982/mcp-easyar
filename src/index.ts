@@ -37,6 +37,7 @@ const toolCatalog = [
   "easyar_generate_client_config",
   "easyar_generate_sample_plan",
   "easyar_generate_run_sequence",
+  "easyar_generate_run_report",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -144,7 +145,7 @@ const quickstartWorkflow = [
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_generate_run_sequence` for an ordered Codex/Claude execution plan.",
+  "8. Run `easyar_generate_run_sequence` for an ordered Codex/Claude execution plan and `easyar_generate_run_report` for current project status.",
   "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
@@ -487,88 +488,50 @@ server.tool(
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
     const sample = findSample(sampleId);
-    const easyarSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 120);
-    const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
-    const matchingScenes = matchSampleScenes(sample, sampleScenes);
-    const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
+    return jsonText(await buildSampleReadinessReport(root, sample));
+  }
+);
 
-    const checks = [
-      {
-        id: "sample-focus",
-        ok: sample.implementationStatus === "focused",
-        detail: sample.implementationStatus === "focused"
-          ? `${sample.name} is in the current focused run-through set.`
-          : `${sample.name} is deferred. Current focused samples are Image Tracking and Cloud Recognition.`
-      },
-      {
-        id: "unity-project",
-        ok: await exists(path.join(root, "Assets")) && await exists(path.join(root, "ProjectSettings", "ProjectVersion.txt")),
-        detail: "Unity project contains Assets and ProjectSettings/ProjectVersion.txt."
-      },
-      {
-        id: "packages-manifest",
-        ok: await exists(path.join(root, "Packages", "manifest.json")),
-        detail: "Unity Packages/manifest.json exists."
-      },
-      {
-        id: "easyar-assets",
-        ok: easyarSignals.length > 0,
-        detail: easyarSignals.length > 0
-          ? `Found ${easyarSignals.length} EasyAR-related asset/package path(s).`
-          : "No EasyAR-related asset/package path was found. Import the official EasyAR Unity Plugin package."
-      },
-      {
-        id: "sample-scene",
-        ok: matchingScenes.length > 0,
-        detail: matchingScenes.length > 0
-          ? `Found matching sample scene(s): ${matchingScenes.join(", ")}.`
-          : `No scene matched hints: ${sample.unityScenes.join(", ")}. Import the official ${sample.name} sample scene.`
-      },
-      {
-        id: "local-config-template",
-        ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example")),
-        detail: "ProjectSettings/EasyAR/easyar.local.json.example exists."
-      },
-      {
-        id: "local-config",
-        ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")),
-        detail: "ProjectSettings/EasyAR/easyar.local.json exists for local license and account credentials."
-      },
-      {
-        id: "sample-runner",
-        ok: await exists(path.join(root, "Assets", "Editor", "EasyARSampleRunner.cs")),
-        detail: "Assets/Editor/EasyARSampleRunner.cs exists."
-      },
-      {
-        id: "build-settings-helper",
-        ok: await exists(path.join(root, "Assets", "Editor", "EasyARBuildSettingsHelper.cs")),
-        detail: "Assets/Editor/EasyARBuildSettingsHelper.cs exists."
-      },
-      {
-        id: "mobile-settings-helper",
-        ok: await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
-        detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
-      },
-      {
-        id: "focused-sample-runbook",
-        ok: await exists(focusedSampleRunbookPath(root, sample)),
-        detail: `${path.relative(root, focusedSampleRunbookPath(root, sample))} exists with sample-specific run-through steps.`
-      },
-      ...sampleSpecificChecks
-    ];
-
-    const nextActions = checks
-      .filter((check) => !check.ok)
-      .map((check) => readinessAction(check.id, sample));
+server.tool(
+  "easyar_generate_run_report",
+  "Generate a focused sample run report combining readiness, local config validation, script review, and recommended next steps.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, maxScriptIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const readiness = await buildSampleReadinessReport(root, sample);
+    const configValidation = await buildLocalConfigValidationReport(root);
+    const scriptReview = await buildScriptReviewReport(root, undefined, 80, maxScriptIssues);
+    const runSequence = buildFocusedRunSequence({
+      projectPath: root,
+      sample,
+      platform: "android",
+      outputPath: `Builds/${sample.id}.apk`,
+      developmentBuild: true
+    });
 
     return jsonText({
       projectPath: root,
-      sample: sample.name,
-      unityVersion: await readUnityVersion(root),
-      ready: checks.every((check) => check.ok),
-      checks,
-      matchingScenes,
-      nextActions
+      sample: {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      },
+      overallReady: readiness.ready && configValidation.valid && scriptReview.issueCount === 0,
+      readiness,
+      configValidation,
+      scriptReview,
+      nextRecommendedPhase: chooseNextRunPhase(readiness, configValidation, scriptReview),
+      runSequenceSummary: runSequence.phases.map((phase) => ({
+        name: phase.name,
+        stepCount: phase.steps.length
+      })),
+      security: "Secrets are not returned. This report only reports presence, placeholder status, and static code issues."
     });
   }
 );
@@ -607,17 +570,7 @@ server.tool(
       });
     }
 
-    const parsed = await readJsonFile(target);
-    const checks = validateLocalConfig(parsed);
-    return jsonText({
-      configPath: target,
-      valid: checks.every((check) => check.ok),
-      checks,
-      security: "Secret values are not returned. This tool only reports presence and placeholder status.",
-      nextActions: checks
-        .filter((check) => !check.ok)
-        .map((check) => localConfigAction(check.id))
-    });
+    return jsonText(await buildLocalConfigValidationReport(root, target));
   }
 );
 
@@ -915,51 +868,7 @@ server.tool(
   async ({ projectPath, relativePaths, maxFiles, maxIssues }) => {
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
-    const files = relativePaths && relativePaths.length > 0
-      ? relativePaths.map((relativePath) => {
-          const target = path.resolve(root, relativePath);
-          assertInside(root, target);
-          if (!target.endsWith(".cs")) {
-            throw new Error("easyar_review_csharp_scripts only reviews .cs files.");
-          }
-          return target;
-        })
-      : (await findFiles(root, ["Assets"], /\.cs$/i, maxFiles)).map((relativePath) => path.join(root, relativePath));
-
-    const reviewed: string[] = [];
-    const issues: ScriptReviewIssue[] = [];
-    for (const filePath of files.slice(0, maxFiles)) {
-      if (!await exists(filePath)) {
-        issues.push({
-          id: "script-missing",
-          severity: "high",
-          file: path.relative(root, filePath),
-          line: null,
-          title: "Script file does not exist",
-          evidence: null,
-          recommendation: "Check the relativePaths input and rerun the review."
-        });
-        continue;
-      }
-
-      const text = await readFile(filePath, "utf8");
-      reviewed.push(path.relative(root, filePath));
-      issues.push(...reviewCsharpScript(path.relative(root, filePath), text));
-      if (issues.length >= maxIssues) {
-        break;
-      }
-    }
-
-    const limitedIssues = issues.slice(0, maxIssues);
-    return jsonText({
-      projectPath: root,
-      reviewedFiles: reviewed,
-      reviewedFileCount: reviewed.length,
-      issueCount: limitedIssues.length,
-      issues: limitedIssues,
-      nextActions: buildScriptReviewActions(limitedIssues),
-      note: "This is a static review. Unity compilation and device testing remain the source of truth."
-    });
+    return jsonText(await buildScriptReviewReport(root, relativePaths, maxFiles, maxIssues));
   }
 );
 
@@ -1309,6 +1218,92 @@ async function collectUnityExecutables(dirPath: string, found: Set<string>, dept
   }
 }
 
+async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
+  const easyarSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 120);
+  const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
+  const matchingScenes = matchSampleScenes(sample, sampleScenes);
+  const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
+
+  const checks = [
+    {
+      id: "sample-focus",
+      ok: sample.implementationStatus === "focused",
+      detail: sample.implementationStatus === "focused"
+        ? `${sample.name} is in the current focused run-through set.`
+        : `${sample.name} is deferred. Current focused samples are Image Tracking and Cloud Recognition.`
+    },
+    {
+      id: "unity-project",
+      ok: await exists(path.join(root, "Assets")) && await exists(path.join(root, "ProjectSettings", "ProjectVersion.txt")),
+      detail: "Unity project contains Assets and ProjectSettings/ProjectVersion.txt."
+    },
+    {
+      id: "packages-manifest",
+      ok: await exists(path.join(root, "Packages", "manifest.json")),
+      detail: "Unity Packages/manifest.json exists."
+    },
+    {
+      id: "easyar-assets",
+      ok: easyarSignals.length > 0,
+      detail: easyarSignals.length > 0
+        ? `Found ${easyarSignals.length} EasyAR-related asset/package path(s).`
+        : "No EasyAR-related asset/package path was found. Import the official EasyAR Unity Plugin package."
+    },
+    {
+      id: "sample-scene",
+      ok: matchingScenes.length > 0,
+      detail: matchingScenes.length > 0
+        ? `Found matching sample scene(s): ${matchingScenes.join(", ")}.`
+        : `No scene matched hints: ${sample.unityScenes.join(", ")}. Import the official ${sample.name} sample scene.`
+    },
+    {
+      id: "local-config-template",
+      ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example")),
+      detail: "ProjectSettings/EasyAR/easyar.local.json.example exists."
+    },
+    {
+      id: "local-config",
+      ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")),
+      detail: "ProjectSettings/EasyAR/easyar.local.json exists for local license and account credentials."
+    },
+    {
+      id: "sample-runner",
+      ok: await exists(path.join(root, "Assets", "Editor", "EasyARSampleRunner.cs")),
+      detail: "Assets/Editor/EasyARSampleRunner.cs exists."
+    },
+    {
+      id: "build-settings-helper",
+      ok: await exists(path.join(root, "Assets", "Editor", "EasyARBuildSettingsHelper.cs")),
+      detail: "Assets/Editor/EasyARBuildSettingsHelper.cs exists."
+    },
+    {
+      id: "mobile-settings-helper",
+      ok: await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
+      detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
+    },
+    {
+      id: "focused-sample-runbook",
+      ok: await exists(focusedSampleRunbookPath(root, sample)),
+      detail: `${path.relative(root, focusedSampleRunbookPath(root, sample))} exists with sample-specific run-through steps.`
+    },
+    ...sampleSpecificChecks
+  ];
+
+  const nextActions = checks
+    .filter((check) => !check.ok)
+    .map((check) => readinessAction(check.id, sample));
+
+  return {
+    projectPath: root,
+    sample: sample.name,
+    unityVersion: await readUnityVersion(root),
+    ready: checks.every((check) => check.ok),
+    checks,
+    matchingScenes,
+    nextActions
+  };
+}
+
 function matchSampleScenes(sample: SampleInfo, scenePaths: string[]): string[] {
   return scenePaths.filter((scenePath) =>
     sample.unityScenes.some((hint) => scenePath.toLowerCase().includes(hint.toLowerCase()))
@@ -1416,6 +1411,41 @@ async function readJsonFile(filePath: string): Promise<unknown> {
   } catch (error) {
     throw new Error(`Failed to parse JSON from ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+async function buildLocalConfigValidationReport(root: string, configPath?: string) {
+  const target = configPath ?? path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+  if (!await exists(target)) {
+    return {
+      configPath: target,
+      valid: false,
+      checks: [
+        {
+          id: "file-exists",
+          ok: false,
+          detail: "Local config file does not exist."
+        }
+      ],
+      security: "Secret values are not returned. This tool only reports presence and placeholder status.",
+      nextActions: [
+        "Run easyar_prepare_unity_project.",
+        "Copy ProjectSettings/EasyAR/easyar.local.json.example to ProjectSettings/EasyAR/easyar.local.json.",
+        "Fill the local file with official EasyAR account/license values."
+      ]
+    };
+  }
+
+  const parsed = await readJsonFile(target);
+  const checks = validateLocalConfig(parsed);
+  return {
+    configPath: target,
+    valid: checks.every((check) => check.ok),
+    checks,
+    security: "Secret values are not returned. This tool only reports presence and placeholder status.",
+    nextActions: checks
+      .filter((check) => !check.ok)
+      .map((check) => localConfigAction(check.id))
+  };
 }
 
 async function readLocalConfigForRemoteValidation(projectPath: string): Promise<{
@@ -1862,6 +1892,54 @@ function reviewCsharpScript(relativePath: string, text: string): ScriptReviewIss
   return issues;
 }
 
+async function buildScriptReviewReport(root: string, relativePaths: string[] | undefined, maxFiles: number, maxIssues: number) {
+  const files = relativePaths && relativePaths.length > 0
+    ? relativePaths.map((relativePath) => {
+        const target = path.resolve(root, relativePath);
+        assertInside(root, target);
+        if (!target.endsWith(".cs")) {
+          throw new Error("easyar_review_csharp_scripts only reviews .cs files.");
+        }
+        return target;
+      })
+    : (await findFiles(root, ["Assets"], /\.cs$/i, maxFiles)).map((relativePath) => path.join(root, relativePath));
+
+  const reviewed: string[] = [];
+  const issues: ScriptReviewIssue[] = [];
+  for (const filePath of files.slice(0, maxFiles)) {
+    if (!await exists(filePath)) {
+      issues.push({
+        id: "script-missing",
+        severity: "high",
+        file: path.relative(root, filePath),
+        line: null,
+        title: "Script file does not exist",
+        evidence: null,
+        recommendation: "Check the relativePaths input and rerun the review."
+      });
+      continue;
+    }
+
+    const text = await readFile(filePath, "utf8");
+    reviewed.push(path.relative(root, filePath));
+    issues.push(...reviewCsharpScript(path.relative(root, filePath), text));
+    if (issues.length >= maxIssues) {
+      break;
+    }
+  }
+
+  const limitedIssues = issues.slice(0, maxIssues);
+  return {
+    projectPath: root,
+    reviewedFiles: reviewed,
+    reviewedFileCount: reviewed.length,
+    issueCount: limitedIssues.length,
+    issues: limitedIssues,
+    nextActions: buildScriptReviewActions(limitedIssues),
+    note: "This is a static review. Unity compilation and device testing remain the source of truth."
+  };
+}
+
 function buildScriptReviewActions(issues: ScriptReviewIssue[]): string[] {
   if (issues.length === 0) {
     return ["No static script review issues were detected. Run Unity compilation and device tests next."];
@@ -1875,6 +1953,23 @@ function buildScriptReviewActions(issues: ScriptReviewIssue[]): string[] {
   }
   actions.add("Patch focused scripts with easyar_write_csharp_file, then run Unity compilation or easyar_analyze_unity_log.");
   return Array.from(actions);
+}
+
+function chooseNextRunPhase(
+  readiness: Awaited<ReturnType<typeof buildSampleReadinessReport>>,
+  configValidation: Awaited<ReturnType<typeof buildLocalConfigValidationReport>>,
+  scriptReview: Awaited<ReturnType<typeof buildScriptReviewReport>>
+): string {
+  if (!readiness.ready) {
+    return "Fix readiness gaps before Unity batch automation.";
+  }
+  if (!configValidation.valid) {
+    return "Fix local EasyAR config before building to device.";
+  }
+  if (scriptReview.issueCount > 0) {
+    return "Fix static C# review issues before compiling in Unity.";
+  }
+  return "Run mobile settings, Build Settings, and device build helpers from easyar_generate_run_sequence.";
 }
 
 function extractMethodBody(text: string, methodName: string): string | null {

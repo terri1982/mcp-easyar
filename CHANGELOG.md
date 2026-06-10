@@ -10,6 +10,7 @@ Initial public MVP for `mcp-easyar`.
 - Official EasyAR links, package-version notes, sample catalog, checklist, and quickstart resources.
 - Focused sample run-through scope for Image Tracking and Cloud Recognition, with other samples marked deferred.
 - Ordered focused sample run sequence generation for Codex/Claude MCP calls and Unity batch methods.
+- Focused sample run report generation across readiness, local config, script review, and next phase.
 - Focused sample runbooks and support directories generated under `Assets/EasyARGenerated/<sampleId>/`.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Authorization status checks that do not expose secret values.

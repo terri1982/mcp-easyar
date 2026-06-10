@@ -132,6 +132,13 @@ try {
   assertTextIncludes(cloudRunSequence, "cloud-recognition-credentials");
   assertTextIncludes(cloudRunSequence, "Builds/iOS/cloud-recognition");
 
+  const initialRunReport = await callTool("easyar_generate_run_report", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(initialRunReport, "\"overallReady\": false");
+  assertTextIncludes(initialRunReport, "Fix readiness gaps before Unity batch automation");
+
   const initialReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,
     sampleId: "image-tracking"
@@ -350,6 +357,14 @@ try {
   assertTextIncludes(scriptReview, "hardcoded-easyar-secret");
   assertTextIncludes(scriptReview, "expensive-update-lookup");
   assertTextIncludes(scriptReview, "touch-without-phase-check");
+
+  const riskyRunReport = await callTool("easyar_generate_run_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    maxScriptIssues: 10
+  });
+  assertTextIncludes(riskyRunReport, "scriptReview");
+  assertTextIncludes(riskyRunReport, "Fix readiness gaps before Unity batch automation");
 
   const logAnalysis = await callTool("easyar_analyze_unity_log", {
     logText: [
