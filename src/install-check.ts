@@ -16,6 +16,7 @@ const requiredTools = [
   "easyar_write_local_config_form",
   "easyar_write_config_integration_audit",
   "easyar_write_focused_preflight",
+  "easyar_write_focused_handoff_pack",
   "easyar_create_local_config_bridge",
   "easyar_write_device_run_result_form",
   "easyar_write_completion_report",

@@ -219,8 +219,9 @@ The first MCP screen is intentionally account-stage driven:
 7. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
 8. `easyar_validate_local_config` checks only presence and placeholders.
 9. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
-10. Before recording device evidence, `easyar_write_device_run_result_form` creates `DEVICE_RUN_RESULT_FORM.md`, a fillable real-device evidence form plus safe `easyar_write_run_result` argument templates.
-11. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
+10. `easyar_write_focused_handoff_pack` writes the safe handoff pack for Image Tracking, Cloud Recognition, or both focused samples so another AI tool can continue from `HANDOFF_PACK.md` and `ARTIFACT_INDEX.md`.
+11. Before recording device evidence, `easyar_write_device_run_result_form` creates `DEVICE_RUN_RESULT_FORM.md`, a fillable real-device evidence form plus safe `easyar_write_run_result` argument templates.
+12. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
 
 ## Tools
 
@@ -272,6 +273,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_run_sequence`: write the focused run sequence to `Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md`.
 - `easyar_generate_artifact_index`: generate an index of focused handoff artifacts, including account onboarding/materials, and recommended reading order.
 - `easyar_write_artifact_index`: write the focused artifact index to `Assets/EasyARGenerated/<sampleId>/ARTIFACT_INDEX.md`.
+- `easyar_generate_focused_handoff_pack`: preview the safe focused sample handoff pack that can be written for Image Tracking, Cloud Recognition, or both.
+- `easyar_write_focused_handoff_pack`: write the focused handoff pack (`HANDOFF_PACK.md`, `ARTIFACT_INDEX.md`, diagnostics, forms, and project dashboards) without writing secrets or fake run results.
 - `easyar_generate_run_report`: summarize focused sample readiness, local config validation, script review, and next phase.
 - `easyar_write_run_report`: write the focused sample run report to `Assets/EasyARGenerated/<sampleId>/RUN_REPORT.md`.
 - `easyar_audit_sample_scene`: audit scene candidates, Build Settings hints, EasyAR import signals, and focused sample blockers.

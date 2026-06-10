@@ -125,6 +125,8 @@ const toolCatalog = [
   "easyar_write_run_sequence",
   "easyar_generate_artifact_index",
   "easyar_write_artifact_index",
+  "easyar_generate_focused_handoff_pack",
+  "easyar_write_focused_handoff_pack",
   "easyar_generate_run_report",
   "easyar_write_run_report",
   "easyar_audit_sample_scene",
@@ -1963,6 +1965,96 @@ server.tool(
       missingCount: index.artifacts.filter((artifact) => !artifact.exists).length,
       nextActions: index.nextActions
     });
+  }
+);
+
+const focusedHandoffSampleIds = ["image-tracking", "cloud-recognition", "all"] as const;
+
+server.tool(
+  "easyar_generate_focused_handoff_pack",
+  "Generate a plan for writing the focused sample handoff artifact pack without writing files.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.enum(focusedHandoffSampleIds).default("all").describe("Focused sample id or all for Image Tracking and Cloud Recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
+    client: z.enum(clientKinds).default("claude-desktop"),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist"),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js when entrypointMode=local-dist."),
+    outputPath: z.string().optional().describe("Build output path. Defaults per sample."),
+    developmentBuild: z.boolean().default(true),
+    programmingGoal: z.string().default("prepare focused EasyAR sample handoff without hardcoded secrets"),
+    codeGoal: z.string().default("wire local EasyAR config into the focused sample without hardcoding secrets"),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, sampleId, platform, accountStage, client, entrypointMode, serverPath, outputPath, developmentBuild, programmingGoal, codeGoal, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    return jsonText(await buildFocusedHandoffPackPlan({
+      root,
+      sampleId,
+      platform,
+      accountStage,
+      client,
+      entrypointMode,
+      serverPath,
+      outputPath,
+      developmentBuild,
+      programmingGoal,
+      codeGoal,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_focused_handoff_pack",
+  "Write the focused sample handoff artifact pack for Image Tracking, Cloud Recognition, or both focused samples.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.enum(focusedHandoffSampleIds).default("all").describe("Focused sample id or all for Image Tracking and Cloud Recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
+    client: z.enum(clientKinds).default("claude-desktop"),
+    entrypointMode: z.enum(clientEntrypointModes).default("local-dist"),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js when entrypointMode=local-dist."),
+    outputPath: z.string().optional().describe("Build output path. Defaults per sample."),
+    developmentBuild: z.boolean().default(true),
+    programmingGoal: z.string().default("prepare focused EasyAR sample handoff without hardcoded secrets"),
+    codeGoal: z.string().default("wire local EasyAR config into the focused sample without hardcoding secrets"),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace existing generated handoff artifacts.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage, client, entrypointMode, serverPath, outputPath, developmentBuild, programmingGoal, codeGoal, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    return jsonText(await writeFocusedHandoffPack({
+      root,
+      sampleId,
+      platform,
+      accountStage,
+      client,
+      entrypointMode,
+      serverPath,
+      outputPath,
+      developmentBuild,
+      programmingGoal,
+      codeGoal,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues,
+      overwrite
+    }));
   }
 );
 
@@ -7486,6 +7578,313 @@ async function buildArtifactIndex(root: string, sample: SampleInfo) {
   };
 }
 
+type FocusedHandoffPackInput = {
+  root: string;
+  sampleId: typeof focusedHandoffSampleIds[number];
+  platform: typeof mobilePlatforms[number];
+  accountStage: AccountStage;
+  client: typeof clientKinds[number];
+  entrypointMode: typeof clientEntrypointModes[number];
+  serverPath?: string;
+  outputPath?: string;
+  developmentBuild: boolean;
+  programmingGoal: string;
+  codeGoal: string;
+  maxScriptIssues: number;
+  maxCandidates: number;
+  maxLogBytes: number;
+  maxLogIssues: number;
+};
+
+function focusedHandoffPackSamples(sampleId: typeof focusedHandoffSampleIds[number]) {
+  return sampleId === "all"
+    ? focusedSamples()
+    : [findSample(sampleId)];
+}
+
+async function buildFocusedHandoffPackPlan(input: FocusedHandoffPackInput) {
+  const samples = focusedHandoffPackSamples(input.sampleId);
+  const samplePlans = await Promise.all(samples.map(async (sample) => {
+    const outputPath = input.outputPath ?? defaultFocusedOutputPath(sample, input.platform);
+    const artifactIndex = await buildArtifactIndex(input.root, sample);
+    const plannedArtifacts = focusedHandoffPackArtifactSpecs(input.root, sample).map((artifact) => {
+      const current = artifactIndex.artifacts.find((item) => item.relativePath === artifact.relativePath);
+      return {
+        ...artifact,
+        exists: current?.exists ?? false,
+        sizeBytes: current?.sizeBytes ?? null
+      };
+    });
+    return {
+      sample: {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      },
+      outputPath,
+      artifactCount: plannedArtifacts.length,
+      missingCount: plannedArtifacts.filter((artifact) => !artifact.exists).length,
+      plannedArtifacts
+    };
+  }));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    platform: input.platform,
+    requestedSampleId: input.sampleId,
+    samples: samplePlans,
+    projectArtifacts: [
+      path.join("Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"),
+      path.join("Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md"),
+      path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md")
+    ],
+    nextActions: [
+      `Run easyar_write_focused_handoff_pack projectPath=${input.root} sampleId=${input.sampleId} platform=${input.platform}.`,
+      "After the pack is written, read ARTIFACT_INDEX.md, PREFLIGHT.md, LOCAL_CONFIG_FORM.md, and PROJECT_HANDOFF.md before Unity automation.",
+      "Do not mark RUN_RESULT.md as passed until real-device evidence exists."
+    ],
+    security: "The focused handoff pack plans and writes generated Markdown diagnostics only. It does not create or expose EasyAR account tokens, license keys, Cloud Recognition appKey/appSecret, or passed device evidence."
+  };
+}
+
+async function writeFocusedHandoffPack(input: FocusedHandoffPackInput & { overwrite: boolean }) {
+  const plan = await buildFocusedHandoffPackPlan(input);
+  const samples = focusedHandoffPackSamples(input.sampleId);
+  const sampleResults = [];
+  const written: string[] = [];
+  const skipped: string[] = [];
+  for (const sample of samples) {
+    const outputPath = input.outputPath ?? defaultFocusedOutputPath(sample, input.platform);
+    const sampleResult = await writeFocusedHandoffPackForSample(input, sample, outputPath, written, skipped);
+    sampleResults.push(sampleResult);
+  }
+
+  const projectHandoff = await buildProjectHandoff({
+    root: input.root,
+    platform: input.platform,
+    client: input.client,
+    entrypointMode: input.entrypointMode,
+    serverPath: input.serverPath,
+    maxScriptIssues: input.maxScriptIssues,
+    maxLogBytes: input.maxLogBytes,
+    maxLogIssues: input.maxLogIssues
+  });
+  await writePackFile(input.root, path.join("Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"), buildProjectHandoffMarkdown(projectHandoff), input.overwrite, written, skipped);
+  const focusedScope = await buildFocusedScopeStatus(input.root, input.platform, input.maxScriptIssues, input.maxLogBytes, input.maxLogIssues);
+  await writePackFile(input.root, path.join("Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md"), buildFocusedScopeStatusMarkdown(focusedScope), input.overwrite, written, skipped);
+  const remainingWork = await buildRemainingWorkReport({
+    root: input.root,
+    platform: input.platform,
+    verificationEvidence: "passed",
+    maxScriptIssues: input.maxScriptIssues,
+    maxLogBytes: input.maxLogBytes,
+    maxLogIssues: input.maxLogIssues
+  });
+  await writePackFile(input.root, path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md"), buildRemainingWorkMarkdown(remainingWork), input.overwrite, written, skipped);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    platform: input.platform,
+    requestedSampleId: input.sampleId,
+    sampleCount: sampleResults.length,
+    samples: sampleResults,
+    written,
+    skipped,
+    writtenCount: written.length,
+    skippedCount: skipped.length,
+    focusedSamplesComplete: focusedScope.allFocusedSamplesComplete,
+    remainingPercent: remainingWork.overall.remainingPercent,
+    topNextCall: projectHandoff.topNextCall,
+    nextActions: Array.from(new Set([
+      ...sampleResults.flatMap((sample) => sample.nextActions),
+      ...projectHandoff.nextActions,
+      "Keep RUN_RESULT.md and CODE_CHANGE.md evidence-based; generate them only after real runs or real code edits."
+    ])).slice(0, 18),
+    planned: plan,
+    security: "The focused handoff pack wrote generated Markdown diagnostics and forms only. It did not write EasyAR secret values, fake run results, or fake code change evidence."
+  };
+}
+
+async function writeFocusedHandoffPackForSample(
+  input: FocusedHandoffPackInput & { overwrite: boolean },
+  sample: SampleInfo,
+  outputPath: string,
+  written: string[],
+  skipped: string[]
+) {
+  const base = path.relative(input.root, focusedSampleGeneratedDir(input.root, sample));
+  const artifacts: Array<{ name: string; relativePath: string; markdown: string }> = [];
+  const onboarding = await buildOnboardingReport({
+    root: input.root,
+    sample,
+    client: input.client,
+    entrypointMode: input.entrypointMode,
+    platform: input.platform,
+    serverPath: input.serverPath,
+    outputPath,
+    maxScriptIssues: input.maxScriptIssues
+  });
+  artifacts.push({ name: "Onboarding", relativePath: path.join(base, "ONBOARDING.md"), markdown: buildOnboardingMarkdown(onboarding) });
+  const localConfigForm = await buildLocalConfigForm(input.root, sample, input.platform, input.accountStage, undefined);
+  artifacts.push({ name: "Local Config Form", relativePath: path.join(base, "LOCAL_CONFIG_FORM.md"), markdown: buildLocalConfigFormMarkdown(localConfigForm) });
+  const workflowState = await buildWorkflowState(input.root, sample, input.platform, outputPath, input.maxScriptIssues);
+  artifacts.push({ name: "Workflow State", relativePath: path.join(base, "WORKFLOW_STATE.md"), markdown: buildWorkflowStateMarkdown(workflowState) });
+  const officialAccess = await buildOfficialAccessReport(input.root, sample, input.platform, "unity-samples");
+  artifacts.push({ name: "Official Access", relativePath: path.join(base, "OFFICIAL_ACCESS.md"), markdown: buildOfficialAccessMarkdown(officialAccess) });
+  const importGuide = await buildSampleImportGuide(input.root, sample);
+  artifacts.push({ name: "Sample Import Guide", relativePath: path.join(base, "SAMPLE_IMPORT_GUIDE.md"), markdown: buildSampleImportGuideMarkdown(importGuide) });
+  const runSequence = buildFocusedRunSequence({
+    projectPath: input.root,
+    sample,
+    platform: input.platform,
+    outputPath,
+    developmentBuild: input.developmentBuild
+  });
+  artifacts.push({ name: "Run Sequence", relativePath: path.join(base, "RUN_SEQUENCE.md"), markdown: buildRunSequenceMarkdown(runSequence) });
+  const runReport = await buildFocusedRunReport(input.root, sample, input.maxScriptIssues);
+  artifacts.push({ name: "Run Report", relativePath: path.join(base, "RUN_REPORT.md"), markdown: buildRunReportMarkdown(runReport) });
+  const preflight = await buildFocusedPreflight(input.root, sample, input.platform, outputPath, input.maxScriptIssues);
+  artifacts.push({ name: "Focused Preflight", relativePath: path.join(base, "PREFLIGHT.md"), markdown: buildFocusedPreflightMarkdown(preflight) });
+  const sceneAudit = await buildSampleSceneAudit(input.root, sample, input.maxCandidates);
+  artifacts.push({ name: "Scene Audit", relativePath: path.join(base, "SCENE_AUDIT.md"), markdown: buildSceneAuditMarkdown(sceneAudit) });
+  const supportBundle = await buildSupportBundle({
+    root: input.root,
+    sample,
+    platform: input.platform,
+    outputPath,
+    developmentBuild: input.developmentBuild,
+    maxScriptIssues: input.maxScriptIssues,
+    maxCandidates: input.maxCandidates,
+    maxLogBytes: input.maxLogBytes,
+    maxLogIssues: input.maxLogIssues
+  });
+  artifacts.push({ name: "Support Bundle", relativePath: path.join(base, "SUPPORT_BUNDLE.md"), markdown: buildSupportBundleMarkdown(supportBundle) });
+  const deviceValidation = await buildDeviceValidationChecklist(input.root, sample, input.platform, undefined, outputPath);
+  artifacts.push({ name: "Device Validation", relativePath: path.join(base, "DEVICE_VALIDATION.md"), markdown: buildDeviceValidationChecklistMarkdown(deviceValidation) });
+  const deviceRunForm = await buildDeviceRunResultForm(input.root, sample, input.platform, undefined, outputPath, undefined);
+  artifacts.push({ name: "Device Run Result Form", relativePath: path.join(base, "DEVICE_RUN_RESULT_FORM.md"), markdown: buildDeviceRunResultFormMarkdown(deviceRunForm) });
+  const configAudit = await buildConfigIntegrationAudit(input.root, sample, 120, 40);
+  artifacts.push({ name: "Config Integration Audit", relativePath: path.join(base, "CONFIG_INTEGRATION.md"), markdown: buildConfigIntegrationAuditMarkdown(configAudit) });
+  const programmingContext = await buildProgrammingContext(input.root, sample, input.programmingGoal, 80, input.maxScriptIssues);
+  artifacts.push({ name: "Programming Context", relativePath: path.join(base, "PROGRAMMING_CONTEXT.md"), markdown: buildProgrammingContextMarkdown(programmingContext) });
+  const codePlan = await buildCodePlan(input.root, sample, input.codeGoal, [], input.maxScriptIssues);
+  artifacts.push({ name: "Code Plan", relativePath: path.join(base, "CODE_PLAN.md"), markdown: buildCodePlanMarkdown(codePlan) });
+
+  for (const artifact of artifacts) {
+    await writePackFile(input.root, artifact.relativePath, artifact.markdown, input.overwrite, written, skipped);
+  }
+
+  const indexBeforePack = await buildArtifactIndex(input.root, sample);
+  const packSummary = buildFocusedHandoffPackMarkdown({
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample,
+    platform: input.platform,
+    outputPath,
+    artifactNames: artifacts.map((artifact) => artifact.name),
+    artifactIndex: indexBeforePack,
+    workflowState,
+    preflight,
+    localConfigForm
+  });
+  await writePackFile(input.root, path.join(base, "HANDOFF_PACK.md"), packSummary, input.overwrite, written, skipped);
+  const refreshedIndex = await buildArtifactIndex(input.root, sample);
+  await writePackFile(input.root, path.join(base, "ARTIFACT_INDEX.md"), buildArtifactIndexMarkdown(refreshedIndex), input.overwrite, written, skipped);
+
+  return {
+    sampleId: sample.id,
+    sampleName: sample.name,
+    outputPath,
+    artifactCount: artifacts.length + 2,
+    missingArtifactsAfterWrite: refreshedIndex.missingArtifacts,
+    workflowPhase: workflowState.phase,
+    workflowBlocked: workflowState.blocked,
+    readyForUnityBatch: preflight.readyForUnityBatch,
+    readyForDeviceBuild: preflight.readyForDeviceBuild,
+    localConfigMissingFields: localConfigForm.missingRequiredFields,
+    nextActions: Array.from(new Set([
+      ...workflowState.nextActions,
+      ...preflight.nextActions,
+      ...localConfigForm.nextActions
+    ])).slice(0, 10)
+  };
+}
+
+function focusedHandoffPackArtifactSpecs(root: string, sample: SampleInfo) {
+  const base = path.relative(root, focusedSampleGeneratedDir(root, sample));
+  return [
+    "ONBOARDING.md",
+    "LOCAL_CONFIG_FORM.md",
+    "WORKFLOW_STATE.md",
+    "OFFICIAL_ACCESS.md",
+    "SAMPLE_IMPORT_GUIDE.md",
+    "RUN_SEQUENCE.md",
+    "RUN_REPORT.md",
+    "PREFLIGHT.md",
+    "SCENE_AUDIT.md",
+    "SUPPORT_BUNDLE.md",
+    "DEVICE_VALIDATION.md",
+    "DEVICE_RUN_RESULT_FORM.md",
+    "CONFIG_INTEGRATION.md",
+    "PROGRAMMING_CONTEXT.md",
+    "CODE_PLAN.md",
+    "ARTIFACT_INDEX.md",
+    "HANDOFF_PACK.md"
+  ].map((name) => ({
+    name,
+    relativePath: path.join(base, name),
+    purpose: focusedHandoffPackPurpose(name)
+  }));
+}
+
+function focusedHandoffPackPurpose(name: string): string {
+  const purposes: Record<string, string> = {
+    "ONBOARDING.md": "Client, release, official access, and workflow overview.",
+    "LOCAL_CONFIG_FORM.md": "Field-by-field local config form without secret values.",
+    "WORKFLOW_STATE.md": "Current blocker and next MCP call.",
+    "OFFICIAL_ACCESS.md": "Official endpoint/token/license/download access status.",
+    "SAMPLE_IMPORT_GUIDE.md": "Focused official sample import instructions.",
+    "RUN_SEQUENCE.md": "Ordered MCP and Unity batch commands.",
+    "RUN_REPORT.md": "Readiness, config, and script review summary.",
+    "PREFLIGHT.md": "Single gate before Unity automation and device validation.",
+    "SCENE_AUDIT.md": "Scene, Build Settings, EasyAR, and sample-specific signals.",
+    "SUPPORT_BUNDLE.md": "Diagnostic handoff across run report, scene audit, sequence, and logs.",
+    "DEVICE_VALIDATION.md": "Real-device validation checklist.",
+    "DEVICE_RUN_RESULT_FORM.md": "Fillable real-device result form.",
+    "CONFIG_INTEGRATION.md": "Local config wiring audit for scripts/assets/scenes.",
+    "PROGRAMMING_CONTEXT.md": "Script inventory and programming handoff.",
+    "CODE_PLAN.md": "Scoped plan before C# edits.",
+    "ARTIFACT_INDEX.md": "Focused artifact status and reading order.",
+    "HANDOFF_PACK.md": "Pack summary for another AI tool or human operator."
+  };
+  return purposes[name] ?? "Generated focused handoff artifact.";
+}
+
+async function writePackFile(
+  root: string,
+  relativePath: string,
+  markdown: string,
+  overwrite: boolean,
+  written: string[],
+  skipped: string[]
+) {
+  const target = path.resolve(root, relativePath);
+  assertInside(root, target);
+  const before = written.length;
+  await writeGeneratedFile(target, markdown, overwrite, written);
+  if (written.length === before) {
+    skipped.push(target);
+  }
+}
+
+function defaultFocusedOutputPath(sample: SampleInfo, platform: typeof mobilePlatforms[number]) {
+  return platform === "android"
+    ? `Builds/${sample.id}.apk`
+    : `Builds/iOS/${sample.id}`;
+}
+
 function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): string[] {
   const priority = [
     "ACCOUNT_ONBOARDING.md",
@@ -7511,6 +7910,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "PROGRAMMING_CONTEXT.md",
     "CODE_PLAN.md",
     "CODE_CHANGE.md",
+    "HANDOFF_PACK.md",
     "ARTIFACT_INDEX.md"
   ];
   return [...artifacts]
@@ -7676,6 +8076,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "CODE_CHANGE.md"),
       purpose: "C# change summary after script edits and before Unity compilation.",
       generateWith: `easyar_write_code_change_summary sampleId=${sample.id}`
+    },
+    {
+      name: "Focused Handoff Pack",
+      relativePath: path.join(base, "HANDOFF_PACK.md"),
+      purpose: "Summary written by easyar_write_focused_handoff_pack for another AI tool or human operator.",
+      generateWith: `easyar_write_focused_handoff_pack sampleId=${sample.id}`
     },
     {
       name: "Artifact Index",
@@ -10900,6 +11306,81 @@ function buildArtifactIndexMarkdown(index: Awaited<ReturnType<typeof buildArtifa
     "## Security",
     "",
     index.security,
+    ""
+  ].join("\n");
+}
+
+function buildFocusedHandoffPackMarkdown(pack: {
+  generatedAt: string;
+  projectPath: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  outputPath: string;
+  artifactNames: string[];
+  artifactIndex: Awaited<ReturnType<typeof buildArtifactIndex>>;
+  workflowState: Awaited<ReturnType<typeof buildWorkflowState>>;
+  preflight: Awaited<ReturnType<typeof buildFocusedPreflight>>;
+  localConfigForm: Awaited<ReturnType<typeof buildLocalConfigForm>>;
+}): string {
+  return [
+    `# EasyAR Focused Handoff Pack - ${pack.sample.name}`,
+    "",
+    `Generated at: ${pack.generatedAt}`,
+    `Project: ${pack.projectPath}`,
+    `Sample id: ${pack.sample.id}`,
+    `Status: ${pack.sample.implementationStatus}`,
+    `Platform: ${pack.platform}`,
+    `Output path: ${pack.outputPath}`,
+    "",
+    "## Summary",
+    "",
+    `Workflow phase: ${pack.workflowState.phase}`,
+    `Workflow blocked: ${pack.workflowState.blocked ? "yes" : "no"}`,
+    `Ready for Unity batch: ${pack.preflight.readyForUnityBatch ? "yes" : "no"}`,
+    `Ready for device build: ${pack.preflight.readyForDeviceBuild ? "yes" : "no"}`,
+    `Local config valid: ${pack.localConfigForm.localConfig.valid ? "yes" : "no"}`,
+    `Missing artifact count: ${pack.artifactIndex.missingArtifacts.length}`,
+    "",
+    "## Generated In This Pack",
+    "",
+    ...pack.artifactNames.map((name) => `- ${name}`),
+    "- ARTIFACT_INDEX.md",
+    "- HANDOFF_PACK.md",
+    "",
+    "## Recommended Reading Order",
+    "",
+    ...pack.artifactIndex.readOrder.map((artifactPath, index) => `${index + 1}. ${artifactPath}`),
+    "",
+    "## Local Config Missing Fields",
+    "",
+    ...markdownIssueList(pack.localConfigForm.missingRequiredFields, "No required local config fields are missing."),
+    "",
+    "## Current Blockers",
+    "",
+    ...markdownIssueList(pack.preflight.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No preflight blockers."),
+    "",
+    "## Next Call",
+    "",
+    `Tool: \`${pack.workflowState.nextCall.tool}\``,
+    `Arguments: \`${JSON.stringify(pack.workflowState.nextCall.arguments)}\``,
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(Array.from(new Set([
+      ...pack.workflowState.nextActions,
+      ...pack.preflight.nextActions,
+      ...pack.localConfigForm.nextActions
+    ])).slice(0, 16), "No next actions recorded."),
+    "",
+    "## Evidence Rules",
+    "",
+    "- This pack does not mark RUN_RESULT.md as passed.",
+    "- CODE_CHANGE.md is intentionally generated only after real C# edits.",
+    "- Real-device completion still requires a passed RUN_RESULT.md with recorded device validation evidence.",
+    "",
+    "## Security",
+    "",
+    "This handoff pack contains paths, field names, placeholders, status summaries, and next calls only. It does not contain EasyAR account tokens, license keys, Cloud Recognition appKey/appSecret, signing keys, provisioning secrets, or raw private logs.",
     ""
   ].join("\n");
 }

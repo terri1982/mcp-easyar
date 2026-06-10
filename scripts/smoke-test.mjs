@@ -169,6 +169,14 @@ try {
     "easyar_write_artifact_index should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_focused_handoff_pack"),
+    "easyar_generate_focused_handoff_pack should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_focused_handoff_pack"),
+    "easyar_write_focused_handoff_pack should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_audit_sample_scene"),
     "easyar_audit_sample_scene should be listed"
   );
@@ -2168,6 +2176,37 @@ try {
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-network");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
 
+  const focusedHandoffPackPlan = await callTool("easyar_generate_focused_handoff_pack", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountStage: "logged-in"
+  });
+  assertTextIncludes(focusedHandoffPackPlan, "HANDOFF_PACK.md");
+  assertTextIncludes(focusedHandoffPackPlan, "DEVICE_RUN_RESULT_FORM.md");
+  assertTextIncludes(focusedHandoffPackPlan, "CODE_PLAN.md");
+  assert(!extractText(focusedHandoffPackPlan).includes("env-test-account-token"), "Focused handoff pack plan should not include account token value");
+  assert(!extractText(focusedHandoffPackPlan).includes("env-test-license-key"), "Focused handoff pack plan should not include license value");
+
+  const writtenFocusedHandoffPack = await callTool("easyar_write_focused_handoff_pack", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountStage: "logged-in"
+  });
+  assertTextIncludes(writtenFocusedHandoffPack, "\"writtenCount\"");
+  assertTextIncludes(writtenFocusedHandoffPack, "HANDOFF_PACK.md");
+  assertTextIncludes(writtenFocusedHandoffPack, "\"focusedSamplesComplete\": false");
+  const handoffPackMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "HANDOFF_PACK.md"),
+    "utf8"
+  );
+  assert(handoffPackMarkdown.includes("EasyAR Focused Handoff Pack - Cloud Recognition"), "Focused handoff pack markdown should include title");
+  assert(handoffPackMarkdown.includes("Evidence Rules"), "Focused handoff pack should state evidence rules");
+  assert(handoffPackMarkdown.includes("does not mark RUN_RESULT.md as passed"), "Focused handoff pack should not claim a passed run result");
+  assert(!handoffPackMarkdown.includes("env-test-account-token"), "Focused handoff pack markdown should not include account token value");
+  assert(!handoffPackMarkdown.includes("env-test-license-key"), "Focused handoff pack markdown should not include license value");
+
   const artifactIndex = await callTool("easyar_generate_artifact_index", {
     projectPath,
     sampleId: "cloud-recognition"
@@ -2190,6 +2229,7 @@ try {
   assertTextIncludes(artifactIndex, "ISSUE_REPORT.md");
   assertTextIncludes(artifactIndex, "PROGRAMMING_CONTEXT.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
+  assertTextIncludes(artifactIndex, "HANDOFF_PACK.md");
   assertTextIncludes(artifactIndex, "ARTIFACT_INDEX.md");
 
   const writtenArtifactIndex = await callTool("easyar_write_artifact_index", {
@@ -2215,6 +2255,7 @@ try {
   assert(artifactIndexMarkdown.includes("COMPLETION_REPORT.md"), "Artifact index markdown should list completion report");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
   assert(artifactIndexMarkdown.includes("PROGRAMMING_CONTEXT.md"), "Artifact index markdown should list programming context");
+  assert(artifactIndexMarkdown.includes("HANDOFF_PACK.md"), "Artifact index markdown should list focused handoff pack");
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("RUN_REPORT.md"),
     "Artifact read order should place preflight before run report"

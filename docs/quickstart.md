@@ -25,9 +25,10 @@ easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=n
 easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition
 easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_write_local_config_form projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
+easyar_write_focused_handoff_pack projectPath=/path/to/UnityProject sampleId=all platform=android accountStage=not-registered
 ```
 
-The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. MCP does not ask for EasyAR website passwords and does not store account credentials.
+The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. `easyar_write_focused_handoff_pack` writes the safe per-sample diagnostics, forms, run sequence, programming context, `HANDOFF_PACK.md`, `ARTIFACT_INDEX.md`, and project dashboards in one call. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 For a user who has not registered yet, the MCP flow is:
 
@@ -166,6 +167,14 @@ Import the official EasyAR Unity Plugin and sample scenes from the EasyAR downlo
 `SAMPLE_IMPORT_GUIDE.md` lists expected `Assets/Samples/...` import locations and post-import verification calls. If the matching sample is already present under local `Library/PackageCache/**/Samples~`, `easyar_import_sample_from_package_cache` can copy it into `Assets/Samples` for the focused sample. After importing, run the listed import checklist, readiness, and focused preflight calls before continuing to Unity batch automation.
 
 When unsure what to do next, call `easyar_next_workflow_step` again. It inspects import status, readiness, local config, scene/Build Settings state, script review, device validation blockers, and handoff artifacts, then returns the next recommended MCP call.
+
+To create the whole safe handoff pack for the focused scope:
+
+```text
+easyar_write_focused_handoff_pack projectPath=/path/to/UnityProject sampleId=all platform=android accountStage=logged-in
+```
+
+The pack intentionally does not write a passed `RUN_RESULT.md` or `CODE_CHANGE.md`; those remain evidence-based artifacts after real device runs or real script edits.
 
 ## 4. Prepare The Unity Project
 
