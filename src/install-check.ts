@@ -35,6 +35,7 @@ const requiredPrompts = [
 
 const requiredResources = [
   "easyar://official/api-contract",
+  "easyar://official/openapi",
   "easyar://workflow/focused-scope",
   "easyar://workflow/quickstart"
 ];
@@ -125,6 +126,11 @@ try {
       "official-api-contract",
       resourceTexts.get("easyar://official/api-contract")?.includes("mcp-easyar Official API Contract") ?? false,
       "Official API contract resource is readable."
+    ),
+    check(
+      "official-openapi-contract",
+      resourceTexts.get("easyar://official/openapi")?.includes("\"openapi\": \"3.1.0\"") ?? false,
+      "Official OpenAPI contract resource is readable."
     ),
     check(
       "focused-scope-workflow",

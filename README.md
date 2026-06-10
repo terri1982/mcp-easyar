@@ -342,6 +342,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar://samples/catalog`
 - `easyar://official/info`
 - `easyar://official/api-contract`
+- `easyar://official/openapi`
 - `easyar://unity/checklist`
 - `easyar://workflow/quickstart`
 - `easyar://workflow/focused-scope`

@@ -477,6 +477,13 @@ try {
   assertResourceIncludes(officialApiContractResource, "cloud-credentials-discovery");
   assertResourceIncludes(officialApiContractResource, "Responses must not include raw license keys");
 
+  const officialOpenApiResource = await request("resources/read", {
+    uri: "easyar://official/openapi"
+  });
+  assertResourceIncludes(officialOpenApiResource, "\"openapi\": \"3.1.0\"");
+  assertResourceIncludes(officialOpenApiResource, "\"/mcp/cloud-recognition/credentials\"");
+  assertResourceIncludes(officialOpenApiResource, "\"EasyARBearerAuth\"");
+
   const focusedScopeResource = await request("resources/read", {
     uri: "easyar://workflow/focused-scope"
   });

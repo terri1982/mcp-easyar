@@ -6,6 +6,7 @@ import { access, cp, mkdir, open, readFile, readdir, stat, writeFile } from "nod
 import { constants } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { createEasyARApiClient } from "./easyar-api.js";
 
 type SampleInfo = {
@@ -73,6 +74,8 @@ const accountStageValues = ["unknown", "not-registered", "registered-not-logged-
 type AccountStage = typeof accountStageValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
 
 const toolCatalog = [
@@ -187,6 +190,7 @@ const resourceCatalog = [
   "easyar://samples/catalog",
   "easyar://official/info",
   "easyar://official/api-contract",
+  "easyar://official/openapi",
   "easyar://unity/checklist",
   "easyar://workflow/quickstart",
   "easyar://workflow/focused-scope"
@@ -345,6 +349,20 @@ server.resource(
         uri: uri.href,
         mimeType: "text/markdown",
         text: buildOfficialApiContractMarkdown(buildOfficialApiContract(undefined, true))
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-official-openapi",
+  "easyar://official/openapi",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "application/json",
+        text: await readFile(officialOpenApiPath, "utf8")
       }
     ]
   })

@@ -90,7 +90,7 @@ easyar_official_api_handoff deploymentTarget=staging
 easyar_write_official_api_handoff workspacePath=/path/to/workspace deploymentTarget=staging
 ```
 
-MCP clients can also read `easyar://official/api-contract` or use the `easyar-validate-official-endpoints` prompt before validating registered-user endpoint access. `OFFICIAL_API_HANDOFF.md` is the backend/operations rollout checklist for mapping the contract to real EasyAR account services, setting endpoint env vars, running canaries, and recording official access evidence.
+MCP clients can also read `easyar://official/api-contract` for Markdown or `easyar://official/openapi` for the machine-readable OpenAPI JSON, or use the `easyar-validate-official-endpoints` prompt before validating registered-user endpoint access. `OFFICIAL_API_HANDOFF.md` is the backend/operations rollout checklist for mapping the contract to real EasyAR account services, setting endpoint env vars, running canaries, and recording official access evidence.
 
 You can inspect local Unity path discovery with:
 
