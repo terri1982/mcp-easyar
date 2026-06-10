@@ -72,6 +72,7 @@ npm run pack:check
 - `easyar_release_manifest`
 - `easyar_account_onboarding`
 - `easyar_account_materials`
+- `easyar_generate_official_api_contract`
 - `easyar_check_client_setup`
 - `easyar_auth_status`
 - `easyar_check_official_access`
@@ -94,6 +95,12 @@ npm run pack:check
 - `EASYAR_DOWNLOADS_ENDPOINT`
 - `EASYAR_CLOUD_CREDENTIALS_ENDPOINT`
 - `EASYAR_UNITY_PATH`
+
+## Official API Contract
+
+- `docs/OFFICIAL_API_CONTRACT.md`
+- `easyar_generate_official_api_contract`
+- `easyar_write_official_api_contract`
 
 ## Required Release Files
 

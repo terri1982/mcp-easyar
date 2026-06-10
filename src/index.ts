@@ -77,6 +77,8 @@ const toolCatalog = [
   "easyar_server_status",
   "easyar_list_samples",
   "easyar_official_info",
+  "easyar_generate_official_api_contract",
+  "easyar_write_official_api_contract",
   "easyar_auth_status",
   "easyar_account_onboarding",
   "easyar_write_account_onboarding",
@@ -761,6 +763,49 @@ server.tool(
         platform
       },
       security: "EASYAR_API_TOKEN, appKey, appSecret, and credential values are never returned. This tool only calls configured official EasyAR endpoints."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_official_api_contract",
+  "Generate the official EasyAR account API contract required for production mcp-easyar deployment.",
+  {
+    baseUrl: z.string().optional().describe("Optional official API base URL. Defaults to EASYAR_API_BASE_URL or https://www.easyar.cn."),
+    includeExamples: z.boolean().default(true).describe("Whether to include non-secret request/response examples.")
+  },
+  async ({ baseUrl, includeExamples }) => {
+    return jsonText(buildOfficialApiContract(baseUrl, includeExamples));
+  }
+);
+
+server.tool(
+  "easyar_write_official_api_contract",
+  "Write the official EasyAR account API contract as Markdown for backend, operations, and MCP client handoff.",
+  {
+    workspacePath: z.string().optional().describe("Workspace or repository path. Defaults to the current working directory."),
+    relativePath: z.string().default(path.join("docs", "OFFICIAL_API_CONTRACT.md")).describe("Contract path inside the workspace."),
+    baseUrl: z.string().optional().describe("Optional official API base URL. Defaults to EASYAR_API_BASE_URL or https://www.easyar.cn."),
+    includeExamples: z.boolean().default(true).describe("Whether to include non-secret request/response examples."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing contract file.")
+  },
+  async ({ workspacePath, relativePath, baseUrl, includeExamples, overwrite }) => {
+    const root = resolveProjectPath(workspacePath ?? process.cwd());
+    await ensureDirectory(root);
+    const contract = buildOfficialApiContract(baseUrl, includeExamples);
+    const target = path.resolve(root, relativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildOfficialApiContractMarkdown(contract), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      endpointCount: contract.endpoints.length,
+      requiredEnv: contract.environment.required,
+      configuredEnv: contract.environment.configured,
+      readyForProductionOfficialAccess: contract.readyForProductionOfficialAccess,
+      note: "The official API contract contains endpoint schemas and security requirements only; it does not contain tokens, license keys, appKey, or appSecret values."
     });
   }
 );
@@ -3486,6 +3531,194 @@ async function buildAccountMaterialsReport(
     nextActions,
     security: "This report never includes secret values. It lists field names, presence, source, storage location, and share policy only."
   };
+}
+
+function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: boolean) {
+  const auth = readAuthConfig();
+  const resolvedBaseUrl = baseUrl ?? auth.apiBaseUrl;
+  const endpoints = [
+    officialApiEndpointContract({
+      baseUrl: resolvedBaseUrl,
+      id: "account-status",
+      envName: "EASYAR_ACCOUNT_STATUS_ENDPOINT",
+      configured: auth.accountStatusEndpointConfigured,
+      method: "GET",
+      path: "/mcp/account/status",
+      purpose: "Confirm the bearer token belongs to a registered EasyAR user and return non-secret account entitlement metadata.",
+      requestFields: [],
+      requiredResponseFields: ["ok", "account.id", "account.registered", "account.status", "entitlements"],
+      optionalResponseFields: ["account.emailMasked", "account.displayName", "plans", "organization", "expiresAt"],
+      usedByTools: ["easyar_check_account", "easyar_check_official_access", "easyar_onboarding_report"]
+    }),
+    officialApiEndpointContract({
+      baseUrl: resolvedBaseUrl,
+      id: "license-validation",
+      envName: "EASYAR_LICENSE_VALIDATE_ENDPOINT",
+      configured: auth.licenseValidationEndpointConfigured,
+      method: "POST",
+      path: "/mcp/license/validate",
+      purpose: "Validate that a local EasyAR Sense license key is usable for the requested Unity bundle identifier and platform.",
+      requestFields: ["licenseKey", "bundleIdentifier", "platform"],
+      requiredResponseFields: ["ok", "license.valid", "license.product", "license.bundleIdentifierMatches", "license.platformAllowed"],
+      optionalResponseFields: ["license.expiresAt", "license.edition", "license.features", "license.message"],
+      usedByTools: ["easyar_validate_license", "easyar_check_official_access", "easyar_write_focused_preflight"]
+    }),
+    officialApiEndpointContract({
+      baseUrl: resolvedBaseUrl,
+      id: "downloads-discovery",
+      envName: "EASYAR_DOWNLOADS_ENDPOINT",
+      configured: auth.downloadsEndpointConfigured,
+      method: "POST",
+      path: "/mcp/downloads",
+      purpose: "Return account-authorized EasyAR SDK, Unity Plugin, and sample package metadata without bypassing official download permissions.",
+      requestFields: ["sampleId", "packageKind", "unityVersion"],
+      requiredResponseFields: ["ok", "packages"],
+      optionalResponseFields: ["packages[].name", "packages[].version", "packages[].url", "packages[].sha256", "packages[].releaseNotesUrl"],
+      usedByTools: ["easyar_discover_downloads", "easyar_check_official_access", "easyar_generate_sample_import_guide"]
+    }),
+    officialApiEndpointContract({
+      baseUrl: resolvedBaseUrl,
+      id: "cloud-credentials-discovery",
+      envName: "EASYAR_CLOUD_CREDENTIALS_ENDPOINT",
+      configured: auth.cloudCredentialsEndpointConfigured,
+      method: "POST",
+      path: "/mcp/cloud-recognition/credentials",
+      purpose: "Return Cloud Recognition app metadata and presence flags for the registered user without returning appKey or appSecret values.",
+      requestFields: ["sampleId", "bundleIdentifier", "platform"],
+      requiredResponseFields: ["ok", "cloudRecognition.appId", "cloudRecognition.appKeyPresent", "cloudRecognition.appSecretPresent"],
+      optionalResponseFields: ["cloudRecognition.serviceRegion", "cloudRecognition.targetLibraryCount", "cloudRecognition.dashboardUrl"],
+      usedByTools: ["easyar_discover_cloud_credentials", "easyar_check_official_access", "easyar_account_materials"]
+    })
+  ];
+  const environment = {
+    baseUrl: resolvedBaseUrl,
+    tokenEnvName: "EASYAR_API_TOKEN",
+    tokenConfigured: auth.hasToken,
+    required: [
+      "EASYAR_API_BASE_URL",
+      "EASYAR_API_TOKEN",
+      "EASYAR_ACCOUNT_STATUS_ENDPOINT",
+      "EASYAR_LICENSE_VALIDATE_ENDPOINT",
+      "EASYAR_DOWNLOADS_ENDPOINT",
+      "EASYAR_CLOUD_CREDENTIALS_ENDPOINT"
+    ],
+    configured: {
+      EASYAR_API_TOKEN: auth.hasToken,
+      EASYAR_ACCOUNT_STATUS_ENDPOINT: auth.accountStatusEndpointConfigured,
+      EASYAR_LICENSE_VALIDATE_ENDPOINT: auth.licenseValidationEndpointConfigured,
+      EASYAR_DOWNLOADS_ENDPOINT: auth.downloadsEndpointConfigured,
+      EASYAR_CLOUD_CREDENTIALS_ENDPOINT: auth.cloudCredentialsEndpointConfigured
+    }
+  };
+  const readyForProductionOfficialAccess = auth.hasToken && endpoints.every((endpoint) => endpoint.configured);
+  return {
+    generatedAt: new Date().toISOString(),
+    server: {
+      name: serverName,
+      version: serverVersion,
+      purpose: "Official EasyAR MCP service for registered users running EasyAR Unity samples and Unity project programming workflows."
+    },
+    environment,
+    authentication: {
+      scheme: "Bearer token",
+      header: "Authorization: Bearer ${EASYAR_API_TOKEN}",
+      tokenSource: "Official EasyAR registered-user account token, stored in MCP client environment or secret storage.",
+      tokenPolicy: [
+        "Do not paste tokens into chat.",
+        "Do not commit tokens to GitHub.",
+        "Do not return tokens in API responses, logs, issue reports, or MCP tool output.",
+        "Prefer short-lived or revocable tokens for production clients."
+      ]
+    },
+    endpoints,
+    examples: includeExamples ? buildOfficialApiContractExamples(resolvedBaseUrl) : [],
+    responsePolicy: [
+      "Responses may include account metadata, package metadata, and presence flags.",
+      "Responses must not include raw license keys, API tokens, appKey, appSecret, passwords, verification codes, signing keys, or provisioning profiles.",
+      "If a backend must report sensitive material existence, return boolean presence flags and dashboard URLs instead of values.",
+      "Use non-2xx status codes plus redacted JSON error bodies for unauthorized, expired, unlicensed, and entitlement failures."
+    ],
+    productionChecklist: [
+      "Configure all endpoint env vars to official HTTPS EasyAR APIs.",
+      "Validate CORS/network policy for local MCP clients if endpoints are proxied.",
+      "Ensure every endpoint authorizes by account token and entitlements.",
+      "Run easyar_check_official_access for image-tracking and cloud-recognition.",
+      "Run easyar_write_deployment_readiness and keep blockers at zero before release."
+    ],
+    readyForProductionOfficialAccess,
+    security: "This contract is schema and deployment guidance only. It intentionally contains no EasyAR account token, license key, appKey, appSecret, or user password."
+  };
+}
+
+function officialApiEndpointContract(input: {
+  baseUrl: string;
+  id: string;
+  envName: string;
+  configured: boolean;
+  method: "GET" | "POST";
+  path: string;
+  purpose: string;
+  requestFields: string[];
+  requiredResponseFields: string[];
+  optionalResponseFields: string[];
+  usedByTools: string[];
+}) {
+  const { baseUrl, ...endpoint } = input;
+  return {
+    ...endpoint,
+    expectedUrl: `${baseUrl}${input.path}`,
+    authorization: "Required bearer token from EASYAR_API_TOKEN",
+    timeoutMs: 10000,
+    secretHandling: "Accept secret request fields only when needed for validation, never echo them back, and return only redacted metadata."
+  };
+}
+
+function buildOfficialApiContractExamples(baseUrl: string) {
+  return [
+    {
+      endpoint: "license-validation",
+      request: {
+        method: "POST",
+        url: `${baseUrl}/mcp/license/validate`,
+        body: {
+          licenseKey: "<local EasyAR license key>",
+          bundleIdentifier: "com.example.easyar.sample",
+          platform: "android"
+        }
+      },
+      response: {
+        ok: true,
+        license: {
+          valid: true,
+          product: "EasyAR Sense Unity Plugin",
+          bundleIdentifierMatches: true,
+          platformAllowed: true,
+          features: ["image-tracking", "cloud-recognition"]
+        }
+      }
+    },
+    {
+      endpoint: "cloud-credentials-discovery",
+      request: {
+        method: "POST",
+        url: `${baseUrl}/mcp/cloud-recognition/credentials`,
+        body: {
+          sampleId: "cloud-recognition",
+          bundleIdentifier: "com.example.easyar.sample",
+          platform: "android"
+        }
+      },
+      response: {
+        ok: true,
+        cloudRecognition: {
+          appId: "<app id or masked app id>",
+          appKeyPresent: true,
+          appSecretPresent: true,
+          serviceRegion: "configured"
+        }
+      }
+    }
+  ];
 }
 
 async function buildOfficialAccessReport(
@@ -8865,6 +9098,97 @@ function buildOfficialAccessMarkdown(report: Awaited<ReturnType<typeof buildOffi
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildOfficialApiContractMarkdown(contract: ReturnType<typeof buildOfficialApiContract>): string {
+  return [
+    "# mcp-easyar Official API Contract",
+    "",
+    `Generated at: ${contract.generatedAt}`,
+    `Server: ${contract.server.name} ${contract.server.version}`,
+    `Ready for production official access: ${contract.readyForProductionOfficialAccess ? "yes" : "no"}`,
+    "",
+    "## Purpose",
+    "",
+    contract.server.purpose,
+    "",
+    "## Environment",
+    "",
+    `Base URL: ${contract.environment.baseUrl}`,
+    `Token env: ${contract.environment.tokenEnvName}`,
+    `Token configured now: ${contract.environment.tokenConfigured ? "yes" : "no"}`,
+    "",
+    "### Required Variables",
+    "",
+    ...contract.environment.required.map((name) => `- ${name}`),
+    "",
+    "### Current Configuration",
+    "",
+    ...Object.entries(contract.environment.configured).map(([name, configured]) => `- ${name}: ${configured ? "yes" : "no"}`),
+    "",
+    "## Authentication",
+    "",
+    `Scheme: ${contract.authentication.scheme}`,
+    `Header: \`${contract.authentication.header}\``,
+    `Token source: ${contract.authentication.tokenSource}`,
+    "",
+    ...contract.authentication.tokenPolicy.map((policy) => `- ${policy}`),
+    "",
+    "## Endpoints",
+    "",
+    ...contract.endpoints.flatMap((endpoint) => [
+      `### ${endpoint.id}`,
+      "",
+      `Env: ${endpoint.envName}`,
+      `Configured now: ${endpoint.configured ? "yes" : "no"}`,
+      `Method: ${endpoint.method}`,
+      `Path: ${endpoint.path}`,
+      `Expected URL: ${endpoint.expectedUrl}`,
+      `Timeout ms: ${endpoint.timeoutMs}`,
+      `Authorization: ${endpoint.authorization}`,
+      "",
+      endpoint.purpose,
+      "",
+      "Request fields:",
+      ...markdownIssueList(endpoint.requestFields, "No request body fields."),
+      "",
+      "Required response fields:",
+      ...endpoint.requiredResponseFields.map((field) => `- ${field}`),
+      "",
+      "Optional response fields:",
+      ...markdownIssueList(endpoint.optionalResponseFields, "No optional response fields listed."),
+      "",
+      "Used by MCP tools:",
+      ...endpoint.usedByTools.map((tool) => `- ${tool}`),
+      "",
+      `Secret handling: ${endpoint.secretHandling}`,
+      ""
+    ]),
+    "## Examples",
+    "",
+    ...(contract.examples.length > 0
+      ? contract.examples.flatMap((example) => [
+          `### ${example.endpoint}`,
+          "",
+          "```json",
+          JSON.stringify(example, null, 2),
+          "```",
+          ""
+        ])
+      : ["Examples omitted."]),
+    "## Response Policy",
+    "",
+    ...contract.responsePolicy.map((policy) => `- ${policy}`),
+    "",
+    "## Production Checklist",
+    "",
+    ...contract.productionChecklist.map((item) => `- ${item}`),
+    "",
+    "## Security",
+    "",
+    contract.security,
     ""
   ].join("\n");
 }

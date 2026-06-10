@@ -108,6 +108,8 @@ EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/
 
 `EASYAR_ACCOUNT_STATUS_ENDPOINT`, `EASYAR_LICENSE_VALIDATE_ENDPOINT`, `EASYAR_DOWNLOADS_ENDPOINT`, and `EASYAR_CLOUD_CREDENTIALS_ENDPOINT` are intentionally configurable. Connect them to authorized EasyAR account APIs in production; the open-source default does not guess or bypass private EasyAR endpoints.
 
+See [`docs/OFFICIAL_API_CONTRACT.md`](docs/OFFICIAL_API_CONTRACT.md) or call `easyar_generate_official_api_contract` for the required official account API contract, request fields, response policy, and secret-handling rules.
+
 ## Claude Desktop
 
 ```json
@@ -201,6 +203,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_validate_license`: call a configured official EasyAR license-validation endpoint using local config or explicit input without returning secrets.
 - `easyar_discover_downloads`: call a configured official downloads endpoint for account-scoped SDK/sample package discovery without returning tokens.
 - `easyar_discover_cloud_credentials`: call a configured official Cloud Recognition endpoint for account-scoped credential metadata without returning secrets.
+- `easyar_generate_official_api_contract`: generate the official EasyAR account API contract needed for production endpoint integration.
+- `easyar_write_official_api_contract`: write the official API contract to `docs/OFFICIAL_API_CONTRACT.md` or a selected workspace path.
 - `easyar_check_official_access`: run a focused official account, license, downloads, and sample-specific access check without exposing secrets.
 - `easyar_write_official_access_report`: write the official access check to `Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md`.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.

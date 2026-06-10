@@ -62,6 +62,13 @@ EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-r
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
 
+The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md` and can be regenerated with:
+
+```text
+easyar_generate_official_api_contract
+easyar_write_official_api_contract workspacePath=/path/to/workspace
+```
+
 You can inspect local Unity path discovery with:
 
 ```text

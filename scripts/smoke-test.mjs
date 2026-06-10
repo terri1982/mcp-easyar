@@ -115,6 +115,14 @@ try {
     "easyar_discover_cloud_credentials should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_official_api_contract"),
+    "easyar_generate_official_api_contract should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_official_api_contract"),
+    "easyar_write_official_api_contract should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_check_official_access"),
     "easyar_check_official_access should be listed"
   );
@@ -327,6 +335,16 @@ try {
   assertTextIncludes(authStatus, "\"downloadsEndpointConfigured\": false");
   assertTextIncludes(authStatus, "\"cloudCredentialsEndpointConfigured\": false");
 
+  const officialApiContract = await callTool("easyar_generate_official_api_contract", {
+    baseUrl: "https://www.easyar.cn",
+    includeExamples: true
+  });
+  assertTextIncludes(officialApiContract, "\"id\": \"account-status\"");
+  assertTextIncludes(officialApiContract, "\"envName\": \"EASYAR_LICENSE_VALIDATE_ENDPOINT\"");
+  assertTextIncludes(officialApiContract, "\"appSecretPresent\"");
+  assertTextIncludes(officialApiContract, "\"readyForProductionOfficialAccess\": false");
+  assertTextIncludes(officialApiContract, "Responses must not include raw license keys");
+
   const accountOnboarding = await callTool("easyar_account_onboarding", {
     sampleId: "cloud-recognition",
     accountStage: "not-registered"
@@ -378,6 +396,20 @@ try {
   assertTextIncludes(cloudCredentialDiscovery, "\"sampleId\": \"cloud-recognition\"");
 
   const officialAccessProjectPath = await createUnityProject();
+  const writtenOfficialApiContract = await callTool("easyar_write_official_api_contract", {
+    workspacePath: officialAccessProjectPath,
+    relativePath: "EasyARGenerated/OFFICIAL_API_CONTRACT.md",
+    baseUrl: "https://www.easyar.cn"
+  });
+  assertTextIncludes(writtenOfficialApiContract, "OFFICIAL_API_CONTRACT.md");
+  const officialApiContractMarkdown = await readFile(
+    path.join(officialAccessProjectPath, "EasyARGenerated", "OFFICIAL_API_CONTRACT.md"),
+    "utf8"
+  );
+  assert(officialApiContractMarkdown.includes("mcp-easyar Official API Contract"), "Official API contract markdown should include title");
+  assert(officialApiContractMarkdown.includes("cloud-credentials-discovery"), "Official API contract markdown should include cloud endpoint");
+  assert(officialApiContractMarkdown.includes("Responses must not include raw license keys"), "Official API contract markdown should include response policy");
+
   const officialAccessNoProject = await callTool("easyar_check_official_access", {
     projectPath: officialAccessProjectPath,
     sampleId: "cloud-recognition",
