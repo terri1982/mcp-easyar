@@ -9149,6 +9149,7 @@ async function buildCompletionReport(
   const hasBlockingLogIssues = latestLog.issues.some((issue) => issue.severity === "high");
   const completionStatus = chooseCompletionStatus(hasRunResult, runResultArtifact.overallStatus, preflightPassed, deviceReady, realDeviceRunPassed, hasBlockingLogIssues);
   const runThroughComplete = completionStatus === "passed";
+  const portalEvidencePassed = !deviceValidation.blockers.some((blocker) => blocker.id === "portal-evidence");
   const requiredEvidence = [
     {
       id: "focused-preflight",
@@ -9162,6 +9163,14 @@ async function buildCompletionReport(
       passed: deviceReady,
       detail: "DEVICE_VALIDATION.md must have no sample/import/scene blockers before real-device testing."
     },
+    ...(sample.id === "cloud-recognition"
+      ? [{
+          id: "portal-evidence",
+          required: true,
+          passed: portalEvidencePassed,
+          detail: "PORTAL_EVIDENCE.md must confirm Sense License is not missing, Cloud Recognition library is present, and target count is greater than zero."
+        }]
+      : []),
     {
       id: "run-result-passed",
       required: true,
@@ -9198,7 +9207,9 @@ async function buildCompletionReport(
       id: "device-validation",
       path: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "DEVICE_VALIDATION.md")),
       status: deviceReady ? "passed" : "blocked",
-      detail: deviceReady ? "Device validation checklist is ready to execute." : `${deviceValidation.blockers.length} device validation blocker(s) remain.`
+      detail: deviceReady
+        ? "Device validation checklist is ready to execute."
+        : `${deviceValidation.blockers.length} device validation blocker(s) remain: ${deviceValidation.blockers.map((blocker) => blocker.id).join(", ")}.`
     },
     {
       id: "run-result",

@@ -1148,6 +1148,7 @@ try {
   assertTextIncludes(remainingWork, "official-easyar-account-api");
   assertTextIncludes(remainingWork, "focused-sample-image-tracking");
   assertTextIncludes(remainingWork, "focused-sample-cloud-recognition");
+  assertTextIncludes(remainingWork, "portal-evidence");
   assertTextIncludes(remainingWork, "This is an evidence-weighted estimate");
   assert(!extractText(remainingWork).includes("env-test-account-token"), "Remaining work report should not include account token values");
   assert(!extractText(remainingWork).includes("env-test-license-key"), "Remaining work report should not include license values");
@@ -1167,6 +1168,7 @@ try {
   assert(remainingWorkMarkdown.includes("Official EasyAR account"), "Remaining work markdown should include official API category");
   assert(remainingWorkMarkdown.includes("Image Tracking focused real-device run-through"), "Remaining work markdown should include Image Tracking category");
   assert(remainingWorkMarkdown.includes("Cloud Recognition focused real-device run-through"), "Remaining work markdown should include Cloud Recognition category");
+  assert(remainingWorkMarkdown.includes("portal-evidence"), "Remaining work markdown should include portal evidence requirement");
   assert(!remainingWorkMarkdown.includes("env-test-account-token"), "Remaining work markdown should not include account token values");
   assert(!remainingWorkMarkdown.includes("env-test-license-key"), "Remaining work markdown should not include license values");
 
@@ -2354,6 +2356,8 @@ exit 0
   assertTextIncludes(blockedCompletionReport, "\"completionStatus\": \"blocked\"");
   assertTextIncludes(blockedCompletionReport, "\"runThroughComplete\": false");
   assertTextIncludes(blockedCompletionReport, "\"latestRunResultStatus\": \"blocked\"");
+  assertTextIncludes(blockedCompletionReport, "\"id\": \"portal-evidence\"");
+  assertTextIncludes(blockedCompletionReport, "Cloud Recognition library is present");
 
   const focusedScopeStatus = await callTool("easyar_generate_focused_scope_status", {
     projectPath,
