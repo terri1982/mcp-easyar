@@ -88,6 +88,8 @@ const toolCatalog = [
   "easyar_write_deployment_readiness",
   "easyar_release_manifest",
   "easyar_write_release_manifest",
+  "easyar_onboarding_report",
+  "easyar_write_onboarding_report",
   "easyar_generate_sample_plan",
   "easyar_next_workflow_step",
   "easyar_write_workflow_state",
@@ -795,6 +797,88 @@ server.tool(
       readyForInstallDocs: manifest.readyForInstallDocs,
       missingCount: manifest.missingRequiredFiles.length,
       nextActions: manifest.nextActions
+    });
+  }
+);
+
+server.tool(
+  "easyar_onboarding_report",
+  "Generate a first-run onboarding report that combines client setup, official access, release manifest, and focused workflow state.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, client, platform, serverPath, outputPath, maxScriptIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    return jsonText(await buildOnboardingReport({
+      root,
+      sample,
+      client,
+      platform,
+      serverPath,
+      outputPath: outputPath ?? defaultOutput,
+      maxScriptIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_onboarding_report",
+  "Write the first-run onboarding report as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    serverPath: z.string().optional().describe("Absolute path to dist/index.js. Defaults to this process entrypoint or dist/index.js."),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    relativePath: z.string().optional().describe("Optional onboarding path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/ONBOARDING.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing onboarding report.")
+  },
+  async ({ projectPath, sampleId, client, platform, serverPath, outputPath, relativePath, maxScriptIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    const report = await buildOnboardingReport({
+      root,
+      sample,
+      client,
+      platform,
+      serverPath,
+      outputPath: outputPath ?? defaultOutput,
+      maxScriptIssues
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "ONBOARDING.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildOnboardingMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      client,
+      readyForFirstRun: report.readyForFirstRun,
+      blockerCount: report.blockers.length,
+      nextCall: report.nextCall,
+      nextActions: report.nextActions,
+      note: "The onboarding report contains setup status and non-secret next steps only."
     });
   }
 );
@@ -2580,6 +2664,110 @@ async function buildReleaseManifest() {
   };
 }
 
+async function buildOnboardingReport(input: {
+  root: string;
+  sample: SampleInfo;
+  client: typeof clientKinds[number];
+  platform: typeof mobilePlatforms[number];
+  serverPath?: string;
+  outputPath: string;
+  maxScriptIssues: number;
+}) {
+  const [releaseManifest, clientSetup, officialAccess, workflowState] = await Promise.all([
+    buildReleaseManifest(),
+    buildClientSetupReport(input.client, input.serverPath, true),
+    buildOfficialAccessReport(input.root, input.sample, input.platform, "unity-samples"),
+    buildWorkflowState(input.root, input.sample, input.platform, input.outputPath, input.maxScriptIssues)
+  ]);
+  const blockers = [
+    ...clientSetup.blockers.map((blocker) => ({
+      area: "client-setup",
+      id: blocker.id,
+      detail: blocker.detail
+    })),
+    ...officialAccess.blockers.map((blocker) => ({
+      area: "official-access",
+      id: blocker.id,
+      detail: blocker.summary
+    })),
+    ...(workflowState.blocked
+      ? [{
+          area: "workflow",
+          id: workflowState.phase,
+          detail: workflowState.reason
+        }]
+      : []),
+    ...releaseManifest.missingRequiredFiles.map((file) => ({
+      area: "release-manifest",
+      id: "missing-release-file",
+      detail: file
+    }))
+  ];
+  const nextCall = blockers.length > 0
+    ? workflowState.nextCall
+    : {
+        tool: "easyar_next_workflow_step",
+        arguments: {
+          projectPath: input.root,
+          sampleId: input.sample.id,
+          platform: input.platform,
+          outputPath: input.outputPath
+        }
+      };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample: {
+      id: input.sample.id,
+      name: input.sample.name,
+      implementationStatus: input.sample.implementationStatus
+    },
+    client: input.client,
+    platform: input.platform,
+    outputPath: input.outputPath,
+    readyForFirstRun: blockers.length === 0,
+    blockers,
+    nextCall,
+    summary: {
+      releaseReady: releaseManifest.readyForInstallDocs,
+      clientReady: clientSetup.readyForClientConnection,
+      officialAccessReady: officialAccess.readyForOfficialContent,
+      workflowPhase: workflowState.phase,
+      workflowBlocked: workflowState.blocked,
+      focusedSamples: releaseManifest.focusedScope.focusedSamples
+    },
+    firstCalls: releaseManifest.firstCalls,
+    clientSetup: {
+      serverPath: clientSetup.serverPath,
+      command: clientSetup.command,
+      args: clientSetup.args,
+      warnings: clientSetup.warnings.map((warning) => warning.id)
+    },
+    officialAccess: {
+      checks: officialAccess.checks.map((check) => ({
+        id: check.id,
+        ok: check.ok,
+        configured: check.configured,
+        statusCode: check.statusCode
+      }))
+    },
+    workflow: {
+      phase: workflowState.phase,
+      blocked: workflowState.blocked,
+      reason: workflowState.reason,
+      nextActions: workflowState.nextActions,
+      missingArtifacts: workflowState.summary.missingArtifacts
+    },
+    nextActions: Array.from(new Set([
+      ...clientSetup.nextActions,
+      ...officialAccess.nextActions,
+      ...workflowState.nextActions
+    ])).slice(0, 12),
+    security: "Onboarding report does not include secret values. Keep official EasyAR tokens, license keys, Cloud Recognition credentials, signing keys, and provisioning secrets out of committed files."
+  };
+}
+
 function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {
   if (client === "codex") {
     return {
@@ -3543,6 +3731,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "RUNBOOK.md"),
       purpose: "Human-readable focused sample checklist.",
       generateWith: `easyar_prepare_unity_project sampleId=${sample.id}`
+    },
+    {
+      name: "Onboarding",
+      relativePath: path.join(base, "ONBOARDING.md"),
+      purpose: "First-run overview across client setup, official access, release manifest, and workflow state.",
+      generateWith: `easyar_write_onboarding_report sampleId=${sample.id}`
     },
     {
       name: "Workflow State",
@@ -5864,6 +6058,69 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
     "## Security",
     "",
     manifest.security,
+    ""
+  ].join("\n");
+}
+
+function buildOnboardingMarkdown(report: Awaited<ReturnType<typeof buildOnboardingReport>>): string {
+  return [
+    `# EasyAR Onboarding - ${report.sample.name}`,
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath}`,
+    `Sample id: ${report.sample.id}`,
+    `Client: ${report.client}`,
+    `Platform: ${report.platform}`,
+    `Output path: ${report.outputPath}`,
+    `Ready for first run: ${report.readyForFirstRun ? "yes" : "no"}`,
+    "",
+    "## Summary",
+    "",
+    `Release ready: ${report.summary.releaseReady ? "yes" : "no"}`,
+    `Client ready: ${report.summary.clientReady ? "yes" : "no"}`,
+    `Official access ready: ${report.summary.officialAccessReady ? "yes" : "no"}`,
+    `Workflow phase: ${report.summary.workflowPhase}`,
+    `Workflow blocked: ${report.summary.workflowBlocked ? "yes" : "no"}`,
+    `Focused samples: ${report.summary.focusedSamples.join(", ")}`,
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(report.blockers.map((blocker) => `${blocker.area}/${blocker.id}: ${blocker.detail}`), "No onboarding blockers."),
+    "",
+    "## Next Call",
+    "",
+    `Tool: \`${report.nextCall.tool}\``,
+    `Arguments: \`${JSON.stringify(report.nextCall.arguments)}\``,
+    "",
+    "## First MCP Calls",
+    "",
+    ...report.firstCalls.map((call) => `- \`${call}\``),
+    "",
+    "## Client Setup",
+    "",
+    `Command: ${report.clientSetup.command}`,
+    `Args: ${report.clientSetup.args.join(" ")}`,
+    `Server path: ${report.clientSetup.serverPath}`,
+    `Warnings: ${report.clientSetup.warnings.length > 0 ? report.clientSetup.warnings.join(", ") : "none"}`,
+    "",
+    "## Official Access Checks",
+    "",
+    ...report.officialAccess.checks.map((check) => `- ${check.ok ? "OK" : "BLOCKED"} ${check.id}: configured=${check.configured ? "yes" : "no"}, status=${check.statusCode ?? "none"}`),
+    "",
+    "## Workflow",
+    "",
+    `Phase: ${report.workflow.phase}`,
+    `Blocked: ${report.workflow.blocked ? "yes" : "no"}`,
+    `Reason: ${report.workflow.reason}`,
+    `Missing artifacts: ${report.workflow.missingArtifacts.length > 0 ? report.workflow.missingArtifacts.join(", ") : "none"}`,
+    "",
+    "## Next Actions",
+    "",
+    ...report.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    report.security,
     ""
   ].join("\n");
 }

@@ -57,6 +57,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - generate MCP client configuration snippets for Codex and Claude
 - generate and write deployment readiness reports for GitHub release, official endpoint, Unity path, and security checks
 - generate release/install manifests for users and AI tools
+- generate first-run onboarding reports across client setup, official access, release metadata, and focused workflow state
 
 The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
 
@@ -179,6 +180,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
 - `easyar_release_manifest`: generate a consumer-facing install/release manifest with package metadata, entrypoints, focused scope, env names, and verification commands.
 - `easyar_write_release_manifest`: write the release manifest to `docs/RELEASE_MANIFEST.md` or a selected path.
+- `easyar_onboarding_report`: generate a first-run project onboarding report across client setup, official access, release manifest, and workflow state.
+- `easyar_write_onboarding_report`: write the onboarding report to `Assets/EasyARGenerated/<sampleId>/ONBOARDING.md`.
 - `easyar_next_workflow_step`: inspect current focused project state and recommend the next MCP/Unity action.
 - `easyar_write_workflow_state`: write current workflow phase, blockers, and next call to `Assets/EasyARGenerated/<sampleId>/WORKFLOW_STATE.md`.
 - `easyar_generate_import_checklist`: generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.

@@ -176,6 +176,14 @@ try {
     "easyar_write_release_manifest should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_onboarding_report"),
+    "easyar_onboarding_report should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_onboarding_report"),
+    "easyar_write_onboarding_report should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_next_workflow_step"),
     "easyar_next_workflow_step should be listed"
   );
@@ -345,6 +353,32 @@ try {
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
 
   const projectPath = await createUnityProject();
+  const onboardingReport = await callTool("easyar_onboarding_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    client: "claude-desktop",
+    platform: "android",
+    serverPath: path.resolve("dist/index.js")
+  });
+  assertTextIncludes(onboardingReport, "\"readyForFirstRun\": false");
+  assertTextIncludes(onboardingReport, "\"area\": \"official-access\"");
+  assertTextIncludes(onboardingReport, "\"tool\": \"easyar_check_official_access\"");
+
+  const writtenOnboarding = await callTool("easyar_write_onboarding_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    client: "claude-desktop",
+    platform: "android",
+    serverPath: path.resolve("dist/index.js")
+  });
+  assertTextIncludes(writtenOnboarding, "ONBOARDING.md");
+  const onboardingMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "ONBOARDING.md"),
+    "utf8"
+  );
+  assert(onboardingMarkdown.includes("EasyAR Onboarding - Image Tracking"), "Onboarding markdown should include title");
+  assert(onboardingMarkdown.includes("official-access"), "Onboarding markdown should include official access blockers");
+
   const initialWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,
     sampleId: "image-tracking",
@@ -1017,6 +1051,7 @@ try {
     sampleId: "cloud-recognition"
   });
   assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
+  assertTextIncludes(artifactIndex, "ONBOARDING.md");
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");

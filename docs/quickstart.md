@@ -19,6 +19,7 @@ easyar_release_manifest
 easyar_generate_client_config client=claude-desktop
 easyar_check_client_setup client=claude-desktop serverPath=/absolute/path/to/mcp-easyar/dist/index.js
 easyar_write_client_setup outputRoot=/path/to/report-folder client=claude-desktop serverPath=/absolute/path/to/mcp-easyar/dist/index.js
+easyar_onboarding_report projectPath=/path/to/UnityProject sampleId=image-tracking client=claude-desktop platform=android
 ```
 
 Set these environment variables locally:
