@@ -81,6 +81,7 @@ easyar_write_scene_audit projectPath=/path/to/UnityProject sampleId=image-tracki
 easyar_generate_support_bundle projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_support_bundle projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_run_result projectPath=/path/to/UnityProject sampleId=image-tracking overallStatus=blocked
+easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=image-tracking overallStatus=blocked
 ```
 
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.
@@ -201,3 +202,15 @@ easyar_analyze_latest_unity_log projectPath=/path/to/UnityProject sampleId=cloud
 ```
 
 The tool classifies common EasyAR license, plugin import, camera permission, C# compile, Android/Gradle, iOS signing, and sample scene issues. With `sampleId=image-tracking` or `sampleId=cloud-recognition`, it adds focused target-asset, cloud credential, and network diagnostics.
+
+## 9. File A GitHub Issue
+
+When a focused sample still fails after the generated checks, create a redacted report:
+
+```text
+easyar_write_support_bundle projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android overallStatus=blocked
+easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android overallStatus=blocked
+```
+
+Paste the contents of `Assets/EasyARGenerated/<sampleId>/ISSUE_REPORT.md` into a GitHub issue and attach or reference `SUPPORT_BUNDLE.md`, `RUN_RESULT.md`, `SCENE_AUDIT.md`, and the Unity log path listed there. Review the report before posting and remove any private license, token, appKey, appSecret, signing, provisioning, or account data.

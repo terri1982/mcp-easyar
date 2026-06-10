@@ -160,6 +160,14 @@ try {
     "easyar_write_run_result should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_issue_report"),
+    "easyar_generate_issue_report should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_issue_report"),
+    "easyar_write_issue_report should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_deployment_readiness"),
     "easyar_deployment_readiness should be listed"
   );
@@ -1035,6 +1043,56 @@ try {
   assert(runResultMarkdown.includes("Overall status: blocked"), "Run result markdown should include overall status");
   assert(runResultMarkdown.includes("appKey=<redacted>"), "Run result markdown should redact sensitive notes");
 
+  const issueReport = await callTool("easyar_generate_issue_report", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    overallStatus: "blocked",
+    observedBehavior: "Cloud request timed out. token=should-not-leak",
+    expectedBehavior: "Cloud Recognition should return a result.",
+    reproductionSteps: [
+      "Run EasyARSampleValidationHelper.ValidateFocusedSample.",
+      "Install Builds/cloud-recognition.apk and start the scene."
+    ],
+    steps: [
+      {
+        name: "Device validation",
+        status: "blocked",
+        evidence: "CloudRecognizer timeout appSecret=should-not-leak",
+        nextAction: "Check official Cloud Recognition credentials and network access."
+      }
+    ]
+  });
+  assertTextIncludes(issueReport, "\"title\": \"[Cloud Recognition] blocked on android\"");
+  assertTextIncludes(issueReport, "token=<redacted>");
+  assertTextIncludes(issueReport, "appSecret=<redacted>");
+  assertTextIncludes(issueReport, "SUPPORT_BUNDLE.md");
+
+  const writtenIssueReport = await callTool("easyar_write_issue_report", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    overallStatus: "blocked",
+    observedBehavior: "Cloud request failed. appKey=should-not-leak",
+    steps: [
+      {
+        name: "Cloud Recognition device validation",
+        status: "blocked",
+        evidence: "HTTP timeout credential=should-not-leak",
+        nextAction: "Retry with a real network and inspect device logs."
+      }
+    ]
+  });
+  assertTextIncludes(writtenIssueReport, "ISSUE_REPORT.md");
+  const issueReportMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "ISSUE_REPORT.md"),
+    "utf8"
+  );
+  assert(issueReportMarkdown.includes("[Cloud Recognition] blocked on android"), "Issue report markdown should include title");
+  assert(issueReportMarkdown.includes("appKey=<redacted>"), "Issue report markdown should redact appKey");
+  assert(issueReportMarkdown.includes("credential=<redacted>"), "Issue report markdown should redact credentials");
+  assert(issueReportMarkdown.includes("Generated Artifacts To Attach Or Reference"), "Issue report should list artifacts");
+
   const cloudDeviceValidation = await callTool("easyar_generate_device_validation_checklist", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -1056,6 +1114,7 @@ try {
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
+  assertTextIncludes(artifactIndex, "ISSUE_REPORT.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
   assertTextIncludes(artifactIndex, "ARTIFACT_INDEX.md");
 
@@ -1071,6 +1130,7 @@ try {
   assert(artifactIndexMarkdown.includes("EasyAR Focused Artifact Index - Cloud Recognition"), "Artifact index markdown should include title");
   assert(artifactIndexMarkdown.includes("Recommended Reading Order"), "Artifact index markdown should include reading order");
   assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
+  assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
 
   await rm(projectPath, { recursive: true, force: true });
   child.kill();

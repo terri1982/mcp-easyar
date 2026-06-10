@@ -20,6 +20,8 @@ Initial public MVP for `mcp-easyar`.
 - Focused support bundle and `SUPPORT_BUNDLE.md` artifact generation across run sequence, run report, scene audit, and latest Unity log diagnostics.
 - Focused real-device validation checklist and `DEVICE_VALIDATION.md` artifact generation for Image Tracking and Cloud Recognition pass criteria.
 - Focused run result and `RUN_RESULT.md` artifact generation for compile, build, and device validation handoff.
+- Redacted GitHub issue report and `ISSUE_REPORT.md` artifact generation for focused sample failures.
+- GitHub issue template and focused Image Tracking / Cloud Recognition troubleshooting guide.
 - Focused Unity C# code planning and `CODE_PLAN.md` artifact generation before sample script edits.
 - Focused Unity C# change summary and `CODE_CHANGE.md` artifact generation after sample script edits.
 - Focused sample runbooks and support directories generated under `Assets/EasyARGenerated/<sampleId>/`.
@@ -57,3 +59,4 @@ Initial public MVP for `mcp-easyar`.
 - The server is designed for official authorized EasyAR account workflows.
 - The server does not bypass EasyAR login, license checks, download authorization, enterprise gates, rate limits, or other access controls.
 - Tools avoid returning account tokens, license keys, cloud credentials, signing keys, or provisioning secrets.
+- GitHub issue reports redact common token, key, license, credential, password, and secret fields before users paste diagnostics publicly.

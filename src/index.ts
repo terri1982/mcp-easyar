@@ -109,6 +109,8 @@ const toolCatalog = [
   "easyar_write_device_validation_checklist",
   "easyar_generate_run_result",
   "easyar_write_run_result",
+  "easyar_generate_issue_report",
+  "easyar_write_issue_report",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -1531,6 +1533,108 @@ server.tool(
 );
 
 server.tool(
+  "easyar_generate_issue_report",
+  "Generate a redacted GitHub issue report for a focused Image Tracking or Cloud Recognition run-through.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    overallStatus: z.enum(runResultStatuses).default("blocked").describe("Observed overall status for the latest attempt."),
+    device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    observedBehavior: z.string().optional().describe("Short observed behavior. Do not include secrets."),
+    expectedBehavior: z.string().optional().describe("Short expected behavior."),
+    reproductionSteps: z.array(z.string()).default([]).describe("Short reproduction steps that can be pasted into a GitHub issue."),
+    steps: z.array(runResultStepSchema).default([]),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, sampleId, platform, overallStatus, device, buildOutputPath, observedBehavior, expectedBehavior, reproductionSteps, steps, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildIssueReport({
+      root,
+      sample,
+      platform,
+      overallStatus,
+      device,
+      buildOutputPath,
+      observedBehavior,
+      expectedBehavior,
+      reproductionSteps,
+      steps,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_issue_report",
+  "Write a redacted GitHub issue report Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    overallStatus: z.enum(runResultStatuses).default("blocked").describe("Observed overall status for the latest attempt."),
+    device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    observedBehavior: z.string().optional().describe("Short observed behavior. Do not include secrets."),
+    expectedBehavior: z.string().optional().describe("Short expected behavior."),
+    reproductionSteps: z.array(z.string()).default([]).describe("Short reproduction steps that can be pasted into a GitHub issue."),
+    steps: z.array(runResultStepSchema).default([]),
+    relativePath: z.string().optional().describe("Optional issue report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/ISSUE_REPORT.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing issue report artifact.")
+  },
+  async ({ projectPath, sampleId, platform, overallStatus, device, buildOutputPath, observedBehavior, expectedBehavior, reproductionSteps, steps, relativePath, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const report = await buildIssueReport({
+      root,
+      sample,
+      platform,
+      overallStatus,
+      device,
+      buildOutputPath,
+      observedBehavior,
+      expectedBehavior,
+      reproductionSteps,
+      steps,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "ISSUE_REPORT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, report.body, overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      title: report.title,
+      labels: report.labels,
+      nextActions: report.nextActions,
+      note: "The issue report is intended for GitHub and redacts common EasyAR token, key, license, credential, password, and secret fields."
+    });
+  }
+);
+
+server.tool(
   "easyar_validate_local_config",
   "Validate ProjectSettings/EasyAR/easyar.local.json without returning secret values.",
   {
@@ -2564,9 +2668,11 @@ async function buildReleaseManifest() {
     "SECURITY.md",
     "docs/quickstart.md",
     "docs/RELEASE_MANIFEST.md",
+    "docs/troubleshooting.md",
     "assets/easyar-icon.png",
     "dist/index.js",
     "dist/easyar-api.js",
+    ".github/ISSUE_TEMPLATE/focused-sample-run.yml",
     ".github/workflows/ci.yml"
   ];
   const requiredFileStatuses = await Promise.all(requiredFiles.map(async (relativePath) => ({
@@ -2646,7 +2752,8 @@ async function buildReleaseManifest() {
       "easyar_check_client_setup",
       "easyar_auth_status",
       "easyar_check_official_access",
-      "easyar_next_workflow_step"
+      "easyar_next_workflow_step",
+      "easyar_write_issue_report"
     ],
     files: requiredFileStatuses,
     packageFiles: parsedPackage.files ?? [],
@@ -3787,6 +3894,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       generateWith: `easyar_write_run_result sampleId=${sample.id}`
     },
     {
+      name: "Issue Report",
+      relativePath: path.join(base, "ISSUE_REPORT.md"),
+      purpose: "Redacted GitHub issue body for focused sample failures.",
+      generateWith: `easyar_write_issue_report sampleId=${sample.id}`
+    },
+    {
       name: "Device Validation",
       relativePath: path.join(base, "DEVICE_VALIDATION.md"),
       purpose: "Real-device test steps, pass criteria, and evidence prompts.",
@@ -3979,6 +4092,130 @@ async function buildRunResult(input: {
     },
     nextActions: recommendedNextActions,
     security: "Secret values are not returned. Do not include license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in run result notes or evidence."
+  };
+}
+
+async function buildIssueReport(input: {
+  root: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  overallStatus: typeof runResultStatuses[number];
+  device?: string;
+  buildOutputPath?: string;
+  observedBehavior?: string;
+  expectedBehavior?: string;
+  reproductionSteps: string[];
+  steps: Array<{
+    name: string;
+    status: typeof runResultStatuses[number];
+    evidence?: string;
+    nextAction?: string;
+  }>;
+  maxScriptIssues: number;
+  maxCandidates: number;
+  maxLogBytes: number;
+  maxLogIssues: number;
+}) {
+  const runResult = await buildRunResult({
+    root: input.root,
+    sample: input.sample,
+    platform: input.platform,
+    overallStatus: input.overallStatus,
+    device: input.device,
+    buildOutputPath: input.buildOutputPath,
+    notes: input.observedBehavior,
+    steps: input.steps,
+    maxScriptIssues: input.maxScriptIssues,
+    maxCandidates: input.maxCandidates,
+    maxLogBytes: input.maxLogBytes,
+    maxLogIssues: input.maxLogIssues
+  });
+  const readiness = await buildSampleReadinessReport(input.root, input.sample);
+  const localConfig = await buildLocalConfigValidationReport(
+    input.root,
+    path.join(input.root, "ProjectSettings", "EasyAR", "easyar.local.json")
+  );
+  const artifactPaths = {
+    onboarding: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "ONBOARDING.md")),
+    workflowState: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "WORKFLOW_STATE.md")),
+    officialAccess: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "OFFICIAL_ACCESS.md")),
+    importChecklist: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "IMPORT_CHECKLIST.md")),
+    runSequence: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_SEQUENCE.md")),
+    runReport: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_REPORT.md")),
+    sceneAudit: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SCENE_AUDIT.md")),
+    supportBundle: runResult.supportBundleSummary.supportBundlePath,
+    runResult: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_RESULT.md")),
+    deviceValidation: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "DEVICE_VALIDATION.md")),
+    latestLog: runResult.supportBundleSummary.logIssueCount > 0
+      ? "Latest Unity log was summarized in SUPPORT_BUNDLE.md; do not paste full logs if they contain secrets."
+      : "No known focused log issue was detected by the latest log analyzer."
+  };
+  const reproductionSteps = input.reproductionSteps.length > 0
+    ? input.reproductionSteps.map(sanitizeIssueText).filter(isNonEmptyString)
+    : defaultIssueReproductionSteps(input.sample, input.platform);
+  const title = `[${input.sample.name}] ${input.overallStatus} on ${input.platform}`;
+  const labels = [
+    "sample-run",
+    input.sample.id,
+    input.platform,
+    input.overallStatus
+  ];
+  const body = buildIssueReportMarkdown({
+    generatedAt: new Date().toISOString(),
+    title,
+    labels,
+    projectPath: input.root,
+    sample: runResult.sample,
+    platform: input.platform,
+    overallStatus: input.overallStatus,
+    device: input.device ?? null,
+    buildOutputPath: input.buildOutputPath ?? null,
+    observedBehavior: sanitizeIssueText(input.observedBehavior) ?? "Describe what happened during the latest run.",
+    expectedBehavior: sanitizeIssueText(input.expectedBehavior) ?? sampleExpectedIssueBehavior(input.sample),
+    reproductionSteps,
+    stepSummary: runResult.steps.map((step) => ({
+      name: sanitizeIssueText(step.name) ?? "Unnamed step",
+      status: step.status,
+      evidence: sanitizeIssueText(step.evidence) ?? null,
+      nextAction: sanitizeIssueText(step.nextAction) ?? null
+    })),
+    readinessSummary: {
+      ready: readiness.ready,
+      unityVersion: readiness.unityVersion,
+      failingChecks: readiness.checks.filter((check) => !check.ok).map((check) => ({
+        id: check.id,
+        severity: "blocker",
+        detail: check.detail,
+        action: readinessAction(check.id, input.sample)
+      }))
+    },
+    configSummary: {
+      valid: localConfig.valid,
+      checkCount: localConfig.checks.length,
+      failingChecks: localConfig.checks.filter((check) => !check.ok).map((check) => ({
+        id: check.id,
+        severity: "blocker",
+        detail: check.detail
+      }))
+    },
+    supportSummary: runResult.supportBundleSummary,
+    artifactPaths,
+    nextActions: runResult.nextActions.map(sanitizeIssueText).filter(isNonEmptyString),
+    security: "This issue body is redacted. Do not attach EasyAR license keys, account tokens, Cloud Recognition appKey/appSecret, signing keys, provisioning profiles, or full private logs."
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    title,
+    labels,
+    body,
+    projectPath: input.root,
+    sample: runResult.sample,
+    platform: input.platform,
+    overallStatus: input.overallStatus,
+    artifactPaths,
+    nextActions: runResult.nextActions.map(sanitizeIssueText).filter(isNonEmptyString),
+    security: "The GitHub issue report redacts common token, key, license, credential, password, and secret fields. Review before posting publicly."
   };
 }
 
@@ -4853,10 +5090,37 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function sanitizeRunResultNotes(value: string | undefined): string | null {
+  return sanitizeIssueText(value);
+}
+
+function sanitizeIssueText(value: string | undefined | null): string | null {
   if (!value) {
     return null;
   }
-  return value.replace(/(licenseKey|accountToken|appKey|appSecret|password|secret)\s*[:=]\s*\S+/gi, "$1=<redacted>");
+  return value.replace(
+    /(licenseKey|license|accountToken|apiToken|accessToken|token|credential|appKey|appSecret|password|secret|key)\s*[:=]\s*\S+/gi,
+    "$1=<redacted>"
+  );
+}
+
+function defaultIssueReproductionSteps(sample: SampleInfo, platform: typeof mobilePlatforms[number]): string[] {
+  return [
+    `Run easyar_write_onboarding_report with sampleId=${sample.id} and platform=${platform}.`,
+    `Run easyar_write_import_checklist, easyar_write_run_sequence, easyar_write_run_report, and easyar_write_scene_audit for sampleId=${sample.id}.`,
+    "Run Unity validation with EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample.",
+    `Build and test the ${sample.name} sample on a real ${platform} device.`,
+    "Run easyar_write_support_bundle, easyar_write_run_result, and easyar_write_issue_report after the failure."
+  ];
+}
+
+function sampleExpectedIssueBehavior(sample: SampleInfo): string {
+  if (sample.id === "image-tracking") {
+    return "The Image Tracking sample should open the camera, load the configured target image, and show the expected tracking behavior on a real device.";
+  }
+  if (sample.id === "cloud-recognition") {
+    return "The Cloud Recognition sample should open the camera, use configured official Cloud Recognition credentials, reach the service, and return recognition results on a real device.";
+  }
+  return "The focused EasyAR sample should pass validation and run on a real device.";
 }
 
 function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
@@ -5642,6 +5906,138 @@ function buildRunResultMarkdown(result: Awaited<ReturnType<typeof buildRunResult
   ].join("\n");
 }
 
+function buildIssueReportMarkdown(report: {
+  generatedAt: string;
+  title: string;
+  labels: string[];
+  projectPath: string;
+  sample: {
+    id: string;
+    name: string;
+    implementationStatus: string;
+  };
+  platform: string;
+  overallStatus: string;
+  device: string | null;
+  buildOutputPath: string | null;
+  observedBehavior: string;
+  expectedBehavior: string;
+  reproductionSteps: string[];
+  stepSummary: Array<{
+    name: string;
+    status: string;
+    evidence: string | null;
+    nextAction: string | null;
+  }>;
+  readinessSummary: {
+    ready: boolean;
+    unityVersion: string | null;
+    failingChecks: Array<{
+      id: string;
+      severity: string;
+      detail: string;
+      action: string;
+    }>;
+  };
+  configSummary: {
+    valid: boolean;
+    checkCount: number;
+    failingChecks: Array<{
+      id: string;
+      severity: string;
+      detail: string;
+    }>;
+  };
+  supportSummary: {
+    overallReady: boolean;
+    readyForUnityValidation: boolean;
+    logIssueCount: number;
+    supportBundlePath: string;
+  };
+  artifactPaths: Record<string, string>;
+  nextActions: string[];
+  security: string;
+}): string {
+  return [
+    `# ${report.title}`,
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Labels: ${report.labels.join(", ")}`,
+    "",
+    "## Summary",
+    "",
+    `Sample: ${report.sample.name} (${report.sample.id})`,
+    `Focused scope status: ${report.sample.implementationStatus}`,
+    `Platform: ${report.platform}`,
+    `Overall status: ${report.overallStatus}`,
+    `Unity version: ${report.readinessSummary.unityVersion ?? "unknown"}`,
+    `Device: ${report.device ?? "not recorded"}`,
+    `Build output: ${report.buildOutputPath ?? "not recorded"}`,
+    "",
+    "## Observed Behavior",
+    "",
+    report.observedBehavior,
+    "",
+    "## Expected Behavior",
+    "",
+    report.expectedBehavior,
+    "",
+    "## Reproduction Steps",
+    "",
+    ...markdownNumberedList(report.reproductionSteps, "Run easyar_next_workflow_step for the focused sample, then follow the recommended call."),
+    "",
+    "## Step Results",
+    "",
+    ...markdownIssueList(
+      report.stepSummary.map((step) => {
+        const details = [
+          `${step.name}: ${step.status}`,
+          step.evidence ? `evidence=${step.evidence}` : null,
+          step.nextAction ? `next=${step.nextAction}` : null
+        ].filter(isNonEmptyString).join("; ");
+        return details;
+      }),
+      "No explicit step results were provided."
+    ),
+    "",
+    "## Current MCP Diagnostics",
+    "",
+    `Readiness ready: ${report.readinessSummary.ready ? "yes" : "no"}`,
+    `Local config valid: ${report.configSummary.valid ? "yes" : "no"}`,
+    `Local config check count: ${report.configSummary.checkCount}`,
+    `Support overall ready: ${report.supportSummary.overallReady ? "yes" : "no"}`,
+    `Ready for Unity validation: ${report.supportSummary.readyForUnityValidation ? "yes" : "no"}`,
+    `Latest log issue count: ${report.supportSummary.logIssueCount}`,
+    "",
+    "### Failing Readiness Checks",
+    "",
+    ...markdownIssueList(
+      report.readinessSummary.failingChecks.map((check) => `${check.severity} ${check.id}: ${check.detail} Next: ${check.action}`),
+      "No failing readiness checks."
+    ),
+    "",
+    "### Failing Local Config Checks",
+    "",
+    ...markdownIssueList(
+      report.configSummary.failingChecks.map((check) => `${check.severity} ${check.id}: ${check.detail}`),
+      "No failing local config checks."
+    ),
+    "",
+    "## Generated Artifacts To Attach Or Reference",
+    "",
+    ...Object.entries(report.artifactPaths).map(([name, artifactPath]) => `- ${name}: ${artifactPath}`),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    report.security,
+    ""
+  ].join("\n");
+}
+
 function buildDeviceValidationChecklistMarkdown(checklist: Awaited<ReturnType<typeof buildDeviceValidationChecklist>>): string {
   return [
     `# EasyAR Device Validation - ${checklist.sample.name}`,
@@ -6137,6 +6533,13 @@ function markdownIssueList(items: string[], emptyMessage: string): string[] {
     return [`- ${emptyMessage}`];
   }
   return items.map((item) => `- ${item}`);
+}
+
+function markdownNumberedList(items: string[], emptyMessage: string): string[] {
+  if (items.length === 0) {
+    return [`1. ${emptyMessage}`];
+  }
+  return items.map((item, index) => `${index + 1}. ${item}`);
 }
 
 function extractMethodBody(text: string, methodName: string): string | null {

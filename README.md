@@ -25,6 +25,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - generate real-device validation checklists for focused Image Tracking and Cloud Recognition tests
 - write device validation checklists into Unity projects as Markdown artifacts
 - record focused sample run results for compile, build, and device validation handoff
+- generate redacted GitHub issue reports for focused sample failures
 - plan scoped Unity C# changes before Codex or Claude writes sample scripts
 - summarize Unity C# code changes after script edits and before Unity compilation
 - list common EasyAR Unity sample categories with focused/deferred status
@@ -144,6 +145,8 @@ npm run pack:check
 
 See [docs/quickstart.md](docs/quickstart.md) for the recommended Codex/Claude to Unity workflow.
 
+See [docs/troubleshooting.md](docs/troubleshooting.md) for focused Image Tracking and Cloud Recognition diagnostics.
+
 ## Release Manifest
 
 See [docs/RELEASE_MANIFEST.md](docs/RELEASE_MANIFEST.md) for install commands, MCP entrypoints, focused scope, environment variable names, and release checks.
@@ -200,6 +203,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_device_validation_checklist`: write the real-device validation checklist to `Assets/EasyARGenerated/<sampleId>/DEVICE_VALIDATION.md`.
 - `easyar_generate_run_result`: generate a focused sample run result summary for compile, build, or device validation attempts.
 - `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
+- `easyar_generate_issue_report`: generate a redacted GitHub issue body for focused Image Tracking or Cloud Recognition failures.
+- `easyar_write_issue_report`: write the redacted issue report to `Assets/EasyARGenerated/<sampleId>/ISSUE_REPORT.md`.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.

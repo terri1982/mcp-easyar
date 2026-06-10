@@ -49,6 +49,7 @@ npm run pack:check
 - `easyar_auth_status`
 - `easyar_check_official_access`
 - `easyar_next_workflow_step`
+- `easyar_write_issue_report`
 
 ## Client Setup Tools
 
@@ -74,9 +75,11 @@ npm run pack:check
 - `SECURITY.md`
 - `docs/quickstart.md`
 - `docs/RELEASE_MANIFEST.md`
+- `docs/troubleshooting.md`
 - `assets/easyar-icon.png`
 - `dist/index.js`
 - `dist/easyar-api.js`
+- `.github/ISSUE_TEMPLATE/focused-sample-run.yml`
 - `.github/workflows/ci.yml`
 
 ## Package Files
