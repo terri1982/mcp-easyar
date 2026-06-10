@@ -17,6 +17,7 @@ type SampleInfo = {
 };
 
 const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "lifecycle"] as const;
+const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
 
 const samples: SampleInfo[] = [
   {
@@ -186,6 +187,7 @@ server.tool(
       "- Run easyar_inspect_unity_project against the project path.",
       "- Import the official EasyAR Unity package if the project does not contain EasyAR assets.",
       "- Run easyar_prepare_unity_project to create an Editor helper, local config template, and secret ignore rules.",
+      "- Run EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the sample scene to Build Settings.",
       "- Build to a real Android/iOS device when the sample requires camera, motion tracking, or cloud recognition.",
       "",
       "Required capabilities:",
@@ -239,12 +241,14 @@ server.tool(
     await mkdir(configDir, { recursive: true });
 
     const runnerPath = path.join(editorDir, "EasyARSampleRunner.cs");
+    const buildSettingsPath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
     const configExamplePath = path.join(configDir, "easyar.local.json.example");
     const localConfigPath = path.join(configDir, "easyar.local.json");
     const gitignorePath = path.join(root, ".gitignore");
 
     const written: string[] = [];
     await writeGeneratedFile(runnerPath, buildSampleRunner(sample), overwrite, written);
+    await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
     await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
     await ensureGitignoreEntries(gitignorePath, [
       "ProjectSettings/EasyAR/easyar.local.json",
@@ -260,8 +264,39 @@ server.tool(
         `Copy ${path.relative(root, configExamplePath)} to ${path.relative(root, localConfigPath)}.`,
         "Fill the local file with the EasyAR license key and official account-scoped credentials.",
         "Do not commit the local config file; .gitignore has been updated to protect it.",
-        "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner."
+        "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner.",
+        "Call EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the matching sample scene to Build Settings."
       ]
+    });
+  }
+);
+
+server.tool(
+  "easyar_create_build_settings_helper",
+  "Create a Unity Editor script that adds the matching EasyAR sample scene to Build Settings and optionally switches the active build target.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Sample id from easyar_list_samples."),
+    platform: z.enum(buildPlatforms).default("none").describe("Optional Unity build target to switch to."),
+    overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
+  },
+  async ({ projectPath, sampleId, platform, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const editorDir = path.join(root, "Assets", "Editor");
+    const filePath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
+
+    const written: string[] = [];
+    await writeGeneratedFile(filePath, buildBuildSettingsHelper(sample, platform), overwrite, written);
+
+    return jsonText({
+      created: written.includes(filePath) ? filePath : null,
+      skipped: written.includes(filePath) ? null : filePath,
+      sample: sample.name,
+      platform,
+      executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings",
+      nextStep: "Run easyar_run_unity_method with the returned executeMethod to update Unity Build Settings."
     });
   }
 );
@@ -494,6 +529,67 @@ ${sceneNames}
     }
 }
 `;
+}
+
+function buildBuildSettingsHelper(sample: SampleInfo, platform: typeof buildPlatforms[number]): string {
+  const sceneNames = sample.unityScenes.map((scene) => `            "${escapeCsharp(scene)}"`).join(",\n");
+  const switchTarget = buildTargetSwitchSnippet(platform);
+  return `using System;
+using System.Linq;
+using UnityEditor;
+
+namespace EasyAR.EditorTools
+{
+    public static class EasyARBuildSettingsHelper
+    {
+        private static readonly string[] SceneNameHints =
+        {
+${sceneNames}
+        };
+
+        [MenuItem("Tools/EasyAR/Configure Build Settings")]
+        public static void ConfigureBuildSettings()
+        {
+            var scene = AssetDatabase.FindAssets("t:Scene")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .FirstOrDefault(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0));
+
+            if (string.IsNullOrEmpty(scene))
+            {
+                throw new InvalidOperationException("No matching EasyAR sample scene found. Import the official ${escapeCsharp(sample.name)} sample first.");
+            }
+
+            var existingScenes = EditorBuildSettings.scenes
+                .Where(item => item != null && !string.IsNullOrEmpty(item.path) && item.path != scene)
+                .ToList();
+            existingScenes.Insert(0, new EditorBuildSettingsScene(scene, true));
+            EditorBuildSettings.scenes = existingScenes.ToArray();
+
+${switchTarget}
+            UnityEngine.Debug.Log("Configured EasyAR Build Settings with sample scene: " + scene);
+        }
+    }
+}
+`;
+}
+
+function buildTargetSwitchSnippet(platform: typeof buildPlatforms[number]): string {
+  if (platform === "android") {
+    return `            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+`;
+  }
+
+  if (platform === "ios") {
+    return `            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);
+`;
+  }
+
+  if (platform === "standalone") {
+    return `            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX);
+`;
+  }
+
+  return "            // No build target switch requested.\n";
 }
 
 function buildLocalConfigExample(sample: SampleInfo): string {

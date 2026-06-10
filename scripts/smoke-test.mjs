@@ -61,6 +61,24 @@ try {
     sampleId: "image-tracking"
   });
   assertTextIncludes(prepared, "easyar.local.json");
+  assertTextIncludes(prepared, "EasyARBuildSettingsHelper.cs");
+
+  const buildSettingsHelper = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),
+    "utf8"
+  );
+  assert(
+    buildSettingsHelper.includes("ConfigureBuildSettings"),
+    "Build settings helper should include ConfigureBuildSettings"
+  );
+
+  const standaloneBuildSettings = await callTool("easyar_create_build_settings_helper", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "standalone",
+    overwrite: true
+  });
+  assertTextIncludes(standaloneBuildSettings, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
 
   const script = await callTool("easyar_create_mono_behaviour", {
     projectPath,
