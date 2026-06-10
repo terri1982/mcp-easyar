@@ -7215,7 +7215,7 @@ function shellSingleQuote(value: string): string {
 }
 
 async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
-  const easyarSignals = filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 120));
+  const easyarSignals = filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 240));
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
   const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
   const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
@@ -10449,10 +10449,15 @@ function uniqueBlockers<T extends { id: string }>(blockers: T[]): T[] {
 }
 
 function filterOfficialEasyARSignals(paths: string[]): string[] {
-  return paths.filter((candidatePath) =>
-    !/^Assets[\/\\]EasyARGenerated[\/\\]/i.test(candidatePath) &&
-    !/^Assets[\/\\]Editor[\/\\]EasyAR.*\.cs$/i.test(candidatePath)
-  );
+  return paths.filter((candidatePath) => {
+    if (/^Assets[\/\\]EasyARGenerated(?:\.meta|[\/\\])/i.test(candidatePath)) {
+      return false;
+    }
+    if (/^Assets[\/\\]Editor[\/\\]EasyAR.*\.(?:cs|cs\.meta)$/i.test(candidatePath)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 async function matchSampleScenes(root: string, sample: SampleInfo, scenePaths: string[]): Promise<string[]> {
