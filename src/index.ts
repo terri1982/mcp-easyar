@@ -84,6 +84,8 @@ const toolCatalog = [
   "easyar_official_info",
   "easyar_generate_official_api_contract",
   "easyar_write_official_api_contract",
+  "easyar_generate_official_openapi_contract",
+  "easyar_write_official_openapi_contract",
   "easyar_official_api_handoff",
   "easyar_write_official_api_handoff",
   "easyar_auth_status",
@@ -1009,6 +1011,47 @@ server.tool(
       configuredEnv: contract.environment.configured,
       readyForProductionOfficialAccess: contract.readyForProductionOfficialAccess,
       note: "The official API contract contains endpoint schemas and security requirements only; it does not contain tokens, license keys, appKey, or appSecret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_official_openapi_contract",
+  "Return the machine-readable OpenAPI contract for official EasyAR account endpoint integration.",
+  {},
+  async () => jsonText({
+    openapi: await readOfficialOpenApiContract(),
+    resourceUri: "easyar://official/openapi",
+    defaultPath: "docs/openapi/easyar-mcp-account-api.openapi.json",
+    note: "This OpenAPI contract contains endpoint schemas and secret-handling policy only; it does not contain EasyAR tokens, license keys, API keys, appKey, appSecret, or passwords."
+  })
+);
+
+server.tool(
+  "easyar_write_official_openapi_contract",
+  "Write the official EasyAR account OpenAPI contract JSON for backend, gateway, or client generation handoff.",
+  {
+    workspacePath: z.string().optional().describe("Workspace or repository path. Defaults to the current working directory."),
+    relativePath: z.string().default(path.join("docs", "openapi", "easyar-mcp-account-api.openapi.json")).describe("OpenAPI path inside the workspace."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing OpenAPI file.")
+  },
+  async ({ workspacePath, relativePath, overwrite }) => {
+    const root = resolveProjectPath(workspacePath ?? process.cwd());
+    await ensureDirectory(root);
+    const contract = await readOfficialOpenApiContract();
+    const target = path.resolve(root, relativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, `${JSON.stringify(contract, null, 2)}\n`, overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      openapiVersion: contract.openapi,
+      title: contract.info?.title ?? null,
+      pathCount: Object.keys(contract.paths ?? {}).length,
+      resourceUri: "easyar://official/openapi",
+      note: "The OpenAPI file is machine-readable contract metadata only; it does not contain EasyAR secret values."
     });
   }
 );
@@ -5045,6 +5088,14 @@ function accountMaterialNextAction(
     return `Choose the Unity package/bundle identifier and make it match the EasyAR license configuration in ${localConfigPath}.`;
   }
   return `Prepare ${item.label} from the official EasyAR account flow and store it in ${item.storeIn}.`;
+}
+
+async function readOfficialOpenApiContract(): Promise<{
+  openapi?: string;
+  info?: { title?: string };
+  paths?: Record<string, unknown>;
+}> {
+  return JSON.parse(await readFile(officialOpenApiPath, "utf8"));
 }
 
 function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: boolean) {

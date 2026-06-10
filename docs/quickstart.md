@@ -86,6 +86,8 @@ The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md
 ```text
 easyar_generate_official_api_contract
 easyar_write_official_api_contract workspacePath=/path/to/workspace
+easyar_generate_official_openapi_contract
+easyar_write_official_openapi_contract workspacePath=/path/to/workspace
 easyar_official_api_handoff deploymentTarget=staging
 easyar_write_official_api_handoff workspacePath=/path/to/workspace deploymentTarget=staging
 ```

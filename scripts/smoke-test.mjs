@@ -133,6 +133,14 @@ try {
     "easyar_write_official_api_contract should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_official_openapi_contract"),
+    "easyar_generate_official_openapi_contract should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_official_openapi_contract"),
+    "easyar_write_official_openapi_contract should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_official_api_handoff"),
     "easyar_official_api_handoff should be listed"
   );
@@ -623,6 +631,25 @@ try {
   assert(officialApiContractMarkdown.includes("mcp-easyar Official API Contract"), "Official API contract markdown should include title");
   assert(officialApiContractMarkdown.includes("cloud-credentials-discovery"), "Official API contract markdown should include cloud endpoint");
   assert(officialApiContractMarkdown.includes("Responses must not include raw license keys"), "Official API contract markdown should include response policy");
+
+  const officialOpenApiContract = await callTool("easyar_generate_official_openapi_contract", {});
+  assertTextIncludes(officialOpenApiContract, "\"openapi\": \"3.1.0\"");
+  assertTextIncludes(officialOpenApiContract, "\"/mcp/cloud-recognition/credentials\"");
+  assertTextIncludes(officialOpenApiContract, "\"resourceUri\": \"easyar://official/openapi\"");
+  assertTextIncludes(officialOpenApiContract, "does not contain EasyAR tokens");
+
+  const writtenOfficialOpenApiContract = await callTool("easyar_write_official_openapi_contract", {
+    workspacePath: officialAccessProjectPath,
+    relativePath: "EasyARGenerated/easyar-mcp-account-api.openapi.json"
+  });
+  assertTextIncludes(writtenOfficialOpenApiContract, "easyar-mcp-account-api.openapi.json");
+  assertTextIncludes(writtenOfficialOpenApiContract, "\"pathCount\": 4");
+  const officialOpenApiContractJson = await readFile(
+    path.join(officialAccessProjectPath, "EasyARGenerated", "easyar-mcp-account-api.openapi.json"),
+    "utf8"
+  );
+  assert(officialOpenApiContractJson.includes("\"openapi\": \"3.1.0\""), "Written OpenAPI contract should include OpenAPI version");
+  assert(officialOpenApiContractJson.includes("\"EasyARBearerAuth\""), "Written OpenAPI contract should include bearer auth scheme");
 
   const officialApiHandoff = await callTool("easyar_official_api_handoff", {
     baseUrl: "https://www.easyar.cn",
