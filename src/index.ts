@@ -4091,10 +4091,12 @@ async function buildReleaseManifest() {
   const packageJson = await readPackageMetadata();
   const requiredFiles = [
     "README.md",
+    ".env.example",
     "CHANGELOG.md",
     "LICENSE",
     "SECURITY.md",
     "docs/quickstart.md",
+    "docs/OFFICIAL_API_CONTRACT.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
     "assets/easyar-icon.png",

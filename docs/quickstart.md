@@ -65,6 +65,8 @@ EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-r
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
 
+The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, `appKey`, or `appSecret`.
+
 The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md` and can be regenerated with:
 
 ```text

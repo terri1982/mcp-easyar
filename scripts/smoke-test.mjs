@@ -544,6 +544,8 @@ try {
   assertTextIncludes(releaseManifest, "image-tracking");
   assertTextIncludes(releaseManifest, "cloud-recognition");
   assertTextIncludes(releaseManifest, "docs/RELEASE_MANIFEST.md");
+  assertTextIncludes(releaseManifest, ".env.example");
+  assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_CONTRACT.md");
 
   const committedReleaseManifest = await readFile(
     path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
@@ -556,6 +558,7 @@ try {
   assert(committedReleaseManifest.includes("npx -y mcp-easyar"), "Committed release manifest should include npx entrypoint");
   assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
   assert(committedReleaseManifest.includes("npm run package:smoke"), "Committed release manifest should include package install smoke");
+  assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {

@@ -108,6 +108,7 @@ npm run pack:check
 ## Required Release Files
 
 - `README.md`
+- `.env.example`
 - `CHANGELOG.md`
 - `LICENSE`
 - `SECURITY.md`
@@ -126,6 +127,7 @@ npm run pack:check
 - `dist`
 - `docs`
 - `assets/easyar-icon.png`
+- `.env.example`
 - `README.md`
 - `CHANGELOG.md`
 - `LICENSE`

@@ -114,6 +114,8 @@ EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-r
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
 
+Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, tokens, license keys, and Cloud Recognition credentials local.
+
 `EASYAR_ACCOUNT_STATUS_ENDPOINT`, `EASYAR_LICENSE_VALIDATE_ENDPOINT`, `EASYAR_DOWNLOADS_ENDPOINT`, and `EASYAR_CLOUD_CREDENTIALS_ENDPOINT` are intentionally configurable. Connect them to authorized EasyAR account APIs in production; the open-source default does not guess or bypass private EasyAR endpoints.
 
 See [`docs/OFFICIAL_API_CONTRACT.md`](docs/OFFICIAL_API_CONTRACT.md) or call `easyar_generate_official_api_contract` for the required official account API contract, request fields, response policy, and secret-handling rules.

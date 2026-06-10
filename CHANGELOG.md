@@ -80,6 +80,7 @@ Initial public MVP for `mcp-easyar`.
 - GitHub Actions CI with build, typecheck, MCP smoke test, executable bin smoke test, and package dry run.
 - User-facing `easyar-mcp-check` install verification bin plus `npm run install:check` for non-secret MCP capability checks after installation.
 - Local tarball package install smoke test via `npm run package:smoke`, validating installed `easyar-mcp` and `easyar-mcp-check` bins from the packed package.
+- Expanded `.env.example` template and `.gitignore` rules for official endpoint, Unity path, license, and Cloud Recognition environment variables without committing real secrets.
 - Package publishing whitelist for runtime artifacts, docs, license, security policy, and logo.
 
 ### Security
