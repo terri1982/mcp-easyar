@@ -14,7 +14,8 @@ const child = spawn(command, args, {
     EASYAR_API_TOKEN: "",
     EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
     EASYAR_LICENSE_VALIDATE_ENDPOINT: "",
-    EASYAR_DOWNLOADS_ENDPOINT: ""
+    EASYAR_DOWNLOADS_ENDPOINT: "",
+    EASYAR_CLOUD_CREDENTIALS_ENDPOINT: ""
   },
   stdio: ["pipe", "pipe", "pipe"]
 });
@@ -95,6 +96,10 @@ try {
     "easyar_discover_downloads should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_discover_cloud_credentials"),
+    "easyar_discover_cloud_credentials should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_run_sequence"),
     "easyar_write_run_sequence should be listed"
   );
@@ -171,6 +176,7 @@ try {
   assertTextIncludes(authStatus, "\"accountStatusEndpointConfigured\": false");
   assertTextIncludes(authStatus, "Secret values are never returned");
   assertTextIncludes(authStatus, "\"downloadsEndpointConfigured\": false");
+  assertTextIncludes(authStatus, "\"cloudCredentialsEndpointConfigured\": false");
 
   const accountCheck = await callTool("easyar_check_account", {});
   assertTextIncludes(accountCheck, "\"configured\": false");
@@ -192,6 +198,14 @@ try {
   assertTextIncludes(downloadDiscovery, "\"configured\": false");
   assertTextIncludes(downloadDiscovery, "EASYAR_DOWNLOADS_ENDPOINT is not configured");
   assertTextIncludes(downloadDiscovery, "\"sampleId\": \"image-tracking\"");
+
+  const cloudCredentialDiscovery = await callTool("easyar_discover_cloud_credentials", {
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(cloudCredentialDiscovery, "\"configured\": false");
+  assertTextIncludes(cloudCredentialDiscovery, "EASYAR_CLOUD_CREDENTIALS_ENDPOINT is not configured");
+  assertTextIncludes(cloudCredentialDiscovery, "\"sampleId\": \"cloud-recognition\"");
 
   const clientConfig = await callTool("easyar_generate_client_config", {
     client: "claude-desktop",

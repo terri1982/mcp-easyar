@@ -36,6 +36,7 @@ const toolCatalog = [
   "easyar_check_account",
   "easyar_validate_license",
   "easyar_discover_downloads",
+  "easyar_discover_cloud_credentials",
   "easyar_generate_client_config",
   "easyar_generate_sample_plan",
   "easyar_generate_run_sequence",
@@ -407,13 +408,15 @@ server.tool(
       accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
       licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
       downloadsEndpointConfigured: auth.downloadsEndpointConfigured,
-      readyForAccountScopedContent: auth.hasToken && auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured && auth.downloadsEndpointConfigured,
+      cloudCredentialsEndpointConfigured: auth.cloudCredentialsEndpointConfigured,
+      readyForAccountScopedContent: auth.hasToken && auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured && auth.downloadsEndpointConfigured && auth.cloudCredentialsEndpointConfigured,
       requiredEnvironment: [
         "EASYAR_API_BASE_URL",
         "EASYAR_API_TOKEN",
         "EASYAR_ACCOUNT_STATUS_ENDPOINT",
         "EASYAR_LICENSE_VALIDATE_ENDPOINT",
-        "EASYAR_DOWNLOADS_ENDPOINT"
+        "EASYAR_DOWNLOADS_ENDPOINT",
+        "EASYAR_CLOUD_CREDENTIALS_ENDPOINT"
       ],
       security: "Secret values are never returned by this tool."
     });
@@ -492,6 +495,40 @@ server.tool(
 );
 
 server.tool(
+  "easyar_discover_cloud_credentials",
+  "Call a configured official EasyAR Cloud Recognition endpoint to discover account-scoped credential metadata without exposing secrets.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to read bundle identifier from local config."),
+    sampleId: z.string().optional().describe("Optional sample id. Defaults to cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("unknown")
+  },
+  async ({ projectPath, sampleId, platform }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const localConfig = root ? await readLocalConfigForRemoteValidation(root) : {};
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    const result = await easyarApi.discoverCloudCredentials({
+      sampleId: sample.id,
+      bundleIdentifier: localConfig.bundleIdentifier,
+      platform
+    });
+
+    return jsonText({
+      ...result,
+      input: {
+        projectPath: root,
+        sampleId: sample.id,
+        bundleIdentifier: localConfig.bundleIdentifier ?? null,
+        platform
+      },
+      security: "EASYAR_API_TOKEN, appKey, appSecret, and credential values are never returned. This tool only calls configured official EasyAR endpoints."
+    });
+  }
+);
+
+server.tool(
   "easyar_generate_client_config",
   "Generate MCP client configuration snippets for connecting Codex, Claude Desktop, or another stdio MCP client.",
   {
@@ -506,6 +543,7 @@ server.tool(
       EASYAR_ACCOUNT_STATUS_ENDPOINT: process.env.EASYAR_ACCOUNT_STATUS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/account/status",
       EASYAR_LICENSE_VALIDATE_ENDPOINT: process.env.EASYAR_LICENSE_VALIDATE_ENDPOINT ?? "https://www.easyar.cn/path/to/official/license/validate",
       EASYAR_DOWNLOADS_ENDPOINT: process.env.EASYAR_DOWNLOADS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/downloads",
+      EASYAR_CLOUD_CREDENTIALS_ENDPOINT: process.env.EASYAR_CLOUD_CREDENTIALS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/cloud-recognition/credentials",
       ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
     };
     const config = buildClientConfig(client, entrypoint, env);

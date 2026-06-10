@@ -5,6 +5,7 @@ export type EasyARAuthStatus = {
   accountStatusEndpointConfigured: boolean;
   licenseValidationEndpointConfigured: boolean;
   downloadsEndpointConfigured: boolean;
+  cloudCredentialsEndpointConfigured: boolean;
 };
 
 export type EasyARApiClient = {
@@ -13,6 +14,7 @@ export type EasyARApiClient = {
   checkAccount(): Promise<EasyARRemoteCheckResult>;
   validateLicense(input: EasyARLicenseValidationInput): Promise<EasyARRemoteCheckResult>;
   discoverDownloads(input: EasyARDownloadDiscoveryInput): Promise<EasyARRemoteCheckResult>;
+  discoverCloudCredentials(input: EasyARCloudCredentialDiscoveryInput): Promise<EasyARRemoteCheckResult>;
 };
 
 export type EasyARLicenseValidationInput = {
@@ -25,6 +27,12 @@ export type EasyARDownloadDiscoveryInput = {
   sampleId?: string;
   packageKind?: string;
   unityVersion?: string | null;
+};
+
+export type EasyARCloudCredentialDiscoveryInput = {
+  sampleId?: string;
+  bundleIdentifier?: string | null;
+  platform?: string;
 };
 
 export type EasyARRemoteCheckResult = {
@@ -43,6 +51,7 @@ export function createEasyARApiClient(env: NodeJS.ProcessEnv = process.env): Eas
   const accountStatusEndpoint = env.EASYAR_ACCOUNT_STATUS_ENDPOINT;
   const licenseValidationEndpoint = env.EASYAR_LICENSE_VALIDATE_ENDPOINT;
   const downloadsEndpoint = env.EASYAR_DOWNLOADS_ENDPOINT;
+  const cloudCredentialsEndpoint = env.EASYAR_CLOUD_CREDENTIALS_ENDPOINT;
 
   return {
     authStatus() {
@@ -52,7 +61,8 @@ export function createEasyARApiClient(env: NodeJS.ProcessEnv = process.env): Eas
         tokenPreview: token ? `${token.slice(0, 4)}...${token.slice(-4)}` : null,
         accountStatusEndpointConfigured: Boolean(accountStatusEndpoint),
         licenseValidationEndpointConfigured: Boolean(licenseValidationEndpoint),
-        downloadsEndpointConfigured: Boolean(downloadsEndpoint)
+        downloadsEndpointConfigured: Boolean(downloadsEndpoint),
+        cloudCredentialsEndpointConfigured: Boolean(cloudCredentialsEndpoint)
       };
     },
     accountScopedFeatures() {
@@ -97,6 +107,20 @@ export function createEasyARApiClient(env: NodeJS.ProcessEnv = process.env): Eas
           unityVersion: input.unityVersion
         },
         missingEndpointSummary: "EASYAR_DOWNLOADS_ENDPOINT is not configured.",
+        missingTokenSummary: "EASYAR_API_TOKEN is not configured."
+      });
+    },
+    async discoverCloudCredentials(input) {
+      return callOfficialEndpoint({
+        endpoint: cloudCredentialsEndpoint,
+        token,
+        method: "POST",
+        body: {
+          sampleId: input.sampleId,
+          bundleIdentifier: input.bundleIdentifier,
+          platform: input.platform
+        },
+        missingEndpointSummary: "EASYAR_CLOUD_CREDENTIALS_ENDPOINT is not configured.",
         missingTokenSummary: "EASYAR_API_TOKEN is not configured."
       });
     }
