@@ -3245,7 +3245,7 @@ async function buildAccountOnboardingReport(
   const mcpSteps = buildAccountMcpSteps(root, sample, platform, needsCloudRecognition);
   const blockers = buildAccountOnboardingBlockers(derivedStage, auth, localConfig, cloudConfig, needsCloudRecognition, root);
   const nextActions = buildAccountOnboardingNextActions(derivedStage, blockers, root, sample, platform, needsCloudRecognition);
-  const firstRunGuide = buildFirstRunAccountGuide(derivedStage, root, sample, platform, needsCloudRecognition);
+  const firstRunGuide = buildFirstRunAccountGuide(derivedStage, root, sample, platform, needsCloudRecognition, bundleIdentifier);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -3261,9 +3261,11 @@ async function buildAccountOnboardingReport(
     needsCloudRecognition,
     officialLinks: {
       website: "https://www.easyar.cn/",
-      developCenter: "https://portal.easyar.com/",
-      docsGettingStarted: "https://help.easyar.com/EasyAR%20Sense/v3/GettingStarted/Getting-Started-with-EasyAR.html",
+      registerAndLogin: "https://www.easyar.cn/",
+      developCenter: "https://www.easyar.cn/",
+      docsGettingStarted: "https://help.easyar.cn/EasyAR%20Sense/v4/GettingStarted/Licensing.html",
       apiKeyDocs: "https://www.easyar.com/doc/zh-hant/develop/apikey-auth.html",
+      downloadsPage: "https://www.easyar.cn/view/download.html",
       downloads: officialInfo.docs.downloads,
       samples: officialInfo.docs.samples
     },
@@ -3308,11 +3310,43 @@ function buildFirstRunAccountGuide(
   root: string | null,
   sample: SampleInfo,
   platform: "android" | "ios" | "standalone" | "unknown",
-  needsCloudRecognition: boolean
+  needsCloudRecognition: boolean,
+  bundleIdentifier: string
 ) {
   const projectPath = root ?? "/path/to/UnityProject";
   return {
     entryQuestion: "Do you already have an EasyAR account?",
+    designPrinciple:
+      "Registration and login are browser handoffs. MCP asks only for account stage and local project paths, then validates local evidence without collecting website credentials or EasyAR secret values.",
+    stageModel: [
+      {
+        stage: "not-registered",
+        userSituation: "The user has not created an EasyAR account yet.",
+        mcpBehavior: "Show official website/register/login links, explain what to create after login, and stop before any account-scoped download or Unity run."
+      },
+      {
+        stage: "registered-not-logged-in",
+        userSituation: "The user has an account but is not signed in in the browser.",
+        mcpBehavior: "Send the user to the official development center login and remind them not to paste passwords or verification codes."
+      },
+      {
+        stage: "logged-in",
+        userSituation: "The user can access the EasyAR development center.",
+        mcpBehavior: "Guide license creation, package identifier matching, official downloads, and local config preparation."
+      },
+      {
+        stage: "has-license",
+        userSituation: "The user has an EasyAR Sense license for the target package/bundle identifier.",
+        mcpBehavior: needsCloudRecognition
+          ? "Guide Cloud Recognition appId/appKey/appSecret creation and local-only storage."
+          : "Move to local config validation and focused sample preflight."
+      },
+      {
+        stage: "has-cloud-credentials",
+        userSituation: "The user has local Cloud Recognition credentials ready.",
+        mcpBehavior: "Validate local config presence, then continue with focused preflight and Unity validation."
+      }
+    ],
     routes: [
       {
         id: "new-user",
@@ -3323,7 +3357,15 @@ function buildFirstRunAccountGuide(
         mcpAfterUserReturns: [
           `easyar_account_onboarding accountStage=registered-not-logged-in sampleId=${sample.id}`,
           `easyar_write_account_onboarding projectPath=${projectPath} accountStage=registered-not-logged-in sampleId=${sample.id}`
-        ]
+        ],
+        browserActions: [
+          "Open https://www.easyar.cn/.",
+          "Use the official login/register entry on the website.",
+          "Activate the registered email if the website requires activation.",
+          "Open the development center from the website after registration succeeds."
+        ],
+        returnPrompt:
+          "After the browser flow is done, tell the MCP client only the new account stage, for example accountStage=registered-not-logged-in or accountStage=logged-in."
       },
       {
         id: "registered-user",
@@ -3334,7 +3376,14 @@ function buildFirstRunAccountGuide(
         mcpAfterUserReturns: [
           `easyar_account_onboarding accountStage=logged-in sampleId=${sample.id}`,
           `easyar_write_account_materials projectPath=${projectPath} sampleId=${sample.id}`
-        ]
+        ],
+        browserActions: [
+          "Open https://www.easyar.cn/ and enter the development center.",
+          "Log in in the browser using the official EasyAR account flow.",
+          "Keep passwords and SMS/email verification codes inside the browser only."
+        ],
+        returnPrompt:
+          "After the dashboard is visible, tell the MCP client accountStage=logged-in. Do not paste passwords or verification codes."
       },
       {
         id: "logged-in-user",
@@ -3346,8 +3395,26 @@ function buildFirstRunAccountGuide(
           `easyar_prepare_unity_project projectPath=${projectPath} sampleId=${sample.id}`,
           `easyar_validate_local_config projectPath=${projectPath}`,
           `easyar_next_workflow_step projectPath=${projectPath} sampleId=${sample.id} platform=${platform}`
-        ]
+        ],
+        browserActions: [
+          "Create or locate the EasyAR Sense license in the development center.",
+          `Confirm the license bundle/package identifier is ${bundleIdentifier} or the real application identifier.`,
+          ...(needsCloudRecognition
+            ? ["Create or locate the Cloud Recognition/CRS service configuration and copy appId, appKey, and appSecret into the local config file only."]
+            : ["Cloud Recognition credentials are not required for this focused sample."]),
+          "Download/import only official EasyAR Unity Plugin and sample packages available to the account."
+        ],
+        returnPrompt:
+          "After local files are filled, ask MCP to validate presence with easyar_validate_local_config. Secret values stay in local files or environment variables."
       }
+    ],
+    mcpConversationRules: [
+      "Ask one account-stage question first instead of asking for credentials.",
+      "For a new user, recommend accountStage=not-registered and write ACCOUNT_ONBOARDING.md before Unity automation.",
+      "Use browser handoff language: register, activate, log in, return.",
+      "When the user returns, ask only which stage is now true.",
+      "Never ask the user to paste EasyAR passwords, verification codes, licenseKey, appKey, appSecret, or account tokens into chat.",
+      "Use easyar_account_materials to show field names, source pages, storage paths, and share policy without storing values."
     ],
     userProvidesToMcp: [
       "Account state only: not-registered, registered-not-logged-in, logged-in, has-license, or has-cloud-credentials.",
@@ -3410,14 +3477,14 @@ function buildAccountHumanSteps(
       id: "register",
       requiredWhen: ["not-registered"],
       title: "Register an EasyAR account",
-      action: "Open https://www.easyar.cn/ and use the official register/sign-up entry. Activate the account from the registration email if required.",
+      action: "Open https://www.easyar.cn/ and use the official login/register entry. Activate the account from the registration email if required, then return to MCP with only the updated account stage.",
       doneWhen: "You can open the EasyAR development center with your registered account."
     },
     {
       id: "login",
       requiredWhen: ["not-registered", "registered-not-logged-in"],
       title: "Log in to EasyAR development center",
-      action: "Open https://portal.easyar.com/ or the Development Center link from the EasyAR website and log in there. Do not paste your password into an MCP client.",
+      action: "Open https://www.easyar.cn/ and enter the Development Center link from the website. Log in there. Do not paste your password or verification code into an MCP client.",
       doneWhen: "The development center dashboard is visible in the browser."
     },
     {
@@ -9221,25 +9288,42 @@ function buildAccountOnboardingMarkdown(report: Awaited<ReturnType<typeof buildA
     "## Official Links",
     "",
     `- EasyAR website: ${report.officialLinks.website}`,
+    `- Register/login entry: ${report.officialLinks.registerAndLogin}`,
     `- Development center: ${report.officialLinks.developCenter}`,
     `- Getting started docs: ${report.officialLinks.docsGettingStarted}`,
     `- API Key docs: ${report.officialLinks.apiKeyDocs}`,
+    `- Official downloads page: ${report.officialLinks.downloadsPage}`,
     `- Downloads: ${report.officialLinks.downloads}`,
     `- Samples docs: ${report.officialLinks.samples}`,
     "",
     "## First Run Guide",
     "",
     `Entry question: ${report.firstRunGuide.entryQuestion}`,
+    `Design principle: ${report.firstRunGuide.designPrinciple}`,
+    "",
+    "### Stage Model",
+    "",
+    ...report.firstRunGuide.stageModel.flatMap((item) => [
+      `- ${item.stage}: ${item.userSituation}`,
+      `  MCP behavior: ${item.mcpBehavior}`
+    ]),
     "",
     ...report.firstRunGuide.routes.flatMap((route) => [
       `### ${route.active ? "[NEXT] " : ""}${route.answer}`,
       "",
       `Route id: ${route.id}`,
       `Guide: ${route.guide}`,
+      "Browser actions:",
+      ...route.browserActions.map((action) => `- ${action}`),
+      `Return prompt: ${route.returnPrompt}`,
       "MCP after user returns:",
       ...route.mcpAfterUserReturns.map((call) => `- ${call}`),
       ""
     ]),
+    "### MCP Conversation Rules",
+    "",
+    ...report.firstRunGuide.mcpConversationRules.map((item) => `- ${item}`),
+    "",
     "### What The User Provides To MCP",
     "",
     ...report.firstRunGuide.userProvidesToMcp.map((item) => `- ${item}`),

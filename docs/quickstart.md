@@ -28,13 +28,16 @@ The guides send users to the official EasyAR website and development center, the
 For a user who has not registered yet, the MCP flow is:
 
 1. Ask only for account state, for example `accountStage=not-registered`; a new user is a valid starting point.
-2. Send the user to the official EasyAR website registration entry and development center login in their browser.
-3. After the user returns, switch the stage to `registered-not-logged-in` or `logged-in` and write `ACCOUNT_ONBOARDING.md`.
-4. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
-5. For Cloud Recognition, guide them to create or locate CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`.
-6. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, then let `easyar_validate_local_config` report only presence and placeholder problems.
-7. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
-8. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`.
+2. Send the user to `https://www.easyar.cn/` in their browser. They use the official login/register entry, activate the account if required, and enter the development center there.
+3. After the user returns, ask only which stage is now true: `registered-not-logged-in`, `logged-in`, `has-license`, or `has-cloud-credentials`.
+4. Write `ACCOUNT_ONBOARDING.md`; it records the browser handoff, stage model, return prompts, and secret-handling rules for the next operator or AI tool.
+5. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
+6. For Cloud Recognition, guide them to create or locate CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`.
+7. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
+8. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
+9. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`.
+
+The MCP should never turn registration into a chat form. Login, email activation, password reset, and verification codes stay in the official browser session. MCP only records account stage and local evidence.
 
 `easyar_write_artifact_index` includes `ACCOUNT_ONBOARDING.md` and `ACCOUNT_MATERIALS.md` in the handoff reading order so another AI tool can see account prerequisites before trying Unity validation.
 

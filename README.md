@@ -197,6 +197,14 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
 
+For brand-new users, the intended conversation is:
+
+1. MCP asks one lightweight question: "Do you already have an EasyAR account?"
+2. If the answer is no, MCP uses `accountStage=not-registered` and gives browser-only actions: open `https://www.easyar.cn/`, register from the official login/register entry, activate the email if required, then enter the development center.
+3. The user returns with only a stage update, such as `registered-not-logged-in` or `logged-in`; they do not paste credentials into chat.
+4. MCP guides license creation, package/bundle identifier matching, official sample/download access, and Cloud Recognition credential setup when the selected sample needs it.
+5. Secret values are written locally or supplied from environment variables; MCP validates presence and placeholders, then moves to focused preflight.
+
 The first MCP screen is intentionally account-stage driven:
 
 1. `easyar_server_status` shows `preflightFirst=true` and suggests `easyar_account_onboarding accountStage=not-registered` as a valid starting point.
