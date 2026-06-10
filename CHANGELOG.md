@@ -17,6 +17,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused run report Markdown artifact generation inside Unity projects.
 - Focused sample scene audit and `SCENE_AUDIT.md` artifact generation for scene candidates, Build Settings hints, and sample blockers.
 - Focused support bundle and `SUPPORT_BUNDLE.md` artifact generation across run sequence, run report, scene audit, and latest Unity log diagnostics.
+- Focused real-device validation checklist and `DEVICE_VALIDATION.md` artifact generation for Image Tracking and Cloud Recognition pass criteria.
 - Focused run result and `RUN_RESULT.md` artifact generation for compile, build, and device validation handoff.
 - Focused Unity C# code planning and `CODE_PLAN.md` artifact generation before sample script edits.
 - Focused Unity C# change summary and `CODE_CHANGE.md` artifact generation after sample script edits.

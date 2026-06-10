@@ -128,6 +128,14 @@ try {
     "easyar_write_support_bundle should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_device_validation_checklist"),
+    "easyar_generate_device_validation_checklist should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_device_validation_checklist"),
+    "easyar_write_device_validation_checklist should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_run_result"),
     "easyar_generate_run_result should be listed"
   );
@@ -261,6 +269,16 @@ try {
   assert(initialImportChecklistMarkdown.includes("EasyAR Import Checklist - Image Tracking"), "Import checklist markdown should include title");
   assert(initialImportChecklistMarkdown.includes("official-unity-plugin-imported"), "Import checklist markdown should include plugin check");
 
+  const initialDeviceValidation = await callTool("easyar_generate_device_validation_checklist", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    buildOutputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(initialDeviceValidation, "\"readyForDeviceValidation\": false");
+  assertTextIncludes(initialDeviceValidation, "official-unity-plugin-imported");
+  assertTextIncludes(initialDeviceValidation, "image-target-detection");
+
   const writtenDeploymentReadiness = await callTool("easyar_write_deployment_readiness", {
     projectPath
   });
@@ -280,6 +298,7 @@ try {
   assertTextIncludes(imageRunSequence, "\"supportedNow\": true");
   assertTextIncludes(imageRunSequence, "easyar_generate_import_checklist");
   assertTextIncludes(imageRunSequence, "easyar_write_import_checklist");
+  assertTextIncludes(imageRunSequence, "easyar_write_device_validation_checklist");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
   assertTextIncludes(imageRunSequence, "easyar_run_unity_compile_check");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
@@ -466,6 +485,23 @@ try {
   assertTextIncludes(readySceneAudit, "Assets/Scenes/ImageTracking.unity");
   assertTextIncludes(readySceneAudit, "Assets/EasyAR/EasyARSense.asset");
   assertTextIncludes(readySceneAudit, "Assets/Targets/ImageTarget.jpg");
+
+  const readyDeviceValidation = await callTool("easyar_write_device_validation_checklist", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    device: "Pixel test device",
+    buildOutputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(readyDeviceValidation, "DEVICE_VALIDATION.md");
+  assertTextIncludes(readyDeviceValidation, "\"readyForDeviceValidation\": true");
+  const deviceValidationMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "DEVICE_VALIDATION.md"),
+    "utf8"
+  );
+  assert(deviceValidationMarkdown.includes("EasyAR Device Validation - Image Tracking"), "Device validation markdown should include title");
+  assert(deviceValidationMarkdown.includes("image-target-detection"), "Device validation markdown should include image target test step");
+  assert(deviceValidationMarkdown.includes("Pixel test device"), "Device validation markdown should include device label");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),
@@ -825,12 +861,24 @@ try {
   assert(runResultMarkdown.includes("Overall status: blocked"), "Run result markdown should include overall status");
   assert(runResultMarkdown.includes("appKey=<redacted>"), "Run result markdown should redact sensitive notes");
 
+  const cloudDeviceValidation = await callTool("easyar_generate_device_validation_checklist", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "ios",
+    device: "iPhone test device",
+    buildOutputPath: "Builds/iOS/cloud-recognition"
+  });
+  assertTextIncludes(cloudDeviceValidation, "\"readyForDeviceValidation\": false");
+  assertTextIncludes(cloudDeviceValidation, "cloud-recognition-network");
+  assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
+
   const artifactIndex = await callTool("easyar_generate_artifact_index", {
     projectPath,
     sampleId: "cloud-recognition"
   });
   assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
+  assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
   assertTextIncludes(artifactIndex, "ARTIFACT_INDEX.md");
 

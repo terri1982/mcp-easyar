@@ -95,6 +95,8 @@ const toolCatalog = [
   "easyar_write_scene_audit",
   "easyar_generate_support_bundle",
   "easyar_write_support_bundle",
+  "easyar_generate_device_validation_checklist",
+  "easyar_write_device_validation_checklist",
   "easyar_generate_run_result",
   "easyar_write_run_result",
   "easyar_inspect_unity_project",
@@ -1082,6 +1084,61 @@ server.tool(
       logIssueCount: bundle.latestLog.issueCount,
       nextActions: bundle.nextActions,
       note: "The support bundle does not include secret values or full Unity log text."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_device_validation_checklist",
+  "Generate a focused real-device validation checklist for Image Tracking or Cloud Recognition.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    device: z.string().optional().describe("Optional target device model or test device label."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path.")
+  },
+  async ({ projectPath, sampleId, platform, device, buildOutputPath }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildDeviceValidationChecklist(root, sample, platform, device, buildOutputPath));
+  }
+);
+
+server.tool(
+  "easyar_write_device_validation_checklist",
+  "Write the focused real-device validation checklist as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    device: z.string().optional().describe("Optional target device model or test device label."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    relativePath: z.string().optional().describe("Optional checklist path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/DEVICE_VALIDATION.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing device validation checklist.")
+  },
+  async ({ projectPath, sampleId, platform, device, buildOutputPath, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const checklist = await buildDeviceValidationChecklist(root, sample, platform, device, buildOutputPath);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "DEVICE_VALIDATION.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildDeviceValidationChecklistMarkdown(checklist), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      platform,
+      readyForDeviceValidation: checklist.readyForDeviceValidation,
+      blockerCount: checklist.blockers.length,
+      nextActions: checklist.nextActions,
+      note: "The device validation checklist contains test criteria and evidence prompts, not secret values."
     });
   }
 );
@@ -2208,6 +2265,12 @@ function buildFocusedRunSequence(input: {
             expected: "EasyARDeviceBuildHelper.cs is generated."
           },
           {
+            step: "Write focused real-device validation checklist",
+            tool: "easyar_write_device_validation_checklist",
+            arguments: { projectPath, sampleId: sample.id, platform, buildOutputPath: outputPath, overwrite: true },
+            expected: `Assets/EasyARGenerated/${sample.id}/DEVICE_VALIDATION.md lists required real-device evidence and pass criteria.`
+          },
+          {
             step: "Run Unity player build",
             tool: "easyar_run_unity_method",
             arguments: {
@@ -2647,6 +2710,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       generateWith: `easyar_write_run_result sampleId=${sample.id}`
     },
     {
+      name: "Device Validation",
+      relativePath: path.join(base, "DEVICE_VALIDATION.md"),
+      purpose: "Real-device test steps, pass criteria, and evidence prompts.",
+      generateWith: `easyar_write_device_validation_checklist sampleId=${sample.id}`
+    },
+    {
       name: "Code Plan",
       relativePath: path.join(base, "CODE_PLAN.md"),
       purpose: "Scoped C# implementation plan before script edits.",
@@ -2834,6 +2903,189 @@ async function buildRunResult(input: {
     nextActions: recommendedNextActions,
     security: "Secret values are not returned. Do not include license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in run result notes or evidence."
   };
+}
+
+async function buildDeviceValidationChecklist(
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  device?: string,
+  buildOutputPath?: string
+) {
+  const readiness = await buildSampleReadinessReport(root, sample);
+  const importChecklist = await buildImportChecklist(root, sample);
+  const sceneAudit = await buildSampleSceneAudit(root, sample, 25);
+  const readinessBlockers = readiness.checks
+    .filter((check) => !check.ok)
+    .map((check) => ({
+      id: check.id,
+      detail: check.detail,
+      action: readinessAction(check.id, sample)
+    }));
+  const importBlockers = importChecklist.items
+    .filter((item) => item.required && !item.ok)
+    .map((item) => ({
+      id: item.id,
+      detail: item.evidence,
+      action: item.action
+    }));
+  const sceneBlockers = sceneAudit.blockers.map((blocker) => ({
+    id: blocker.id,
+    detail: blocker.detail,
+    action: blocker.action
+  }));
+  const blockers = uniqueBlockers([
+    ...readinessBlockers,
+    ...importBlockers,
+    ...sceneBlockers
+  ]);
+  const readyForDeviceValidation = blockers.length === 0;
+  const steps = buildDeviceValidationSteps(sample, platform);
+  const evidencePrompts = [
+    "Device model and OS version.",
+    "Build output path or installed app version.",
+    "Unity build log path and device log capture path.",
+    "Observed camera permission behavior.",
+    ...sampleDeviceEvidencePrompts(sample)
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    device: device ?? null,
+    buildOutputPath: buildOutputPath ?? null,
+    readyForDeviceValidation,
+    blockers,
+    preflightSummary: {
+      readinessReady: readiness.ready,
+      importReady: importChecklist.readyForFocusedPreparation,
+      sceneReady: sceneAudit.readyForUnityValidation,
+      unityVersion: readiness.unityVersion
+    },
+    steps,
+    passCriteria: sampleDevicePassCriteria(sample),
+    evidencePrompts,
+    nextActions: readyForDeviceValidation
+      ? [
+          "Install the build on a real Android or iOS device.",
+          "Run every device validation step and capture the requested evidence.",
+          "Record the observed result with easyar_write_run_result."
+        ]
+      : Array.from(new Set(blockers.map((blocker) => blocker.action))),
+    security: "Do not paste EasyAR license keys, account tokens, Cloud Recognition appKey/appSecret, signing keys, provisioning profiles, or device-private identifiers into validation evidence."
+  };
+}
+
+function buildDeviceValidationSteps(sample: SampleInfo, platform: typeof mobilePlatforms[number]) {
+  const platformSteps = platform === "android"
+    ? [
+        {
+          id: "install-android-build",
+          title: "Install Android build",
+          action: "Install the APK on a physical Android device and grant camera/network permissions when prompted.",
+          expected: "The app launches without Android permission, Gradle, or signing failures."
+        }
+      ]
+    : [
+        {
+          id: "install-ios-build",
+          title: "Install iOS build",
+          action: "Build/run the generated Xcode project on a physical iOS device with valid signing and camera usage description.",
+          expected: "The app launches without signing, provisioning, or camera permission failures."
+        }
+      ];
+  return [
+    ...platformSteps,
+    {
+      id: "camera-startup",
+      title: "Verify camera startup",
+      action: "Launch the sample and observe the live camera feed.",
+      expected: "The camera feed appears and no EasyAR license/plugin initialization error is shown."
+    },
+    ...sampleSpecificDeviceValidationSteps(sample),
+    {
+      id: "record-result",
+      title: "Record validation result",
+      action: "Call easyar_write_run_result with each step status, evidence, and next action.",
+      expected: "RUN_RESULT.md captures whether this device validation passed, failed, or is blocked."
+    }
+  ];
+}
+
+function sampleSpecificDeviceValidationSteps(sample: SampleInfo) {
+  if (sample.id === "cloud-recognition") {
+    return [
+      {
+        id: "cloud-recognition-network",
+        title: "Verify network and cloud service access",
+        action: "Run on a device network that can reach the configured EasyAR Cloud Recognition service region.",
+        expected: "No unauthorized, timeout, DNS, TLS, or region mismatch errors appear in app/device logs."
+      },
+      {
+        id: "cloud-recognition-result",
+        title: "Verify cloud recognition result",
+        action: "Present a target configured in the official EasyAR Cloud Recognition library.",
+        expected: "The sample receives a cloud recognition result and displays or logs the expected target/content response."
+      }
+    ];
+  }
+
+  return [
+    {
+      id: "image-target-detection",
+      title: "Verify image target detection",
+      action: "Present a real target image from the imported Image Tracking target set in stable lighting.",
+      expected: "The sample detects the target and shows anchored content at the target pose."
+    },
+    {
+      id: "image-target-tracking-stability",
+      title: "Verify tracking stability",
+      action: "Move the device around the target and briefly occlude/reveal the target.",
+      expected: "Tracking remains stable while visible and recovers predictably after reacquisition."
+    }
+  ];
+}
+
+function sampleDevicePassCriteria(sample: SampleInfo): string[] {
+  if (sample.id === "cloud-recognition") {
+    return [
+      "App launches on a physical device with camera permission granted.",
+      "EasyAR initializes without license or plugin import errors.",
+      "Cloud Recognition credentials are accepted by the official service.",
+      "A configured cloud target is recognized and produces the expected sample response.",
+      "No secret values are printed in Unity, device, or support logs."
+    ];
+  }
+
+  return [
+    "App launches on a physical device with camera permission granted.",
+    "EasyAR initializes without license or plugin import errors.",
+    "A real image target is detected from the focused sample target set.",
+    "Anchored content follows the target pose without obvious scale/orientation errors.",
+    "Tracking loss and reacquisition behavior is understandable and recorded."
+  ];
+}
+
+function sampleDeviceEvidencePrompts(sample: SampleInfo): string[] {
+  if (sample.id === "cloud-recognition") {
+    return [
+      "Cloud target/library name or non-secret identifier.",
+      "Recognition response status without appKey/appSecret values.",
+      "Network/service-region observations."
+    ];
+  }
+
+  return [
+    "Target image/database asset path.",
+    "Observed detection distance and lighting conditions.",
+    "Tracking stability notes or short screen recording reference."
+  ];
 }
 
 async function buildCodePlan(root: string, sample: SampleInfo, goal: string, targetFiles: string[], maxScriptIssues: number) {
@@ -4252,6 +4504,58 @@ function buildRunResultMarkdown(result: Awaited<ReturnType<typeof buildRunResult
     "## Security",
     "",
     result.security,
+    ""
+  ].join("\n");
+}
+
+function buildDeviceValidationChecklistMarkdown(checklist: Awaited<ReturnType<typeof buildDeviceValidationChecklist>>): string {
+  return [
+    `# EasyAR Device Validation - ${checklist.sample.name}`,
+    "",
+    `Generated at: ${checklist.generatedAt}`,
+    `Project: ${checklist.projectPath}`,
+    `Sample id: ${checklist.sample.id}`,
+    `Status: ${checklist.sample.implementationStatus}`,
+    `Platform: ${checklist.platform}`,
+    `Device: ${checklist.device ?? "not recorded"}`,
+    `Build output: ${checklist.buildOutputPath ?? "not recorded"}`,
+    `Ready for device validation: ${checklist.readyForDeviceValidation ? "yes" : "no"}`,
+    "",
+    "## Preflight Summary",
+    "",
+    `Readiness ready: ${checklist.preflightSummary.readinessReady ? "yes" : "no"}`,
+    `Import ready: ${checklist.preflightSummary.importReady ? "yes" : "no"}`,
+    `Scene ready: ${checklist.preflightSummary.sceneReady ? "yes" : "no"}`,
+    `Unity version: ${checklist.preflightSummary.unityVersion ?? "unknown"}`,
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(checklist.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No device validation blockers."),
+    "",
+    "## Device Test Steps",
+    "",
+    ...checklist.steps.flatMap((step, index) => [
+      `${index + 1}. ${step.title}`,
+      `   - Id: ${step.id}`,
+      `   - Action: ${step.action}`,
+      `   - Expected: ${step.expected}`
+    ]),
+    "",
+    "## Pass Criteria",
+    "",
+    ...checklist.passCriteria.map((criterion) => `- ${criterion}`),
+    "",
+    "## Evidence To Capture",
+    "",
+    ...checklist.evidencePrompts.map((prompt) => `- ${prompt}`),
+    "",
+    "## Next Actions",
+    "",
+    ...checklist.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    checklist.security,
     ""
   ].join("\n");
 }

@@ -22,6 +22,8 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - write focused run reports into Unity projects as Markdown artifacts
 - audit focused sample scenes, Build Settings hints, EasyAR import signals, and sample-specific blockers
 - generate focused support bundles that summarize project state, scene audit, run report, and latest Unity log diagnostics
+- generate real-device validation checklists for focused Image Tracking and Cloud Recognition tests
+- write device validation checklists into Unity projects as Markdown artifacts
 - record focused sample run results for compile, build, and device validation handoff
 - plan scoped Unity C# changes before Codex or Claude writes sample scripts
 - summarize Unity C# code changes after script edits and before Unity compilation
@@ -172,6 +174,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_scene_audit`: write the focused scene audit to `Assets/EasyARGenerated/<sampleId>/SCENE_AUDIT.md`.
 - `easyar_generate_support_bundle`: generate a focused support bundle summary across run sequence, run report, scene audit, and latest Unity log diagnostics.
 - `easyar_write_support_bundle`: write the focused support bundle to `Assets/EasyARGenerated/<sampleId>/SUPPORT_BUNDLE.md`.
+- `easyar_generate_device_validation_checklist`: generate focused real-device validation steps, pass criteria, blockers, and evidence prompts.
+- `easyar_write_device_validation_checklist`: write the real-device validation checklist to `Assets/EasyARGenerated/<sampleId>/DEVICE_VALIDATION.md`.
 - `easyar_generate_run_result`: generate a focused sample run result summary for compile, build, or device validation attempts.
 - `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
