@@ -83,6 +83,8 @@ const toolCatalog = [
   "easyar_deployment_readiness",
   "easyar_write_deployment_readiness",
   "easyar_generate_sample_plan",
+  "easyar_generate_import_checklist",
+  "easyar_write_import_checklist",
   "easyar_generate_run_sequence",
   "easyar_write_run_sequence",
   "easyar_generate_artifact_index",
@@ -694,6 +696,54 @@ server.tool(
     ].join("\n");
 
     return markdownText(plan);
+  }
+);
+
+server.tool(
+  "easyar_generate_import_checklist",
+  "Generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition.")
+  },
+  async ({ projectPath, sampleId }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildImportChecklist(root, sample));
+  }
+);
+
+server.tool(
+  "easyar_write_import_checklist",
+  "Write the official EasyAR import checklist as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    relativePath: z.string().optional().describe("Optional checklist path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing import checklist.")
+  },
+  async ({ projectPath, sampleId, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const checklist = await buildImportChecklist(root, sample);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "IMPORT_CHECKLIST.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildImportChecklistMarkdown(checklist), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      readyForFocusedPreparation: checklist.readyForFocusedPreparation,
+      missingRequiredCount: checklist.items.filter((item) => item.required && !item.ok).length,
+      nextActions: checklist.nextActions,
+      note: "The import checklist records package/sample import evidence only and does not include secret values."
+    });
   }
 );
 
@@ -2048,6 +2098,12 @@ function buildFocusedRunSequence(input: {
             expected: "Project has Assets, Packages/manifest.json, ProjectSettings/ProjectVersion.txt, and EasyAR import signals."
           },
           {
+            step: "Generate official EasyAR import checklist",
+            tool: "easyar_generate_import_checklist",
+            arguments: { projectPath, sampleId: sample.id },
+            expected: "Report whether the official EasyAR Unity Plugin and focused sample scene/assets appear to be imported."
+          },
+          {
             step: "Check focused sample readiness",
             tool: "easyar_check_sample_readiness",
             arguments: { projectPath, sampleId: sample.id },
@@ -2063,6 +2119,12 @@ function buildFocusedRunSequence(input: {
             tool: "easyar_prepare_unity_project",
             arguments: { projectPath, sampleId: sample.id, overwrite: false },
             expected: `Assets/EasyARGenerated/${sample.id}/RUNBOOK.md and Editor helper scripts are present.`
+          },
+          {
+            step: "Write official EasyAR import checklist artifact",
+            tool: "easyar_write_import_checklist",
+            arguments: { projectPath, sampleId: sample.id, overwrite: true },
+            expected: `Assets/EasyARGenerated/${sample.id}/IMPORT_CHECKLIST.md records import evidence and missing official package/sample pieces.`
           },
           {
             step: "Validate local config without exposing secrets",
@@ -2356,6 +2418,112 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
   };
 }
 
+async function buildImportChecklist(root: string, sample: SampleInfo) {
+  const allEasyARSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 160);
+  const easyarSignals = filterOfficialEasyARSignals(allEasyARSignals);
+  const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
+  const matchingScenes = matchSampleScenes(sample, sampleScenes);
+  const targetAssets = sample.id === "image-tracking"
+    ? await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, 80)
+    : [];
+  const cloudConfigPath = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+  const cloudConfig = sample.id === "cloud-recognition" ? await readCloudRecognitionConfig(root) : null;
+  const items = [
+    {
+      id: "unity-project-opened",
+      required: true,
+      ok: await exists(path.join(root, "Assets")) && await exists(path.join(root, "Packages", "manifest.json")) && await exists(path.join(root, "ProjectSettings", "ProjectVersion.txt")),
+      evidence: "Assets, Packages/manifest.json, and ProjectSettings/ProjectVersion.txt exist.",
+      action: "Open or create the Unity project once before importing EasyAR packages."
+    },
+    {
+      id: "official-unity-plugin-imported",
+      required: true,
+      ok: easyarSignals.length > 0,
+      evidence: easyarSignals.length > 0
+        ? `EasyAR import signals: ${easyarSignals.slice(0, 10).join(", ")}`
+        : "No official EasyAR import signals were found under Assets or Packages.",
+      action: "Download the official EasyAR Sense Unity Plugin from the registered EasyAR account/download page and import it into this project."
+    },
+    {
+      id: "focused-sample-scene-imported",
+      required: true,
+      ok: matchingScenes.length > 0,
+      evidence: matchingScenes.length > 0
+        ? `Matching sample scene(s): ${matchingScenes.join(", ")}`
+        : `No scene matched focused sample hints: ${sample.unityScenes.join(", ")}.`,
+      action: `Import the official ${sample.name} sample scene from the EasyAR Unity sample package.`
+    },
+    {
+      id: "sample-scope-supported",
+      required: true,
+      ok: sample.implementationStatus === "focused",
+      evidence: `${sample.name} status is ${sample.implementationStatus}.`,
+      action: "Use image-tracking or cloud-recognition until broader sample work resumes."
+    },
+    {
+      id: "official-download-discovery-ready",
+      required: false,
+      ok: readAuthConfig().downloadsEndpointConfigured,
+      evidence: readAuthConfig().downloadsEndpointConfigured
+        ? "EASYAR_DOWNLOADS_ENDPOINT is configured for account-scoped package discovery."
+        : "EASYAR_DOWNLOADS_ENDPOINT is not configured; use manual official download page or configure the endpoint.",
+      action: "Configure EASYAR_DOWNLOADS_ENDPOINT only with an authorized official EasyAR account API."
+    },
+    {
+      id: "local-config-template-present",
+      required: false,
+      ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example")),
+      evidence: "ProjectSettings/EasyAR/easyar.local.json.example is generated by easyar_prepare_unity_project.",
+      action: `Run easyar_prepare_unity_project with sampleId "${sample.id}".`
+    },
+    ...(sample.id === "image-tracking"
+      ? [
+          {
+            id: "image-tracking-target-assets-imported",
+            required: true,
+            ok: targetAssets.length > 0,
+            evidence: targetAssets.length > 0
+              ? `Possible target asset(s): ${targetAssets.slice(0, 10).join(", ")}`
+              : "No Image Tracking target images/database assets were found.",
+            action: "Import the official Image Tracking target assets or add real target images/database files under Assets."
+          }
+        ]
+      : [
+          {
+            id: "cloud-recognition-local-credentials-ready",
+            required: true,
+            ok: hasCompleteCloudRecognitionConfig(cloudConfig ?? {}),
+            evidence: hasCompleteCloudRecognitionConfig(cloudConfig ?? {})
+              ? `Cloud Recognition credentials are configured in ${path.relative(root, cloudConfigPath)}.`
+              : `Cloud Recognition credentials are missing or incomplete in ${path.relative(root, cloudConfigPath)}.`,
+            action: "Fill appId, appKey, and appSecret from the official EasyAR Cloud Recognition account into local config, never into committed source."
+          }
+        ])
+  ];
+  const nextActions = items
+    .filter((item) => item.required && !item.ok)
+    .map((item) => item.action);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    officialReferences: officialInfo.docs,
+    packageVersions: officialInfo.packageVersions,
+    readyForFocusedPreparation: items.filter((item) => item.required).every((item) => item.ok),
+    items,
+    nextActions: nextActions.length > 0
+      ? Array.from(new Set(nextActions))
+      : ["Official plugin, focused sample scene, and sample-specific import requirements are present. Continue with easyar_prepare_unity_project and easyar_generate_run_sequence."],
+    security: "This checklist does not download private packages or expose secrets. It records local import evidence after authorized official EasyAR access."
+  };
+}
+
 async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScriptIssues: number) {
   const readiness = await buildSampleReadinessReport(root, sample);
   const configValidation = await buildLocalConfigValidationReport(root);
@@ -2441,6 +2609,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "RUNBOOK.md"),
       purpose: "Human-readable focused sample checklist.",
       generateWith: `easyar_prepare_unity_project sampleId=${sample.id}`
+    },
+    {
+      name: "Import Checklist",
+      relativePath: path.join(base, "IMPORT_CHECKLIST.md"),
+      purpose: "Official EasyAR Unity Plugin and focused sample import evidence.",
+      generateWith: `easyar_write_import_checklist sampleId=${sample.id}`
     },
     {
       name: "Run Sequence",
@@ -3817,6 +3991,50 @@ function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRu
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildImportChecklistMarkdown(checklist: Awaited<ReturnType<typeof buildImportChecklist>>): string {
+  const missingRequired = checklist.items.filter((item) => item.required && !item.ok);
+  return [
+    `# EasyAR Import Checklist - ${checklist.sample.name}`,
+    "",
+    `Generated at: ${checklist.generatedAt}`,
+    `Project: ${checklist.projectPath}`,
+    `Sample id: ${checklist.sample.id}`,
+    `Status: ${checklist.sample.implementationStatus}`,
+    `Ready for focused preparation: ${checklist.readyForFocusedPreparation ? "yes" : "no"}`,
+    "",
+    "## Required Missing Items",
+    "",
+    ...markdownIssueList(missingRequired.map((item) => `${item.id}: ${item.action}`), "All required import items are present."),
+    "",
+    "## Checklist",
+    "",
+    ...checklist.items.flatMap((item) => [
+      `- ${item.ok ? "OK" : "MISSING"} ${item.required ? "[required]" : "[recommended]"} ${item.id}`,
+      `  Evidence: ${item.evidence}`,
+      `  Action: ${item.action}`
+    ]),
+    "",
+    "## Official References",
+    "",
+    `- Samples: ${checklist.officialReferences.samples}`,
+    `- Downloads: ${checklist.officialReferences.downloads}`,
+    `- Download history: ${checklist.officialReferences.downloadHistory}`,
+    "",
+    "## Captured Package Versions",
+    "",
+    ...Object.entries(checklist.packageVersions).map(([name, version]) => `- ${name}: ${version}`),
+    "",
+    "## Next Actions",
+    "",
+    ...checklist.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    checklist.security,
     ""
   ].join("\n");
 }

@@ -13,6 +13,8 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
+- generate official EasyAR Unity Plugin and focused sample import checklists
+- write import checklists into Unity projects as Markdown artifacts
 - generate an ordered focused sample run sequence for Codex or Claude
 - write focused run sequences into Unity projects as Markdown artifacts
 - index focused sample handoff artifacts with recommended reading order
@@ -158,6 +160,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
 - `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
+- `easyar_generate_import_checklist`: generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.
+- `easyar_write_import_checklist`: write the official import checklist to `Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md`.
 - `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.
 - `easyar_write_run_sequence`: write the focused run sequence to `Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md`.
 - `easyar_generate_artifact_index`: generate an index of focused handoff artifacts and recommended reading order.

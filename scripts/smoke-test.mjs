@@ -143,6 +143,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_deployment_readiness"),
     "easyar_write_deployment_readiness should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_import_checklist"),
+    "easyar_generate_import_checklist should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_import_checklist"),
+    "easyar_write_import_checklist should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -233,6 +241,26 @@ try {
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
 
   const projectPath = await createUnityProject();
+  const initialImportChecklist = await callTool("easyar_generate_import_checklist", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(initialImportChecklist, "\"readyForFocusedPreparation\": false");
+  assertTextIncludes(initialImportChecklist, "official-unity-plugin-imported");
+  assertTextIncludes(initialImportChecklist, "image-tracking-target-assets-imported");
+
+  const writtenImportChecklist = await callTool("easyar_write_import_checklist", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(writtenImportChecklist, "IMPORT_CHECKLIST.md");
+  const initialImportChecklistMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "IMPORT_CHECKLIST.md"),
+    "utf8"
+  );
+  assert(initialImportChecklistMarkdown.includes("EasyAR Import Checklist - Image Tracking"), "Import checklist markdown should include title");
+  assert(initialImportChecklistMarkdown.includes("official-unity-plugin-imported"), "Import checklist markdown should include plugin check");
+
   const writtenDeploymentReadiness = await callTool("easyar_write_deployment_readiness", {
     projectPath
   });
@@ -250,6 +278,8 @@ try {
     platform: "android"
   });
   assertTextIncludes(imageRunSequence, "\"supportedNow\": true");
+  assertTextIncludes(imageRunSequence, "easyar_generate_import_checklist");
+  assertTextIncludes(imageRunSequence, "easyar_write_import_checklist");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
   assertTextIncludes(imageRunSequence, "easyar_run_unity_compile_check");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
@@ -418,6 +448,15 @@ try {
     ].join("\n"),
     "utf8"
   );
+
+  const readyImportChecklist = await callTool("easyar_generate_import_checklist", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(readyImportChecklist, "\"readyForFocusedPreparation\": true");
+  assertTextIncludes(readyImportChecklist, "Assets/EasyAR/EasyARSense.asset");
+  assertTextIncludes(readyImportChecklist, "Assets/Scenes/ImageTracking.unity");
+  assertTextIncludes(readyImportChecklist, "Assets/Targets/ImageTarget.jpg");
 
   const readySceneAudit = await callTool("easyar_audit_sample_scene", {
     projectPath,
@@ -791,6 +830,7 @@ try {
     sampleId: "cloud-recognition"
   });
   assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
+  assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
   assertTextIncludes(artifactIndex, "ARTIFACT_INDEX.md");
 
