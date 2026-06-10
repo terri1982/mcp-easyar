@@ -61,6 +61,7 @@ easyar_list_samples
 easyar_generate_sample_plan sampleId=image-tracking platform=android
 easyar_generate_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_generate_run_report projectPath=/path/to/UnityProject sampleId=image-tracking
+easyar_write_run_report projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
 
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.

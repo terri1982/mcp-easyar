@@ -167,6 +167,18 @@ try {
   assertTextIncludes(initialRunReport, "\"overallReady\": false");
   assertTextIncludes(initialRunReport, "Fix readiness gaps before Unity batch automation");
 
+  const writtenRunReport = await callTool("easyar_write_run_report", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(writtenRunReport, "RUN_REPORT.md");
+  const runReportMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "RUN_REPORT.md"),
+    "utf8"
+  );
+  assert(runReportMarkdown.includes("EasyAR Focused Run Report - Image Tracking"), "Run report markdown should include title");
+  assert(runReportMarkdown.includes("Next Recommended Phase"), "Run report markdown should include next phase");
+
   const initialReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,
     sampleId: "image-tracking"

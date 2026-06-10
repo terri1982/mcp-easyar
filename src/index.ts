@@ -38,6 +38,7 @@ const toolCatalog = [
   "easyar_generate_sample_plan",
   "easyar_generate_run_sequence",
   "easyar_generate_run_report",
+  "easyar_write_run_report",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -553,7 +554,7 @@ server.tool(
       hasPackagesManifest: await exists(path.join(root, "Packages", "manifest.json")),
       hasProjectSettings: await exists(path.join(root, "ProjectSettings", "ProjectVersion.txt")),
       unityVersion: await readUnityVersion(root),
-      easyarSignals: await findFiles(root, ["Assets", "Packages"], /easyar/i, 80),
+      easyarSignals: filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 80)),
       sampleScenes: await findFiles(root, ["Assets"], /\.(unity)$/i, 120)
     };
 
@@ -588,34 +589,39 @@ server.tool(
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
     const sample = findSample(sampleId);
-    const readiness = await buildSampleReadinessReport(root, sample);
-    const configValidation = await buildLocalConfigValidationReport(root);
-    const scriptReview = await buildScriptReviewReport(root, undefined, 80, maxScriptIssues);
-    const runSequence = buildFocusedRunSequence({
-      projectPath: root,
-      sample,
-      platform: "android",
-      outputPath: `Builds/${sample.id}.apk`,
-      developmentBuild: true
-    });
+    return jsonText(await buildFocusedRunReport(root, sample, maxScriptIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_run_report",
+  "Write a focused sample run report Markdown artifact into the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/RUN_REPORT.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing report.")
+  },
+  async ({ projectPath, sampleId, relativePath, maxScriptIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const report = await buildFocusedRunReport(root, sample, maxScriptIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "RUN_REPORT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildRunReportMarkdown(report), overwrite, written);
 
     return jsonText({
-      projectPath: root,
-      sample: {
-        id: sample.id,
-        name: sample.name,
-        implementationStatus: sample.implementationStatus
-      },
-      overallReady: readiness.ready && configValidation.valid && scriptReview.issueCount === 0,
-      readiness,
-      configValidation,
-      scriptReview,
-      nextRecommendedPhase: chooseNextRunPhase(readiness, configValidation, scriptReview),
-      runSequenceSummary: runSequence.phases.map((phase) => ({
-        name: phase.name,
-        stepCount: phase.steps.length
-      })),
-      security: "Secrets are not returned. This report only reports presence, placeholder status, and static code issues."
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      overallReady: report.overallReady,
+      nextRecommendedPhase: report.nextRecommendedPhase,
+      note: "The report does not include secret values."
     });
   }
 );
@@ -1471,7 +1477,7 @@ async function collectUnityExecutables(dirPath: string, found: Set<string>, dept
 }
 
 async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
-  const easyarSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 120);
+  const easyarSignals = filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 120));
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
   const matchingScenes = matchSampleScenes(sample, sampleScenes);
   const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
@@ -1559,6 +1565,46 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
     matchingScenes,
     nextActions
   };
+}
+
+async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScriptIssues: number) {
+  const readiness = await buildSampleReadinessReport(root, sample);
+  const configValidation = await buildLocalConfigValidationReport(root);
+  const scriptReview = await buildScriptReviewReport(root, undefined, 80, maxScriptIssues);
+  const runSequence = buildFocusedRunSequence({
+    projectPath: root,
+    sample,
+    platform: "android",
+    outputPath: `Builds/${sample.id}.apk`,
+    developmentBuild: true
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    overallReady: readiness.ready && configValidation.valid && scriptReview.issueCount === 0,
+    readiness,
+    configValidation,
+    scriptReview,
+    nextRecommendedPhase: chooseNextRunPhase(readiness, configValidation, scriptReview),
+    runSequenceSummary: runSequence.phases.map((phase) => ({
+      name: phase.name,
+      stepCount: phase.steps.length
+    })),
+    security: "Secrets are not returned. This report only reports presence, placeholder status, and static code issues."
+  };
+}
+
+function filterOfficialEasyARSignals(paths: string[]): string[] {
+  return paths.filter((candidatePath) =>
+    !/^Assets[\/\\]EasyARGenerated[\/\\]/i.test(candidatePath) &&
+    !/^Assets[\/\\]Editor[\/\\]EasyAR.*\.cs$/i.test(candidatePath)
+  );
 }
 
 function matchSampleScenes(sample: SampleInfo, scenePaths: string[]): string[] {
@@ -2320,6 +2366,57 @@ function chooseNextRunPhase(
     return "Fix static C# review issues before compiling in Unity.";
   }
   return "Run mobile settings, Build Settings, and device build helpers from easyar_generate_run_sequence.";
+}
+
+function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRunReport>>): string {
+  const failedReadiness = report.readiness.checks.filter((check) => !check.ok);
+  const failedConfig = report.configValidation.checks.filter((check) => !check.ok);
+  const scriptIssues = report.scriptReview.issues;
+  return [
+    `# EasyAR Focused Run Report - ${report.sample.name}`,
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath}`,
+    `Sample id: ${report.sample.id}`,
+    `Status: ${report.sample.implementationStatus}`,
+    `Overall ready: ${report.overallReady ? "yes" : "no"}`,
+    "",
+    "## Next Recommended Phase",
+    "",
+    report.nextRecommendedPhase,
+    "",
+    "## Readiness",
+    "",
+    `Ready: ${report.readiness.ready ? "yes" : "no"}`,
+    ...markdownIssueList(failedReadiness.map((check) => `${check.id}: ${check.detail}`), "All readiness checks passed."),
+    "",
+    "## Local Config",
+    "",
+    `Valid: ${report.configValidation.valid ? "yes" : "no"}`,
+    ...markdownIssueList(failedConfig.map((check) => `${check.id}: ${check.detail}`), "Local config checks passed."),
+    "",
+    "## Script Review",
+    "",
+    `Reviewed files: ${report.scriptReview.reviewedFileCount}`,
+    `Issue count: ${report.scriptReview.issueCount}`,
+    ...markdownIssueList(scriptIssues.map((issue) => `${issue.severity} ${issue.file}${issue.line ? `:${issue.line}` : ""} - ${issue.title}`), "No static script review issues."),
+    "",
+    "## Run Sequence Summary",
+    "",
+    ...report.runSequenceSummary.map((phase) => `- ${phase.name}: ${phase.stepCount} step(s)`),
+    "",
+    "## Security",
+    "",
+    report.security,
+    ""
+  ].join("\n");
+}
+
+function markdownIssueList(items: string[], emptyMessage: string): string[] {
+  if (items.length === 0) {
+    return [`- ${emptyMessage}`];
+  }
+  return items.map((item) => `- ${item}`);
 }
 
 function extractMethodBody(text: string, methodName: string): string | null {
