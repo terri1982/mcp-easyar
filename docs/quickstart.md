@@ -21,9 +21,10 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 easyar_account_materials sampleId=cloud-recognition
 easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition
 easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition
+easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
 ```
 
-The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. MCP does not ask for EasyAR website passwords and does not store account credentials.
+The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file, the environment-backed writer command, and the validation chain. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 For a user who has not registered yet, the MCP flow is:
 
@@ -31,11 +32,12 @@ For a user who has not registered yet, the MCP flow is:
 2. Send the user to `https://www.easyar.cn/` in their browser. They use the official login/register entry, activate the account if required, and enter the development center there.
 3. After the user returns, ask only which stage is now true: `registered-not-logged-in`, `logged-in`, `has-license`, or `has-cloud-credentials`.
 4. Write `ACCOUNT_ONBOARDING.md`; it records the browser handoff, stage model, return prompts, and secret-handling rules for the next operator or AI tool.
-5. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
-6. For Cloud Recognition, guide them to create or locate CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`.
-7. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
-8. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
-9. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`.
+5. Write `LOCAL_CONFIG_HANDOFF.md`; it gives the user both manual-file and env-backed ways to fill the local config without pasting secrets into chat.
+6. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
+7. For Cloud Recognition, guide them to create or locate CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`.
+8. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
+9. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
+10. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`.
 
 The MCP should never turn registration into a chat form. Login, email activation, password reset, and verification codes stay in the official browser session. MCP only records account stage and local evidence.
 
@@ -169,6 +171,12 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials, or write the local file from environment-backed secrets:
 
 The generated example is valid JSON with an `_instructions` block. It tells first-time users which values come from EasyAR registration/login, which Cloud Recognition/CRS fields must be filled together, which values must never be pasted into chat, and which environment variables can be used with `easyar_write_local_config_from_env`.
+
+For a handoff document that another AI tool or teammate can resume from:
+
+```text
+easyar_write_local_config_handoff projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android accountStage=not-registered
+```
 
 ```bash
 export EASYAR_API_TOKEN=your_registered_user_token

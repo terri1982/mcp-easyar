@@ -69,6 +69,8 @@ const mobilePlatforms = ["android", "ios"] as const;
 const runResultStatuses = ["passed", "failed", "blocked", "not-run"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 const clientEntrypointModes = ["local-dist", "package-bin", "npx"] as const;
+const accountStageValues = ["unknown", "not-registered", "registered-not-logged-in", "logged-in", "has-license", "has-cloud-credentials"] as const;
+type AccountStage = typeof accountStageValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
 const easyarApi = createEasyARApiClient();
@@ -135,6 +137,8 @@ const toolCatalog = [
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
   "easyar_write_local_config_from_env",
+  "easyar_local_config_handoff",
+  "easyar_write_local_config_handoff",
   "easyar_analyze_unity_log",
   "easyar_analyze_latest_unity_log",
   "easyar_prepare_unity_project",
@@ -664,7 +668,7 @@ server.tool(
     projectPath: z.string().optional().describe("Optional Unity project path used to inspect local EasyAR config and Unity bundle identifier."),
     sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs account cloud credentials."),
     platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
-    accountStage: z.enum(["unknown", "not-registered", "registered-not-logged-in", "logged-in", "has-license", "has-cloud-credentials"]).default("unknown").describe("What the user currently knows about their EasyAR account state.")
+    accountStage: z.enum(accountStageValues).default("unknown").describe("What the user currently knows about their EasyAR account state.")
   },
   async ({ projectPath, sampleId, platform, accountStage }) => {
     const root = projectPath ? resolveProjectPath(projectPath) : null;
@@ -684,7 +688,7 @@ server.tool(
     outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
     sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs account cloud credentials."),
     platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
-    accountStage: z.enum(["unknown", "not-registered", "registered-not-logged-in", "logged-in", "has-license", "has-cloud-credentials"]).default("unknown"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
     relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md for Unity projects or EasyARGenerated/ACCOUNT_ONBOARDING.md for outputRoot."),
     overwrite: z.boolean().default(true).describe("Whether to replace an existing account onboarding artifact.")
   },
@@ -2352,6 +2356,59 @@ server.tool(
       requiredMissing: report.requiredMissing,
       envPresence: report.envPresence,
       validation: report.canWrite && written.includes(target) ? await buildLocalConfigValidationReport(root, target) : null,
+      nextActions: report.nextActions,
+      security: report.security
+    });
+  }
+);
+
+server.tool(
+  "easyar_local_config_handoff",
+  "Generate a first-run handoff for registering/logging into EasyAR, collecting account materials, and filling ProjectSettings/EasyAR/easyar.local.json locally.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildLocalConfigHandoffReport(root, sample, platform, accountStage));
+  }
+);
+
+server.tool(
+  "easyar_write_local_config_handoff",
+  "Write a local Markdown handoff that guides first-time EasyAR users from registration/login to safe easyar.local.json validation.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known."),
+    relativePath: z.string().optional().describe("Optional output path inside the project. Defaults to Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing handoff artifact.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const report = await buildLocalConfigHandoffReport(root, sample, platform, accountStage);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(root, "Assets", "EasyARGenerated", "LOCAL_CONFIG_HANDOFF.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildLocalConfigHandoffMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      stage: report.account.stage,
+      localConfigValid: report.localConfig.valid,
+      missingRequiredMaterials: report.accountMaterials.missingRequired,
       nextActions: report.nextActions,
       security: report.security
     });
@@ -8071,6 +8128,120 @@ async function buildLocalConfigFromEnvReport(
   };
 }
 
+async function buildLocalConfigHandoffReport(
+  root: string,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone",
+  accountStage: AccountStage
+) {
+  const onboarding = await buildAccountOnboardingReport(root, sample, platform, accountStage);
+  const accountMaterials = await buildAccountMaterialsReport(root, sample, platform);
+  const localConfig = await buildLocalConfigValidationReport(root);
+  const configPath = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+  const examplePath = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example");
+  const localConfigExists = await exists(configPath);
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const envPresence = [
+    envPresenceItem("easyar.apiBaseUrl", ["EASYAR_API_BASE_URL"], isNonPlaceholderString(envFirst(["EASYAR_API_BASE_URL"]) ?? "https://www.easyar.cn"), "defaults to https://www.easyar.cn when unset"),
+    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"], isNonPlaceholderString(envFirst(["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"])), "required by local validation"),
+    envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"])), "required for focused sample runs"),
+    envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)), "defaults to focused sample identifier when unset"),
+    envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
+    envPresenceItem("easyar.cloudRecognition.appKey", ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
+    envPresenceItem("easyar.cloudRecognition.appSecret", ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking")
+  ];
+  const failedLocalChecks = localConfig.checks.filter((check) => !check.ok).map((check) => check.id);
+  const manualFileSteps = [
+    "Open https://www.easyar.cn/ in a browser and register or log in with the user's EasyAR account.",
+    `Create or locate the EasyAR Sense license for ${platform} and the Unity bundle/package identifier.`,
+    ...(needsCloudRecognition
+      ? ["Create or locate the Cloud Recognition/CRS application and copy appId, appKey, and appSecret locally."]
+      : ["Cloud Recognition credentials are not required for Image Tracking, but can remain empty as a complete empty group."]),
+    "Run easyar_prepare_unity_project if easyar.local.json.example is missing.",
+    `Copy ${path.relative(root, examplePath)} to ${path.relative(root, configPath)}.`,
+    "Fill the JSON file locally. Do not paste account passwords, API tokens, license keys, appKey, or appSecret into the AI chat.",
+    `Run easyar_validate_local_config projectPath=${root}.`
+  ];
+  const envBackedWrite = {
+    command: "easyar_write_local_config_from_env",
+    arguments: {
+      projectPath: root,
+      sampleId: sample.id,
+      targetPlatform: platform
+    },
+    requiredEnv: envPresence
+      .filter((item) => item.field === "easyar.accountToken" || item.field === "easyar.licenseKey" || (needsCloudRecognition && item.field.startsWith("easyar.cloudRecognition.")))
+      .flatMap((item) => item.envNames)
+  };
+  const validationChain = [
+    `easyar_validate_local_config projectPath=${root}`,
+    `easyar_write_import_checklist projectPath=${root} sampleId=${sample.id} platform=${platform}`,
+    `easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=${platform}`,
+    `easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}`,
+    `easyar_next_workflow_step projectPath=${root} sampleId=${sample.id} platform=${platform}`
+  ];
+  const nextActions = Array.from(new Set([
+    ...(onboarding.stage === "not-registered"
+      ? ["Register or log in at https://www.easyar.cn/ before preparing local credentials."]
+      : []),
+    ...(accountMaterials.missingRequired.length > 0
+      ? [`Prepare missing EasyAR material(s): ${accountMaterials.missingRequired.join(", ")}.`]
+      : []),
+    ...(failedLocalChecks.length > 0
+      ? [`Fix local config check(s): ${failedLocalChecks.join(", ")}.`]
+      : []),
+    `Use either the manual file steps or ${envBackedWrite.command}; then run ${validationChain[0]}.`,
+    needsCloudRecognition
+      ? "For Cloud Recognition, appId, appKey, and appSecret must be filled together before the sample can be considered ready."
+      : "For Image Tracking, leave Cloud Recognition credentials empty unless the project also needs Cloud Recognition."
+  ]));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name
+    },
+    platform,
+    account: {
+      requestedStage: accountStage,
+      stage: onboarding.stage,
+      officialLinks: onboarding.officialLinks,
+      firstRunGuide: onboarding.firstRunGuide
+    },
+    accountMaterials: {
+      readyForLocalConfigValidation: accountMaterials.readyForLocalConfigValidation,
+      missingRequired: accountMaterials.missingRequired,
+      materials: accountMaterials.materials
+    },
+    localConfig: {
+      path: configPath,
+      examplePath,
+      exists: localConfigExists,
+      valid: localConfig.valid,
+      failedChecks: failedLocalChecks,
+      nextActions: localConfig.nextActions
+    },
+    envBackedWrite,
+    envPresence,
+    manualFileSteps,
+    validationChain,
+    sampleSpecific: needsCloudRecognition
+      ? [
+          "Cloud Recognition is account-scoped and cannot run with placeholder credentials.",
+          "The MCP server should stop at local-config validation until appId, appKey, and appSecret are present.",
+          "Only presence and placeholder status are reported back to the AI client."
+        ]
+      : [
+          "Image Tracking needs an EasyAR license and target assets, but not Cloud Recognition app credentials.",
+          "Cloud Recognition fields can stay empty as long as appId, appKey, and appSecret are all empty."
+        ],
+    nextActions,
+    security: "This handoff never returns secret values. It guides the user to register/login in the browser and store account-scoped values only in local files or local environment variables."
+  };
+}
+
 function envFirst(names: string[]): string | undefined {
   for (const name of names) {
     const value = process.env[name];
@@ -9978,6 +10149,96 @@ function buildAccountMaterialsMarkdown(report: Awaited<ReturnType<typeof buildAc
     "## Next Actions",
     "",
     ...markdownIssueList(report.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    report.security,
+    ""
+  ].join("\n");
+}
+
+function buildLocalConfigHandoffMarkdown(report: Awaited<ReturnType<typeof buildLocalConfigHandoffReport>>): string {
+  return [
+    "# EasyAR Local Config Handoff",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath}`,
+    `Sample: ${report.sample.name} (${report.sample.id})`,
+    `Platform: ${report.platform}`,
+    `Requested account stage: ${report.account.requestedStage}`,
+    `Derived account stage: ${report.account.stage}`,
+    "",
+    "## Official Browser Handoff",
+    "",
+    `- EasyAR website: ${report.account.officialLinks.website}`,
+    `- Register/login entry: ${report.account.officialLinks.registerAndLogin}`,
+    `- Development center: ${report.account.officialLinks.developCenter}`,
+    "",
+    "A first-time user may not have an EasyAR account yet. Start with the browser flow, then return here and continue with local config validation.",
+    "",
+    "## First Run Routes",
+    "",
+    ...report.account.firstRunGuide.routes.flatMap((route) => [
+      `### ${route.active ? "[NEXT] " : ""}${route.answer}`,
+      "",
+      `Guide: ${route.guide}`,
+      ...route.browserActions.map((action) => `- ${action}`),
+      `Return prompt: ${route.returnPrompt}`,
+      ""
+    ]),
+    "## Account Materials",
+    "",
+    `Ready for local config validation: ${report.accountMaterials.readyForLocalConfigValidation ? "yes" : "no"}`,
+    "",
+    ...report.accountMaterials.materials.flatMap((item) => [
+      `### ${item.label}`,
+      "",
+      `Required: ${item.required ? "yes" : "no"}`,
+      `Present: ${item.present ? "yes" : "no"}`,
+      `Source: ${item.source}`,
+      `Store in: ${item.storeIn}`,
+      `Share policy: ${item.sharePolicy}`,
+      ""
+    ]),
+    "Missing required materials:",
+    ...markdownIssueList(report.accountMaterials.missingRequired, "No required account materials are missing."),
+    "",
+    "## Local Config",
+    "",
+    `Config path: ${report.localConfig.path}`,
+    `Example path: ${report.localConfig.examplePath}`,
+    `Exists: ${report.localConfig.exists ? "yes" : "no"}`,
+    `Valid: ${report.localConfig.valid ? "yes" : "no"}`,
+    "",
+    "Failed checks:",
+    ...markdownIssueList(report.localConfig.failedChecks, "No failed local config checks."),
+    "",
+    "## Manual File Steps",
+    "",
+    ...report.manualFileSteps.map((step, index) => `${index + 1}. ${step}`),
+    "",
+    "## Environment-Backed Write",
+    "",
+    `Tool: ${report.envBackedWrite.command}`,
+    `Arguments: ${JSON.stringify(report.envBackedWrite.arguments)}`,
+    "",
+    "Required env names:",
+    ...Array.from(new Set(report.envBackedWrite.requiredEnv)).map((name) => `- ${name}`),
+    "",
+    "Current env presence:",
+    ...report.envPresence.map((item) => `- ${item.field}: ${item.present ? "present" : "missing"} (${item.envNames.join(" or ")}) - ${item.note}`),
+    "",
+    "## Validation Chain",
+    "",
+    ...report.validationChain.map((call, index) => `${index + 1}. ${call}`),
+    "",
+    "## Sample Notes",
+    "",
+    ...report.sampleSpecific.map((item) => `- ${item}`),
+    "",
+    "## Next Actions",
+    "",
+    ...report.nextActions.map((action) => `- ${action}`),
     "",
     "## Security",
     "",

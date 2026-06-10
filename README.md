@@ -198,6 +198,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
 
+For Unity-project handoff, call `easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`. It writes `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`, combining the official browser registration/login path, account materials checklist, manual `easyar.local.json` steps, environment-backed writer command, and validation chain.
+
 For brand-new users, the intended conversation is:
 
 1. MCP asks one lightweight question: "Do you already have an EasyAR account?"
@@ -211,10 +213,11 @@ The first MCP screen is intentionally account-stage driven:
 1. `easyar_server_status` shows `preflightFirst=true` and suggests `easyar_account_onboarding accountStage=not-registered` as a valid starting point.
 2. `easyar_write_account_onboarding` creates `ACCOUNT_ONBOARDING.md` so another AI tool or human operator can resume the same browser handoff.
 3. `easyar_write_account_materials` lists which official materials are needed, where to find them, where to store them locally, and whether they are safe to share.
-4. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
-5. `easyar_validate_local_config` checks only presence and placeholders.
-6. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
-7. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, run result, and latest log evidence all support a passed focused run-through.
+4. `easyar_write_local_config_handoff` creates `LOCAL_CONFIG_HANDOFF.md`, the safest bridge from EasyAR website registration/login to local secret storage.
+5. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
+6. `easyar_validate_local_config` checks only presence and placeholders.
+7. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
+8. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, run result, and latest log evidence all support a passed focused run-through.
 
 ## Tools
 
@@ -278,6 +281,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.
 - `easyar_write_local_config_from_env`: write `ProjectSettings/EasyAR/easyar.local.json` from local environment variables such as `EASYAR_API_TOKEN`, `EASYAR_LICENSE_KEY`, and Cloud Recognition env vars without returning secret values.
+- `easyar_local_config_handoff`: generate a first-run handoff from EasyAR website registration/login to safe local `easyar.local.json` setup and validation.
+- `easyar_write_local_config_handoff`: write the first-run local config handoff to `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
 - `easyar_prepare_unity_project`: create a sample runner, focused sample runbook, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_sample_validation_helper`: create `Assets/Editor/EasyARSampleValidationHelper.cs` for Unity-side focused sample validation, excluding generated MCP helper files from official EasyAR import signals.

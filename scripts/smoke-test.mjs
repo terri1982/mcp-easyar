@@ -300,6 +300,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_from_env"),
     "easyar_write_local_config_from_env should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_local_config_handoff"),
+    "easyar_local_config_handoff should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_handoff"),
+    "easyar_write_local_config_handoff should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -713,6 +721,39 @@ try {
   assert(accountMaterialsMarkdown.includes("easyar.cloudRecognition.appSecret"), "Account materials markdown should list cloud secret field name");
   assert(accountMaterialsMarkdown.includes("Secret. Never paste into chat"), "Account materials markdown should include sharing policy");
   assert(!accountMaterialsMarkdown.includes("test-cloud-app-secret"), "Account materials markdown should not include secret values");
+
+  const localConfigHandoff = await callTool("easyar_local_config_handoff", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountStage: "not-registered"
+  });
+  assertTextIncludes(localConfigHandoff, "\"stage\": \"not-registered\"");
+  assertTextIncludes(localConfigHandoff, "easyar_write_local_config_from_env");
+  assertTextIncludes(localConfigHandoff, "EASYAR_CLOUD_APP_SECRET");
+  assertTextIncludes(localConfigHandoff, "https://www.easyar.cn/");
+  assert(!extractText(localConfigHandoff).includes("env-test-account-token"), "Local config handoff should not return account token value");
+  assert(!extractText(localConfigHandoff).includes("env-test-license-key"), "Local config handoff should not return license value");
+
+  const writtenLocalConfigHandoff = await callTool("easyar_write_local_config_handoff", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountStage: "not-registered"
+  });
+  assertTextIncludes(writtenLocalConfigHandoff, "LOCAL_CONFIG_HANDOFF.md");
+  const localConfigHandoffMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "LOCAL_CONFIG_HANDOFF.md"),
+    "utf8"
+  );
+  assert(localConfigHandoffMarkdown.includes("EasyAR Local Config Handoff"), "Local config handoff markdown should include title");
+  assert(localConfigHandoffMarkdown.includes("Official Browser Handoff"), "Local config handoff markdown should include browser handoff");
+  assert(localConfigHandoffMarkdown.includes("No, I have not registered yet."), "Local config handoff markdown should include new-user route");
+  assert(localConfigHandoffMarkdown.includes("ProjectSettings/EasyAR/easyar.local.json"), "Local config handoff markdown should include local config path");
+  assert(localConfigHandoffMarkdown.includes("EASYAR_CLOUD_APP_SECRET"), "Local config handoff markdown should list cloud secret env name");
+  assert(localConfigHandoffMarkdown.includes("never returns secret values"), "Local config handoff markdown should include security policy");
+  assert(!localConfigHandoffMarkdown.includes("env-test-account-token"), "Local config handoff markdown should not include account token value");
+  assert(!localConfigHandoffMarkdown.includes("env-test-license-key"), "Local config handoff markdown should not include license value");
 
   const initialWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,
