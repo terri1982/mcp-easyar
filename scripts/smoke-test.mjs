@@ -2018,6 +2018,21 @@ try {
   });
   assertTextExcludes(nativeExtensionNoticeAnalysis, "image-tracking-target-load");
 
+  const harmlessAndroidAssetLogAnalysis = await callTool("easyar_analyze_unity_log", {
+    logText: [
+      "Copying Assets/Plugins/Android/permission.CAMERA.aar",
+      "DisplayProgressbar: Detecting Android SDK",
+      "Android SDK Root: /Applications/Unity/Hub/Editor/2022.3.62f3/PlaybackEngines/AndroidPlayer/SDK"
+    ].join("\n")
+  });
+  assertTextExcludes(harmlessAndroidAssetLogAnalysis, "camera-permission");
+  assertTextExcludes(harmlessAndroidAssetLogAnalysis, "android-gradle");
+
+  const failedGradleLogAnalysis = await callTool("easyar_analyze_unity_log", {
+    logText: "GradleInvokationException: Could not download com.android.tools.build:gradle:7.4.2"
+  });
+  assertTextIncludes(failedGradleLogAnalysis, "android-gradle");
+
   const cloudLogAnalysis = await callTool("easyar_analyze_unity_log", {
     sampleId: "cloud-recognition",
     logText: "CloudRecognizer unauthorized: appKey invalid"

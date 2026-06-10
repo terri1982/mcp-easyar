@@ -10708,7 +10708,7 @@ function analyzeUnityLog(logText: string, sample: SampleInfo | null = null) {
     {
       id: "camera-permission",
       severity: "high",
-      pattern: /(camera|webcam)[\s\S]{0,120}(permission|denied|not authorized|unauthorized)|permission[\s\S]{0,120}(camera|webcam)/i,
+      pattern: /\b(camera|webcam)\b[\s\S]{0,120}\b(permission\s+(denied|missing|disabled)|denied|not authorized|unauthorized)\b|\bpermission\b[\s\S]{0,120}\b(denied|missing|disabled|not authorized|unauthorized)\b[\s\S]{0,120}\b(camera|webcam)\b/i,
       title: "Camera permission problem",
       actions: [
         "Enable camera permission in Android Player Settings or iOS Info.plist.",
@@ -10741,7 +10741,7 @@ function analyzeUnityLog(logText: string, sample: SampleInfo | null = null) {
     {
       id: "android-gradle",
       severity: "medium",
-      pattern: /(gradle|android).{0,160}(failed|exception|sdk|manifest|minSdk|targetSdk|duplicate class)/i,
+      pattern: /(gradle|android).{0,200}(failed|failure|exception|error|could not|unable|manifest merger|minSdk|targetSdk|duplicate class)|\b(GradleInvokationException|FAILURE:\s*Build failed|Execution failed for task|Could not download)\b/i,
       title: "Android/Gradle build problem",
       actions: [
         "Check Android SDK, Gradle, minSdkVersion, targetSdkVersion, and manifest permissions.",
