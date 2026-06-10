@@ -168,6 +168,14 @@ try {
     "easyar_write_deployment_readiness should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_release_manifest"),
+    "easyar_release_manifest should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_release_manifest"),
+    "easyar_write_release_manifest should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_next_workflow_step"),
     "easyar_next_workflow_step should be listed"
   );
@@ -304,6 +312,26 @@ try {
   assertTextIncludes(deploymentReadiness, "account-status-endpoint");
   assertTextIncludes(deploymentReadiness, "cloud-credentials-endpoint");
   assertTextIncludes(deploymentReadiness, "\"focusedSamples\"");
+
+  const releaseManifest = await callTool("easyar_release_manifest", {});
+  assertTextIncludes(releaseManifest, "\"name\": \"mcp-easyar\"");
+  assertTextIncludes(releaseManifest, "\"binName\": \"easyar-mcp\"");
+  assertTextIncludes(releaseManifest, "easyar_check_client_setup");
+  assertTextIncludes(releaseManifest, "image-tracking");
+  assertTextIncludes(releaseManifest, "cloud-recognition");
+
+  const releaseManifestRoot = await createUnityProject();
+  const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {
+    outputRoot: releaseManifestRoot
+  });
+  assertTextIncludes(writtenReleaseManifest, "RELEASE_MANIFEST.md");
+  const releaseManifestMarkdown = await readFile(
+    path.join(releaseManifestRoot, "docs", "RELEASE_MANIFEST.md"),
+    "utf8"
+  );
+  assert(releaseManifestMarkdown.includes("mcp-easyar Release Manifest"), "Release manifest markdown should include title");
+  assert(releaseManifestMarkdown.includes("easyar-mcp"), "Release manifest markdown should include bin name");
+  await rm(releaseManifestRoot, { recursive: true, force: true });
 
   const unityEnvironment = await callTool("easyar_unity_environment", {});
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");

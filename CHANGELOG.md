@@ -26,6 +26,7 @@ Initial public MVP for `mcp-easyar`.
 - Unity-side focused sample validation filters generated MCP helper files and verifies the matching sample scene is first in Build Settings.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Client setup validation and `CLIENT_SETUP.md` report generation for Codex, Claude Desktop, and generic stdio MCP clients.
+- Consumer-facing release/install manifest generation and `docs/RELEASE_MANIFEST.md` artifact writing.
 - Authorization status checks that do not expose secret values.
 - Configurable official EasyAR account-status and license-validation endpoint calls.
 - Configurable official EasyAR downloads endpoint calls for account-scoped SDK/sample package discovery.

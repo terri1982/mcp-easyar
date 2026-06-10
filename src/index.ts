@@ -86,6 +86,8 @@ const toolCatalog = [
   "easyar_write_client_setup",
   "easyar_deployment_readiness",
   "easyar_write_deployment_readiness",
+  "easyar_release_manifest",
+  "easyar_write_release_manifest",
   "easyar_generate_sample_plan",
   "easyar_next_workflow_step",
   "easyar_write_workflow_state",
@@ -757,6 +759,42 @@ server.tool(
       warningCount: report.warnings.length,
       nextActions: report.nextActions,
       note: "The deployment readiness report does not include secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_release_manifest",
+  "Generate a consumer-facing install and release manifest for mcp-easyar.",
+  {},
+  async () => jsonText(await buildReleaseManifest())
+);
+
+server.tool(
+  "easyar_write_release_manifest",
+  "Write a consumer-facing install and release manifest as Markdown.",
+  {
+    outputRoot: z.string().describe("Directory that should receive RELEASE_MANIFEST.md."),
+    relativePath: z.string().optional().describe("Optional report path inside outputRoot. Defaults to docs/RELEASE_MANIFEST.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing release manifest.")
+  },
+  async ({ outputRoot, relativePath, overwrite }) => {
+    const root = resolveProjectPath(outputRoot);
+    await ensureDirectory(root);
+    const manifest = await buildReleaseManifest();
+    const target = path.resolve(root, relativePath ?? path.join("docs", "RELEASE_MANIFEST.md"));
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildReleaseManifestMarkdown(manifest), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      packageName: manifest.package.name,
+      version: manifest.package.version,
+      readyForInstallDocs: manifest.readyForInstallDocs,
+      missingCount: manifest.missingRequiredFiles.length,
+      nextActions: manifest.nextActions
     });
   }
 );
@@ -2431,6 +2469,114 @@ function clientSetupAction(id: string): string {
     return "Use the mcp-easyar repository/package, not an old renamed checkout.";
   }
   return "Review the generated client setup report and rerun easyar_check_client_setup.";
+}
+
+async function buildReleaseManifest() {
+  const packageJson = await readPackageMetadata();
+  const requiredFiles = [
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md",
+    "docs/quickstart.md",
+    "assets/easyar-icon.png",
+    "dist/index.js",
+    "dist/easyar-api.js",
+    ".github/workflows/ci.yml"
+  ];
+  const requiredFileStatuses = await Promise.all(requiredFiles.map(async (relativePath) => ({
+    path: relativePath,
+    exists: await exists(path.join(process.cwd(), relativePath))
+  })));
+  const missingRequiredFiles = requiredFileStatuses.filter((file) => !file.exists).map((file) => file.path);
+  const packageText = await readFile(path.join(process.cwd(), "package.json"), "utf8");
+  const parsedPackage = JSON.parse(packageText) as {
+    description?: string;
+    engines?: Record<string, string>;
+    scripts?: Record<string, string>;
+    keywords?: string[];
+    files?: string[];
+  };
+  const binName = packageJson.binName ?? "easyar-mcp";
+  const installCommands = [
+    "npm install",
+    "npm run build",
+    "npm start"
+  ];
+  const verificationCommands = [
+    "npm run typecheck",
+    "npm test",
+    "npm run bin:smoke",
+    "npm run pack:check"
+  ];
+  const mcpEntrypoints = [
+    {
+      label: "Built dist entrypoint",
+      command: "node",
+      args: [path.resolve(process.cwd(), "dist", "index.js")]
+    },
+    {
+      label: "Package bin",
+      command: binName,
+      args: []
+    }
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    package: {
+      name: packageJson.name,
+      version: packageJson.version,
+      description: parsedPackage.description ?? null,
+      binName,
+      repository: packageJson.repository,
+      homepage: "https://github.com/terri1982/mcp-easyar#readme",
+      node: parsedPackage.engines?.node ?? ">=20",
+      keywords: parsedPackage.keywords ?? []
+    },
+    focusedScope: {
+      focusedSamples: focusedSamples().map((sample) => sample.id),
+      deferredSamples: deferredSamples().map((sample) => sample.id)
+    },
+    installCommands,
+    verificationCommands,
+    mcpEntrypoints,
+    clientSetupTools: [
+      "easyar_generate_client_config",
+      "easyar_check_client_setup",
+      "easyar_write_client_setup"
+    ],
+    requiredEnvironment: [
+      "EASYAR_API_BASE_URL",
+      "EASYAR_API_TOKEN",
+      "EASYAR_ACCOUNT_STATUS_ENDPOINT",
+      "EASYAR_LICENSE_VALIDATE_ENDPOINT",
+      "EASYAR_DOWNLOADS_ENDPOINT",
+      "EASYAR_CLOUD_CREDENTIALS_ENDPOINT",
+      "EASYAR_UNITY_PATH"
+    ],
+    firstCalls: [
+      "easyar_server_status",
+      "easyar_release_manifest",
+      "easyar_check_client_setup",
+      "easyar_auth_status",
+      "easyar_check_official_access",
+      "easyar_next_workflow_step"
+    ],
+    files: requiredFileStatuses,
+    packageFiles: parsedPackage.files ?? [],
+    scripts: parsedPackage.scripts ?? {},
+    readyForInstallDocs: missingRequiredFiles.length === 0 && packageJson.name === serverName && packageJson.binName === "easyar-mcp",
+    missingRequiredFiles,
+    nextActions: missingRequiredFiles.length > 0
+      ? missingRequiredFiles.map((relativePath) => `Restore or generate required release file: ${relativePath}`)
+      : [
+          "Run verification commands before publishing or tagging a release.",
+          "Use easyar_check_client_setup to validate the MCP client config path before giving it to Codex or Claude.",
+          "Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files."
+        ],
+    security: "The release manifest is safe to commit. It lists required environment variable names and placeholder commands, not secret values."
+  };
 }
 
 function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {
@@ -5654,6 +5800,69 @@ function buildClientSetupMarkdown(report: Awaited<ReturnType<typeof buildClientS
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildReleaseManifest>>): string {
+  return [
+    "# mcp-easyar Release Manifest",
+    "",
+    `Generated at: ${manifest.generatedAt}`,
+    `Package: ${manifest.package.name ?? "unknown"} ${manifest.package.version ?? "unknown"}`,
+    `Bin: ${manifest.package.binName}`,
+    `Node: ${manifest.package.node}`,
+    `Repository: ${manifest.package.repository ?? "unknown"}`,
+    `Ready for install docs: ${manifest.readyForInstallDocs ? "yes" : "no"}`,
+    "",
+    "## Focused Scope",
+    "",
+    `Focused samples: ${manifest.focusedScope.focusedSamples.join(", ")}`,
+    `Deferred samples: ${manifest.focusedScope.deferredSamples.join(", ")}`,
+    "",
+    "## Install Commands",
+    "",
+    ...manifest.installCommands.map((command) => `- \`${command}\``),
+    "",
+    "## MCP Entrypoints",
+    "",
+    ...manifest.mcpEntrypoints.map((entrypoint) => `- ${entrypoint.label}: \`${[entrypoint.command, ...entrypoint.args].join(" ")}\``),
+    "",
+    "## Verification Commands",
+    "",
+    ...manifest.verificationCommands.map((command) => `- \`${command}\``),
+    "",
+    "## First MCP Calls",
+    "",
+    ...manifest.firstCalls.map((call) => `- \`${call}\``),
+    "",
+    "## Client Setup Tools",
+    "",
+    ...manifest.clientSetupTools.map((tool) => `- \`${tool}\``),
+    "",
+    "## Required Environment",
+    "",
+    ...manifest.requiredEnvironment.map((name) => `- \`${name}\``),
+    "",
+    "## Required Files",
+    "",
+    ...manifest.files.map((file) => `- ${file.exists ? "OK" : "MISSING"} ${file.path}`),
+    "",
+    "## Package Files",
+    "",
+    ...manifest.packageFiles.map((file) => `- ${file}`),
+    "",
+    "## Scripts",
+    "",
+    ...Object.entries(manifest.scripts).map(([name, command]) => `- \`${name}\`: \`${command}\``),
+    "",
+    "## Next Actions",
+    "",
+    ...manifest.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    manifest.security,
     ""
   ].join("\n");
 }

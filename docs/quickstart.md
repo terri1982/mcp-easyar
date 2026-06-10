@@ -15,6 +15,7 @@ Ask the MCP server for a client snippet:
 
 ```text
 easyar_server_status
+easyar_release_manifest
 easyar_generate_client_config client=claude-desktop
 easyar_check_client_setup client=claude-desktop serverPath=/absolute/path/to/mcp-easyar/dist/index.js
 easyar_write_client_setup outputRoot=/path/to/report-folder client=claude-desktop serverPath=/absolute/path/to/mcp-easyar/dist/index.js
