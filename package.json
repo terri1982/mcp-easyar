@@ -6,9 +6,18 @@
   "bin": {
     "easyar-mcp": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "docs",
+    "assets/easyar-icon.png",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "pack:check": "npm run build && npm pack --dry-run",
     "start": "node dist/index.js",
     "test": "npm run build && node scripts/smoke-test.mjs",
     "typecheck": "tsc --noEmit"

@@ -98,6 +98,7 @@ Run checks:
 npm run build
 npm run typecheck
 npm test
+npm run pack:check
 ```
 
 ## Quickstart
