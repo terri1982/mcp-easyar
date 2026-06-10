@@ -76,6 +76,7 @@ npm run pack:check
 - `easyar_auth_status`
 - `easyar_check_official_access`
 - `easyar_next_workflow_step`
+- `easyar_write_completion_report`
 - `easyar_write_issue_report`
 
 ## Client Setup Tools

@@ -175,6 +175,14 @@ try {
     "easyar_write_run_result should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_completion_report"),
+    "easyar_generate_completion_report should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_completion_report"),
+    "easyar_write_completion_report should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_issue_report"),
     "easyar_generate_issue_report should be listed"
   );
@@ -942,6 +950,31 @@ try {
   assert(deviceValidationMarkdown.includes("image-target-detection"), "Device validation markdown should include image target test step");
   assert(deviceValidationMarkdown.includes("Pixel test device"), "Device validation markdown should include device label");
 
+  const notRunCompletionReport = await callTool("easyar_generate_completion_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    outputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(notRunCompletionReport, "\"completionStatus\": \"not-run\"");
+  assertTextIncludes(notRunCompletionReport, "\"runThroughComplete\": false");
+  assertTextIncludes(notRunCompletionReport, "RUN_RESULT.md");
+
+  const writtenNotRunCompletionReport = await callTool("easyar_write_completion_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    outputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(writtenNotRunCompletionReport, "COMPLETION_REPORT.md");
+  const completionReportMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "COMPLETION_REPORT.md"),
+    "utf8"
+  );
+  assert(completionReportMarkdown.includes("EasyAR Completion Report - Image Tracking"), "Completion report markdown should include title");
+  assert(completionReportMarkdown.includes("Completion status: not-run"), "Completion report markdown should include not-run status");
+  assert(completionReportMarkdown.includes("Run-through complete: no"), "Completion report markdown should clearly mark incomplete run-through");
+
   const preparedWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,
     sampleId: "image-tracking",
@@ -1396,6 +1429,15 @@ try {
   assert(runResultMarkdown.includes("Overall status: blocked"), "Run result markdown should include overall status");
   assert(runResultMarkdown.includes("appKey=<redacted>"), "Run result markdown should redact sensitive notes");
 
+  const blockedCompletionReport = await callTool("easyar_generate_completion_report", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(blockedCompletionReport, "\"completionStatus\": \"blocked\"");
+  assertTextIncludes(blockedCompletionReport, "\"runThroughComplete\": false");
+  assertTextIncludes(blockedCompletionReport, "\"latestRunResultStatus\": \"blocked\"");
+
   const issueReport = await callTool("easyar_generate_issue_report", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -1472,6 +1514,7 @@ try {
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
   assertTextIncludes(artifactIndex, "SAMPLE_IMPORT_GUIDE.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
+  assertTextIncludes(artifactIndex, "COMPLETION_REPORT.md");
   assertTextIncludes(artifactIndex, "ISSUE_REPORT.md");
   assertTextIncludes(artifactIndex, "PROGRAMMING_CONTEXT.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
@@ -1494,6 +1537,7 @@ try {
   assert(artifactIndexMarkdown.includes("UNITY_ENVIRONMENT.md"), "Artifact index markdown should list Unity environment");
   assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
+  assert(artifactIndexMarkdown.includes("COMPLETION_REPORT.md"), "Artifact index markdown should list completion report");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
   assert(artifactIndexMarkdown.includes("PROGRAMMING_CONTEXT.md"), "Artifact index markdown should list programming context");
   assert(
@@ -1503,6 +1547,10 @@ try {
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("SUPPORT_BUNDLE.md"),
     "Artifact read order should place preflight before support bundle"
+  );
+  assert(
+    artifactIndexMarkdown.indexOf("RUN_RESULT.md") < artifactIndexMarkdown.indexOf("COMPLETION_REPORT.md"),
+    "Artifact read order should place run result before completion report"
   );
   assert(
     artifactIndexMarkdown.indexOf("PROGRAMMING_CONTEXT.md") < artifactIndexMarkdown.indexOf("CODE_PLAN.md"),

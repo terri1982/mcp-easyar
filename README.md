@@ -189,6 +189,7 @@ The first MCP screen is intentionally account-stage driven:
 4. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
 5. `easyar_validate_local_config` checks only presence and placeholders.
 6. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
+7. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, run result, and latest log evidence all support a passed focused run-through.
 
 ## Tools
 
@@ -237,6 +238,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_device_validation_checklist`: write the real-device validation checklist to `Assets/EasyARGenerated/<sampleId>/DEVICE_VALIDATION.md`.
 - `easyar_generate_run_result`: generate a focused sample run result summary for compile, build, or device validation attempts.
 - `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
+- `easyar_generate_completion_report`: summarize final focused sample completion status across preflight, device validation, `RUN_RESULT.md`, and latest Unity log evidence.
+- `easyar_write_completion_report`: write the final focused completion report to `Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md`.
 - `easyar_generate_issue_report`: generate a redacted GitHub issue body for focused Image Tracking or Cloud Recognition failures.
 - `easyar_write_issue_report`: write the redacted issue report to `Assets/EasyARGenerated/<sampleId>/ISSUE_REPORT.md`.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.

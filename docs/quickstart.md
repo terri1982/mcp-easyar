@@ -31,6 +31,7 @@ For a user who has not registered yet, the MCP flow is:
 5. For Cloud Recognition, guide them to create or locate CRS/Cloud Recognition `appId`, `appKey`, and `appSecret`.
 6. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, then let `easyar_validate_local_config` report only presence and placeholder problems.
 7. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
+8. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`.
 
 `easyar_write_artifact_index` includes `ACCOUNT_ONBOARDING.md` and `ACCOUNT_MATERIALS.md` in the handoff reading order so another AI tool can see account prerequisites before trying Unity validation.
 
@@ -199,6 +200,15 @@ easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.E
 For repeatable diagnostics, pass `logPath=Logs/mcp-easyar-ConfigureBuildSettings.log` or follow the `easyar_generate_run_sequence` output, which includes project-local log paths for Unity batch calls.
 
 When `sampleId` is provided, `easyar_run_unity_compile_check` and `easyar_run_unity_method` return focused log diagnostics plus a `suggestedRunResultCall`. `easyar_generate_run_sequence` includes `sampleId`, `platform`, and project-local `logPath` arguments on Unity batch steps so the suggested `easyar_write_run_result` call can update `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md` after compile, Build Settings, sample validation, build, or device attempts.
+
+After `RUN_RESULT.md` is recorded, generate the final focused completion report:
+
+```text
+easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
+easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
+```
+
+`COMPLETION_REPORT.md` parses the latest `RUN_RESULT.md`, checks focused preflight readiness again, verifies device-validation blockers, and summarizes latest Unity log diagnostics. It reports `not-run` when no run result exists, `blocked` or `failed` when the latest evidence is not passed, and `passed` only when the focused sample has evidence for a completed run-through.
 
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 

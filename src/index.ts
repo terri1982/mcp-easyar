@@ -120,6 +120,8 @@ const toolCatalog = [
   "easyar_write_device_validation_checklist",
   "easyar_generate_run_result",
   "easyar_write_run_result",
+  "easyar_generate_completion_report",
+  "easyar_write_completion_report",
   "easyar_generate_issue_report",
   "easyar_write_issue_report",
   "easyar_inspect_unity_project",
@@ -1821,6 +1823,72 @@ server.tool(
       stepCount: result.steps.length,
       nextActions: result.nextActions,
       note: "The run result does not include secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_completion_report",
+  "Generate the final focused sample completion report, combining preflight, device validation, latest run result, and Unity log evidence.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, sampleId, platform, outputPath, maxScriptIssues, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    return jsonText(await buildCompletionReport(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues, maxLogBytes, maxLogIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_completion_report",
+  "Write the final focused sample completion report to Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing completion report.")
+  },
+  async ({ projectPath, sampleId, platform, outputPath, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    const report = await buildCompletionReport(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues, maxLogBytes, maxLogIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "COMPLETION_REPORT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildCompletionReportMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      completionStatus: report.completionStatus,
+      runThroughComplete: report.runThroughComplete,
+      evidenceCount: report.evidence.length,
+      blockerCount: report.blockers.length,
+      nextActions: report.nextActions,
+      note: "The completion report summarizes evidence only. It does not contain secret values or raw logs."
     });
   }
 );
@@ -5215,6 +5283,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "SUPPORT_BUNDLE.md",
     "DEVICE_VALIDATION.md",
     "RUN_RESULT.md",
+    "COMPLETION_REPORT.md",
     "ISSUE_REPORT.md",
     "PROGRAMMING_CONTEXT.md",
     "CODE_PLAN.md",
@@ -5324,6 +5393,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "RUN_RESULT.md"),
       purpose: "Latest compile, build, or device validation outcome.",
       generateWith: `easyar_write_run_result sampleId=${sample.id}`
+    },
+    {
+      name: "Completion Report",
+      relativePath: path.join(base, "COMPLETION_REPORT.md"),
+      purpose: "Final focused run-through status across preflight, device validation, run result, and latest log evidence.",
+      generateWith: `easyar_write_completion_report sampleId=${sample.id}`
     },
     {
       name: "Issue Report",
@@ -5531,6 +5606,262 @@ async function buildRunResult(input: {
     nextActions: recommendedNextActions,
     security: "Secret values are not returned. Do not include license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in run result notes or evidence."
   };
+}
+
+async function buildCompletionReport(
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  outputPath: string,
+  maxScriptIssues: number,
+  maxLogBytes: number,
+  maxLogIssues: number
+) {
+  const [
+    preflight,
+    deviceValidation,
+    latestLog,
+    runResultArtifact
+  ] = await Promise.all([
+    buildFocusedPreflight(root, sample, platform, outputPath, maxScriptIssues),
+    buildDeviceValidationChecklist(root, sample, platform, undefined, outputPath),
+    buildLatestLogDiagnostic(root, sample, maxLogBytes, maxLogIssues),
+    readRunResultArtifact(root, sample)
+  ]);
+  const preflightPassed = preflight.readyForDeviceBuild;
+  const deviceReady = deviceValidation.readyForDeviceValidation;
+  const runResultPassed = runResultArtifact.overallStatus === "passed";
+  const hasRunResult = runResultArtifact.exists;
+  const hasBlockingLogIssues = latestLog.issues.some((issue) => issue.severity === "high");
+  const completionStatus = chooseCompletionStatus(hasRunResult, runResultArtifact.overallStatus, preflightPassed, deviceReady, hasBlockingLogIssues);
+  const runThroughComplete = completionStatus === "passed";
+  const requiredEvidence = [
+    {
+      id: "focused-preflight",
+      required: true,
+      passed: preflightPassed,
+      detail: "PREFLIGHT.md must report readyForDeviceBuild=true."
+    },
+    {
+      id: "device-validation-ready",
+      required: true,
+      passed: deviceReady,
+      detail: "DEVICE_VALIDATION.md must have no sample/import/scene blockers before real-device testing."
+    },
+    {
+      id: "run-result-passed",
+      required: true,
+      passed: runResultPassed,
+      detail: "RUN_RESULT.md must exist and record Overall status: passed after real device validation."
+    },
+    {
+      id: "latest-log-clean",
+      required: false,
+      passed: !hasBlockingLogIssues,
+      detail: "Latest Unity log diagnostics should not contain known error patterns for the focused sample."
+    },
+    ...sampleDevicePassCriteria(sample).map((criterion, index) => ({
+      id: `sample-pass-criterion-${index + 1}`,
+      required: true,
+      passed: runResultPassed,
+      detail: criterion
+    }))
+  ];
+  const evidence = [
+    {
+      id: "preflight",
+      path: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "PREFLIGHT.md")),
+      status: preflightPassed ? "passed" : "blocked",
+      detail: preflightPassed ? "Focused preflight is ready for device build." : `${preflight.blockers.length} preflight blocker(s) remain.`
+    },
+    {
+      id: "device-validation",
+      path: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "DEVICE_VALIDATION.md")),
+      status: deviceReady ? "passed" : "blocked",
+      detail: deviceReady ? "Device validation checklist is ready to execute." : `${deviceValidation.blockers.length} device validation blocker(s) remain.`
+    },
+    {
+      id: "run-result",
+      path: runResultArtifact.relativePath,
+      status: runResultArtifact.exists ? runResultArtifact.overallStatus ?? "unknown" : "missing",
+      detail: runResultArtifact.exists
+        ? `Recorded overall status: ${runResultArtifact.overallStatus ?? "unknown"}.`
+        : "RUN_RESULT.md has not been written yet."
+    },
+    {
+      id: "latest-unity-log",
+      path: latestLog.logPath ? path.relative(root, latestLog.logPath) : "none",
+      status: hasBlockingLogIssues ? "failed" : latestLog.analyzed ? "checked" : "not-analyzed",
+      detail: latestLog.analyzed ? `${latestLog.issueCount} known focused log issue(s) detected.` : "No latest Unity log was available for analysis."
+    }
+  ];
+  const blockers = [
+    ...preflight.blockers.map((blocker) => ({
+      id: `preflight/${blocker.id}`,
+      detail: blocker.detail,
+      action: blocker.action
+    })),
+    ...deviceValidation.blockers.map((blocker) => ({
+      id: `device/${blocker.id}`,
+      detail: blocker.detail,
+      action: blocker.action
+    })),
+    ...(!hasRunResult
+      ? [{
+          id: "run-result/missing",
+          detail: "No RUN_RESULT.md artifact exists for this focused sample.",
+          action: "Run compile/build/device validation and record the observed result with easyar_write_run_result."
+        }]
+      : runResultPassed
+        ? []
+        : [{
+            id: "run-result/not-passed",
+            detail: `RUN_RESULT.md overall status is ${runResultArtifact.overallStatus ?? "unknown"}, not passed.`,
+            action: "Resolve the recorded run result next actions, then rerun the focused sample on a real device."
+          }]),
+    ...latestLog.issues
+      .filter((issue) => issue.severity === "high")
+      .map((issue) => ({
+        id: `log/${issue.id}`,
+        detail: issue.title,
+        action: issue.actions.join(" ")
+      }))
+  ];
+  const nextActions = buildCompletionNextActions(completionStatus, preflight, deviceValidation, runResultArtifact, latestLog, root, sample, platform);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    outputPath,
+    completionStatus,
+    runThroughComplete,
+    requiredEvidence,
+    evidence,
+    parsedRunResult: runResultArtifact,
+    summary: {
+      readyForUnityBatch: preflight.readyForUnityBatch,
+      readyForDeviceBuild: preflight.readyForDeviceBuild,
+      readyForDeviceValidation: deviceValidation.readyForDeviceValidation,
+      latestLogAnalyzed: latestLog.analyzed,
+      latestLogIssueCount: latestLog.issueCount,
+      latestRunResultStatus: runResultArtifact.overallStatus
+    },
+    blockers: uniqueBlockers(blockers),
+    nextActions,
+    security: "Completion reports use artifact status lines, presence checks, and redacted log diagnostics only. They do not include EasyAR tokens, license keys, Cloud Recognition appKey/appSecret, signing keys, provisioning secrets, or raw Unity logs."
+  };
+}
+
+function chooseCompletionStatus(
+  hasRunResult: boolean,
+  runResultStatus: string | null,
+  preflightPassed: boolean,
+  deviceReady: boolean,
+  hasBlockingLogIssues: boolean
+): typeof runResultStatuses[number] {
+  if (!hasRunResult) {
+    return "not-run";
+  }
+  if (runResultStatus === "failed") {
+    return "failed";
+  }
+  if (runResultStatus === "passed" && preflightPassed && deviceReady && !hasBlockingLogIssues) {
+    return "passed";
+  }
+  return "blocked";
+}
+
+async function readRunResultArtifact(root: string, sample: SampleInfo) {
+  const absolutePath = path.join(focusedSampleGeneratedDir(root, sample), "RUN_RESULT.md");
+  const relativePath = path.relative(root, absolutePath);
+  try {
+    const body = await readFile(absolutePath, "utf8");
+    const overallStatus = parseRunResultStatus(body);
+    return {
+      exists: true,
+      relativePath,
+      overallStatus,
+      device: parseMarkdownField(body, "Device"),
+      buildOutputPath: parseMarkdownField(body, "Build output"),
+      passedStepCount: countMarkdownStepStatuses(body, "passed"),
+      failedStepCount: countMarkdownStepStatuses(body, "failed"),
+      blockedStepCount: countMarkdownStepStatuses(body, "blocked"),
+      notRunStepCount: countMarkdownStepStatuses(body, "not-run")
+    };
+  } catch {
+    return {
+      exists: false,
+      relativePath,
+      overallStatus: null,
+      device: null,
+      buildOutputPath: null,
+      passedStepCount: 0,
+      failedStepCount: 0,
+      blockedStepCount: 0,
+      notRunStepCount: 0
+    };
+  }
+}
+
+function parseRunResultStatus(markdown: string): typeof runResultStatuses[number] | null {
+  const value = parseMarkdownField(markdown, "Overall status");
+  return runResultStatuses.includes(value as typeof runResultStatuses[number])
+    ? value as typeof runResultStatuses[number]
+    : null;
+}
+
+function parseMarkdownField(markdown: string, field: string): string | null {
+  const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(new RegExp(`^${escapedField}:\\s*(.+)$`, "m"));
+  return match?.[1]?.trim() ?? null;
+}
+
+function countMarkdownStepStatuses(markdown: string, status: typeof runResultStatuses[number]): number {
+  const escapedStatus = status.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return [...markdown.matchAll(new RegExp(`Status:\\s*${escapedStatus}\\b`, "g"))].length;
+}
+
+function buildCompletionNextActions(
+  completionStatus: typeof runResultStatuses[number],
+  preflight: Awaited<ReturnType<typeof buildFocusedPreflight>>,
+  deviceValidation: Awaited<ReturnType<typeof buildDeviceValidationChecklist>>,
+  runResultArtifact: Awaited<ReturnType<typeof readRunResultArtifact>>,
+  latestLog: Awaited<ReturnType<typeof buildLatestLogDiagnostic>>,
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number]
+) {
+  if (completionStatus === "passed") {
+    return [
+      "Keep COMPLETION_REPORT.md, RUN_RESULT.md, DEVICE_VALIDATION.md, and SUPPORT_BUNDLE.md as the focused sample run-through evidence.",
+      "Move on to the next requested EasyAR workflow only after the user asks to continue."
+    ];
+  }
+  const actions: string[] = [];
+  if (!preflight.readyForDeviceBuild) {
+    actions.push(`Run easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=${platform} and resolve the first blocker.`);
+    actions.push(...preflight.nextActions);
+  }
+  if (!deviceValidation.readyForDeviceValidation) {
+    actions.push(`Run easyar_write_device_validation_checklist projectPath=${root} sampleId=${sample.id} platform=${platform} and resolve device blockers.`);
+    actions.push(...deviceValidation.nextActions);
+  }
+  if (!runResultArtifact.exists) {
+    actions.push("Run Unity compile/build/device validation, then call easyar_write_run_result with observed step evidence.");
+  } else if (runResultArtifact.overallStatus !== "passed") {
+    actions.push(`RUN_RESULT.md is ${runResultArtifact.overallStatus ?? "unknown"}; resolve recorded failures/blockers and rerun on a real device.`);
+  }
+  if (latestLog.issues.some((issue) => issue.severity === "high")) {
+    actions.push("Run easyar_write_issue_report after reviewing SUPPORT_BUNDLE.md and the latest Unity/device log diagnostics.");
+  }
+  actions.push(`Regenerate this report with easyar_write_completion_report projectPath=${root} sampleId=${sample.id} platform=${platform}.`);
+  return Array.from(new Set(actions)).slice(0, 14);
 }
 
 async function buildIssueReport(input: {
@@ -7775,6 +8106,63 @@ function buildRunResultMarkdown(result: Awaited<ReturnType<typeof buildRunResult
     "## Security",
     "",
     result.security,
+    ""
+  ].join("\n");
+}
+
+function buildCompletionReportMarkdown(report: Awaited<ReturnType<typeof buildCompletionReport>>): string {
+  return [
+    `# EasyAR Completion Report - ${report.sample.name}`,
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath}`,
+    `Sample id: ${report.sample.id}`,
+    `Status: ${report.sample.implementationStatus}`,
+    `Platform: ${report.platform}`,
+    `Output path: ${report.outputPath}`,
+    `Completion status: ${report.completionStatus}`,
+    `Run-through complete: ${report.runThroughComplete ? "yes" : "no"}`,
+    "",
+    "## Summary",
+    "",
+    `Ready for Unity batch: ${report.summary.readyForUnityBatch ? "yes" : "no"}`,
+    `Ready for device build: ${report.summary.readyForDeviceBuild ? "yes" : "no"}`,
+    `Ready for device validation: ${report.summary.readyForDeviceValidation ? "yes" : "no"}`,
+    `Latest log analyzed: ${report.summary.latestLogAnalyzed ? "yes" : "no"}`,
+    `Latest log issue count: ${report.summary.latestLogIssueCount}`,
+    `Latest run result status: ${report.summary.latestRunResultStatus ?? "none"}`,
+    "",
+    "## Required Evidence",
+    "",
+    ...report.requiredEvidence.map((item) => `- ${item.passed ? "OK" : "MISSING"} ${item.required ? "[required]" : "[recommended]"} ${item.id}: ${item.detail}`),
+    "",
+    "## Evidence",
+    "",
+    ...report.evidence.map((item) => `- ${item.id}: ${item.status}; path=${item.path}; ${item.detail}`),
+    "",
+    "## Parsed Run Result",
+    "",
+    `Exists: ${report.parsedRunResult.exists ? "yes" : "no"}`,
+    `Path: ${report.parsedRunResult.relativePath}`,
+    `Overall status: ${report.parsedRunResult.overallStatus ?? "none"}`,
+    `Device: ${report.parsedRunResult.device ?? "not recorded"}`,
+    `Build output: ${report.parsedRunResult.buildOutputPath ?? "not recorded"}`,
+    `Passed steps: ${report.parsedRunResult.passedStepCount}`,
+    `Failed steps: ${report.parsedRunResult.failedStepCount}`,
+    `Blocked steps: ${report.parsedRunResult.blockedStepCount}`,
+    `Not-run steps: ${report.parsedRunResult.notRunStepCount}`,
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(report.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No completion blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "Focused sample run-through is complete."),
+    "",
+    "## Security",
+    "",
+    report.security,
     ""
   ].join("\n");
 }
