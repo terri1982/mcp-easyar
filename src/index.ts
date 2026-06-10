@@ -521,6 +521,11 @@ server.tool(
         ok: await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
         detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
       },
+      {
+        id: "focused-sample-runbook",
+        ok: await exists(focusedSampleRunbookPath(root, sample)),
+        detail: `${path.relative(root, focusedSampleRunbookPath(root, sample))} exists with sample-specific run-through steps.`
+      },
       ...sampleSpecificChecks
     ];
 
@@ -631,12 +636,15 @@ server.tool(
 
     const editorDir = path.join(root, "Assets", "Editor");
     const configDir = path.join(root, "ProjectSettings", "EasyAR");
+    const generatedSampleDir = focusedSampleGeneratedDir(root, sample);
     await mkdir(editorDir, { recursive: true });
     await mkdir(configDir, { recursive: true });
+    await mkdir(generatedSampleDir, { recursive: true });
 
     const runnerPath = path.join(editorDir, "EasyARSampleRunner.cs");
     const buildSettingsPath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
     const mobileSettingsPath = path.join(editorDir, "EasyARMobileSettingsHelper.cs");
+    const runbookPath = focusedSampleRunbookPath(root, sample);
     const configExamplePath = path.join(configDir, "easyar.local.json.example");
     const localConfigPath = path.join(configDir, "easyar.local.json");
     const gitignorePath = path.join(root, ".gitignore");
@@ -645,6 +653,8 @@ server.tool(
     await writeGeneratedFile(runnerPath, buildSampleRunner(sample), overwrite, written);
     await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
     await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, null), overwrite, written);
+    await writeGeneratedFile(runbookPath, buildFocusedSampleRunbook(sample), overwrite, written);
+    await writeFocusedSampleSupportFiles(root, sample, overwrite, written);
     await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
     await ensureGitignoreEntries(gitignorePath, [
       "ProjectSettings/EasyAR/easyar.local.json",
@@ -661,6 +671,7 @@ server.tool(
         "Fill the local file with the EasyAR license key and official account-scoped credentials.",
         "Do not commit the local config file; .gitignore has been updated to protect it.",
         "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner.",
+        `Review ${path.relative(root, runbookPath)} for the focused ${sample.name} run-through checklist.`,
         "Call EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings in Unity batch mode before device builds.",
         "Call EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the matching sample scene to Build Settings."
       ]
@@ -1130,6 +1141,9 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
   if (checkId === "local-config-template" || checkId === "sample-runner" || checkId === "build-settings-helper" || checkId === "mobile-settings-helper") {
     return `Run easyar_prepare_unity_project with sampleId "${sample.id}".`;
   }
+  if (checkId === "focused-sample-runbook") {
+    return `Run easyar_prepare_unity_project with sampleId "${sample.id}" to generate the focused sample runbook.`;
+  }
   if (checkId === "local-config") {
     return "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json and fill it with official local credentials.";
   }
@@ -1140,6 +1154,14 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
     return "Fill easyar.cloudRecognition.appId, appKey, and appSecret in ProjectSettings/EasyAR/easyar.local.json.";
   }
   return "Review the EasyAR Unity checklist and rerun readiness checks.";
+}
+
+function focusedSampleGeneratedDir(root: string, sample: SampleInfo): string {
+  return path.join(root, "Assets", "EasyARGenerated", sample.id);
+}
+
+function focusedSampleRunbookPath(root: string, sample: SampleInfo): string {
+  return path.join(focusedSampleGeneratedDir(root, sample), "RUNBOOK.md");
 }
 
 async function buildSampleSpecificReadinessChecks(root: string, sample: SampleInfo) {
@@ -1876,6 +1898,107 @@ function buildLocalConfigExample(sample: SampleInfo): string {
     null,
     2
   )}\n`;
+}
+
+function buildFocusedSampleRunbook(sample: SampleInfo): string {
+  const commonSteps = [
+    `# ${sample.name} Runbook`,
+    "",
+    `Sample id: \`${sample.id}\``,
+    `Implementation status: \`${sample.implementationStatus}\``,
+    "",
+    "## Before Unity",
+    "",
+    "1. Import the official EasyAR Unity Plugin and matching official sample scenes.",
+    "2. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json`.",
+    "3. Fill the local EasyAR license key and account-scoped values without committing the file.",
+    "4. Run `easyar_validate_local_config` and `easyar_check_sample_readiness`.",
+    "",
+    "## Unity Automation",
+    "",
+    "1. Run `EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings`.",
+    "2. Run `EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings`.",
+    "3. Open the matching official sample scene with `EasyAR.EditorTools.EasyARSampleRunner.OpenSampleScene` if needed.",
+    "4. Build and test on a real Android or iOS device."
+  ];
+
+  if (sample.id === "image-tracking") {
+    return [
+      ...commonSteps,
+      "",
+      "## Image Tracking Checklist",
+      "",
+      "1. Add target images or official Image Tracking target assets under `Assets`.",
+      "2. Confirm target physical size and image quality in the EasyAR target workflow.",
+      "3. Keep target texture import settings stable after the sample is working.",
+      "4. Test with stable lighting and a printed or screen-displayed target.",
+      "",
+      "Expected readiness checks:",
+      "",
+      "- `image-target-assets` should find a target image, target JSON/XML, `.etd`, or similarly named asset.",
+      "- `sample-scene` should find an official Image Tracking scene."
+    ].join("\n") + "\n";
+  }
+
+  if (sample.id === "cloud-recognition") {
+    return [
+      ...commonSteps,
+      "",
+      "## Cloud Recognition Checklist",
+      "",
+      "1. Fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in local config.",
+      "2. Confirm network access is allowed on the target platform.",
+      "3. Verify the cloud database/target library is configured in the official EasyAR account.",
+      "4. Test on a real device with a network path to the selected EasyAR cloud recognition service.",
+      "",
+      "Expected readiness checks:",
+      "",
+      "- `cloud-recognition-credentials` should report all three cloud fields configured.",
+      "- `sample-scene` should find an official Cloud Recognition scene."
+    ].join("\n") + "\n";
+  }
+
+  return [
+    ...commonSteps,
+    "",
+    "This sample is deferred in the current run-through scope. Use `image-tracking` or `cloud-recognition` first."
+  ].join("\n") + "\n";
+}
+
+async function writeFocusedSampleSupportFiles(root: string, sample: SampleInfo, overwrite: boolean, written: string[]) {
+  if (sample.id === "image-tracking") {
+    const targetDir = path.join(focusedSampleGeneratedDir(root, sample), "Targets");
+    await mkdir(targetDir, { recursive: true });
+    await writeGeneratedFile(
+      path.join(targetDir, "README.md"),
+      [
+        "# Image Tracking Targets",
+        "",
+        "Place official EasyAR Image Tracking target images, target JSON/XML files, `.etd` files, or imported target assets here or elsewhere under `Assets`.",
+        "",
+        "This directory is only a project convention. The readiness check still requires real target assets before the sample is considered runnable."
+      ].join("\n") + "\n",
+      overwrite,
+      written
+    );
+  }
+
+  if (sample.id === "cloud-recognition") {
+    const cloudDir = path.join(focusedSampleGeneratedDir(root, sample), "CloudRecognition");
+    await mkdir(cloudDir, { recursive: true });
+    await writeGeneratedFile(
+      path.join(cloudDir, "README.md"),
+      [
+        "# Cloud Recognition Credentials",
+        "",
+        "Fill `ProjectSettings/EasyAR/easyar.local.json` with official `appId`, `appKey`, and `appSecret` values from the registered EasyAR account.",
+        "",
+        "Do not commit cloud recognition credentials. The generated `.gitignore` protects the local config file."
+      ].join("\n") + "\n",
+      overwrite,
+      written
+    );
+  }
 }
 
 function defaultBundleIdentifier(sample: SampleInfo | null): string {

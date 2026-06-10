@@ -73,6 +73,8 @@ easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=image-tr
 easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
 
+`easyar_prepare_unity_project` also creates a focused runbook under `Assets/EasyARGenerated/<sampleId>/RUNBOOK.md`. For Image Tracking it creates a target-asset staging directory. For Cloud Recognition it creates a cloud credential note directory.
+
 Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials.
 
 Then validate without exposing secrets:

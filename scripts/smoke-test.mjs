@@ -129,6 +129,18 @@ try {
   assertTextIncludes(prepared, "easyar.local.json");
   assertTextIncludes(prepared, "EasyARBuildSettingsHelper.cs");
   assertTextIncludes(prepared, "EasyARMobileSettingsHelper.cs");
+  assertTextIncludes(prepared, "Assets/EasyARGenerated/image-tracking/RUNBOOK.md");
+
+  const imageTrackingRunbook = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "RUNBOOK.md"),
+    "utf8"
+  );
+  assert(imageTrackingRunbook.includes("Image Tracking Checklist"), "Image Tracking runbook should include focused checklist");
+  const imageTargetsReadme = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "Targets", "README.md"),
+    "utf8"
+  );
+  assert(imageTargetsReadme.includes("requires real target assets"), "Image Tracking target README should not pretend to be a target asset");
 
   await copyFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
@@ -237,6 +249,18 @@ try {
   });
   assertTextIncludes(missingCloudReadiness, "cloud-recognition-credentials");
   assertTextIncludes(missingCloudReadiness, "credentials are incomplete");
+
+  const preparedCloud = await callTool("easyar_prepare_unity_project", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    overwrite: true
+  });
+  assertTextIncludes(preparedCloud, "Assets/EasyARGenerated/cloud-recognition/RUNBOOK.md");
+  const cloudRunbook = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "RUNBOOK.md"),
+    "utf8"
+  );
+  assert(cloudRunbook.includes("Cloud Recognition Checklist"), "Cloud Recognition runbook should include focused checklist");
 
   await writeFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),

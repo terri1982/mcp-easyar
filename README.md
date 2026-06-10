@@ -18,6 +18,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - generate an Editor helper for Android/iOS player settings and camera permissions
 - generate an Editor helper for adding sample scenes to Unity Build Settings
 - generate an Editor helper for Android/iOS/Standalone player builds
+- generate focused runbooks and support directories for Image Tracking and Cloud Recognition
 - prepare a Unity project with EasyAR local config templates and secret ignore rules
 - validate local EasyAR config files without exposing secrets
 - generate Unity MonoBehaviour script templates for common EasyAR workflows
@@ -140,7 +141,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
-- `easyar_prepare_unity_project`: create a sample runner, EasyAR local config template, and secret ignore rules in a Unity project.
+- `easyar_prepare_unity_project`: create a sample runner, focused sample runbook, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_mobile_settings_helper`: create `Assets/Editor/EasyARMobileSettingsHelper.cs` for Android/iOS player settings and camera permission setup.
 - `easyar_create_build_settings_helper`: create `Assets/Editor/EasyARBuildSettingsHelper.cs` for Build Settings automation.
 - `easyar_create_device_build_helper`: create `Assets/Editor/EasyARDeviceBuildHelper.cs` for Unity player builds.
