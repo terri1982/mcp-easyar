@@ -83,6 +83,14 @@ try {
     "easyar_write_code_plan should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_programming_context"),
+    "easyar_generate_programming_context should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_programming_context"),
+    "easyar_write_programming_context should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_code_change_summary"),
     "easyar_generate_code_change_summary should be listed"
   );
@@ -1053,6 +1061,29 @@ try {
   );
   assert(generatedScript.includes("OnTargetFound"), "Generated script should include OnTargetFound");
 
+  const programmingContext = await callTool("easyar_generate_programming_context", {
+    projectPath,
+    sampleId: "image-tracking",
+    goal: "Show content when an image target is found."
+  });
+  assertTextIncludes(programmingContext, "ImageTargetContentController.cs");
+  assertTextIncludes(programmingContext, "\"recommendedWorkflow\"");
+  assertTextIncludes(programmingContext, "easyar_write_code_plan");
+
+  const writtenProgrammingContext = await callTool("easyar_write_programming_context", {
+    projectPath,
+    sampleId: "image-tracking",
+    goal: "Show content when an image target is found."
+  });
+  assertTextIncludes(writtenProgrammingContext, "PROGRAMMING_CONTEXT.md");
+  const programmingContextMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "PROGRAMMING_CONTEXT.md"),
+    "utf8"
+  );
+  assert(programmingContextMarkdown.includes("EasyAR Programming Context - Image Tracking"), "Programming context markdown should include title");
+  assert(programmingContextMarkdown.includes("Recommended Workflow"), "Programming context markdown should include workflow");
+  assert(programmingContextMarkdown.includes("ImageTargetContentController.cs"), "Programming context markdown should list generated script");
+
   const codePlan = await callTool("easyar_generate_code_plan", {
     projectPath,
     sampleId: "image-tracking",
@@ -1328,6 +1359,7 @@ try {
   assertTextIncludes(artifactIndex, "SAMPLE_IMPORT_GUIDE.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
   assertTextIncludes(artifactIndex, "ISSUE_REPORT.md");
+  assertTextIncludes(artifactIndex, "PROGRAMMING_CONTEXT.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
   assertTextIncludes(artifactIndex, "ARTIFACT_INDEX.md");
 
@@ -1349,6 +1381,7 @@ try {
   assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
+  assert(artifactIndexMarkdown.includes("PROGRAMMING_CONTEXT.md"), "Artifact index markdown should list programming context");
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("RUN_REPORT.md"),
     "Artifact read order should place preflight before run report"
@@ -1356,6 +1389,10 @@ try {
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("SUPPORT_BUNDLE.md"),
     "Artifact read order should place preflight before support bundle"
+  );
+  assert(
+    artifactIndexMarkdown.indexOf("PROGRAMMING_CONTEXT.md") < artifactIndexMarkdown.indexOf("CODE_PLAN.md"),
+    "Artifact read order should place programming context before code plan"
   );
 
   await rm(projectPath, { recursive: true, force: true });

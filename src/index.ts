@@ -135,6 +135,8 @@ const toolCatalog = [
   "easyar_write_code_plan",
   "easyar_create_mono_behaviour",
   "easyar_write_csharp_file",
+  "easyar_generate_programming_context",
+  "easyar_write_programming_context",
   "easyar_generate_code_change_summary",
   "easyar_write_code_change_summary",
   "easyar_review_csharp_scripts",
@@ -2368,6 +2370,61 @@ server.tool(
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, contents, "utf8");
     return jsonText({ written: target, bytes: Buffer.byteLength(contents, "utf8") });
+  }
+);
+
+server.tool(
+  "easyar_generate_programming_context",
+  "Generate a focused Unity programming context before editing EasyAR sample C# scripts.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    goal: z.string().optional().describe("Optional programming goal to contextualize recommendations."),
+    maxFiles: z.number().int().positive().max(200).default(80),
+    maxIssues: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, goal, maxFiles, maxIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildProgrammingContext(root, sample, goal, maxFiles, maxIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_programming_context",
+  "Write the focused Unity programming context as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    goal: z.string().optional().describe("Optional programming goal to contextualize recommendations."),
+    relativePath: z.string().optional().describe("Optional context path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/PROGRAMMING_CONTEXT.md."),
+    maxFiles: z.number().int().positive().max(200).default(80),
+    maxIssues: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing programming context artifact.")
+  },
+  async ({ projectPath, sampleId, goal, relativePath, maxFiles, maxIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const context = await buildProgrammingContext(root, sample, goal, maxFiles, maxIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "PROGRAMMING_CONTEXT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildProgrammingContextMarkdown(context), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      scriptCount: context.scriptInventory.totalScripts,
+      easyarScriptCount: context.scriptInventory.easyarScripts.length,
+      issueCount: context.scriptReview.issueCount,
+      nextActions: context.nextActions,
+      note: "Review PROGRAMMING_CONTEXT.md before creating CODE_PLAN.md or editing C# scripts."
+    });
   }
 );
 
@@ -4905,6 +4962,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "DEVICE_VALIDATION.md",
     "RUN_RESULT.md",
     "ISSUE_REPORT.md",
+    "PROGRAMMING_CONTEXT.md",
     "CODE_PLAN.md",
     "CODE_CHANGE.md",
     "ARTIFACT_INDEX.md"
@@ -5018,6 +5076,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "ISSUE_REPORT.md"),
       purpose: "Redacted GitHub issue body for focused sample failures.",
       generateWith: `easyar_write_issue_report sampleId=${sample.id}`
+    },
+    {
+      name: "Programming Context",
+      relativePath: path.join(base, "PROGRAMMING_CONTEXT.md"),
+      purpose: "Focused Unity C# script inventory, generated helper summary, static review, and recommended programming workflow.",
+      generateWith: `easyar_write_programming_context sampleId=${sample.id}`
     },
     {
       name: "Device Validation",
@@ -5641,6 +5705,94 @@ async function buildCodeChangeSummary(
     missingFiles,
     nextActions,
     security: "Secret values are not returned. Do not include EasyAR license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in code change notes."
+  };
+}
+
+async function buildProgrammingContext(
+  root: string,
+  sample: SampleInfo,
+  goal: string | undefined,
+  maxFiles: number,
+  maxIssues: number
+) {
+  const scriptPaths = await findFiles(root, ["Assets"], /\.cs$/i, maxFiles);
+  const scriptDetails = await Promise.all(scriptPaths.map(async (relativePath) => {
+    const text = await readFile(path.join(root, relativePath), "utf8").catch(() => "");
+    const generated = /^Assets[\/\\]Editor[\/\\]EasyAR.*\.cs$/i.test(relativePath) || /^Assets[\/\\]EasyARGenerated[\/\\]/i.test(relativePath);
+    return {
+      path: relativePath,
+      generated,
+      mentionsEasyAR: /\busing\s+EasyAR\b|EasyAR\.|EasyAR/i.test(text),
+      mentionsMonoBehaviour: /:\s*MonoBehaviour\b/.test(text),
+      lineCount: text ? text.split(/\r?\n/).length : 0,
+      sizeBytes: Buffer.byteLength(text, "utf8")
+    };
+  }));
+  const scriptReview = await buildScriptReviewReport(root, undefined, maxFiles, maxIssues);
+  const readiness = await buildSampleReadinessReport(root, sample);
+  const suggestedPrimaryFile = sample.id === "cloud-recognition"
+    ? "Assets/Scripts/CloudRecognitionResultController.cs"
+    : "Assets/Scripts/ImageTargetContentController.cs";
+  const suggestedTemplateKind = sample.id === "cloud-recognition" ? "cloud-recognition" : "image-tracking";
+  const easyarScripts = scriptDetails.filter((script) => script.mentionsEasyAR && !script.generated);
+  const monoBehaviours = scriptDetails.filter((script) => script.mentionsMonoBehaviour && !script.generated);
+  const generatedHelpers = scriptDetails.filter((script) => script.generated);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    goal: goal ?? null,
+    scriptInventory: {
+      totalScripts: scriptDetails.length,
+      easyarScripts,
+      monoBehaviours,
+      generatedHelpers,
+      scripts: scriptDetails
+    },
+    readinessSummary: {
+      ready: readiness.ready,
+      failingChecks: readiness.checks.filter((check) => !check.ok).map((check) => check.id)
+    },
+    scriptReview: {
+      reviewedFileCount: scriptReview.reviewedFileCount,
+      issueCount: scriptReview.issueCount,
+      issues: scriptReview.issues
+    },
+    recommendedWorkflow: [
+      "Read PREFLIGHT.md before editing scripts.",
+      "Call easyar_generate_code_plan or easyar_write_code_plan with the programming goal.",
+      `Create or patch ${suggestedPrimaryFile} with easyar_create_mono_behaviour or easyar_write_csharp_file.`,
+      "Run easyar_review_csharp_scripts after edits.",
+      "Write CODE_CHANGE.md with easyar_write_code_change_summary.",
+      "Run easyar_run_unity_compile_check only after static review is clean."
+    ],
+    suggestedTemplate: {
+      tool: "easyar_create_mono_behaviour",
+      arguments: {
+        projectPath: root,
+        relativePath: suggestedPrimaryFile,
+        className: path.basename(suggestedPrimaryFile, ".cs"),
+        kind: suggestedTemplateKind
+      }
+    },
+    relatedArtifacts: {
+      preflight: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "PREFLIGHT.md")),
+      codePlan: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "CODE_PLAN.md")),
+      codeChange: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "CODE_CHANGE.md")),
+      programmingContext: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "PROGRAMMING_CONTEXT.md"))
+    },
+    nextActions: [
+      `Run easyar_write_code_plan projectPath=${root} sampleId=${sample.id} goal="${goal ?? "describe the requested script change"}".`,
+      `Use ${easyarScripts.length > 0 ? "existing EasyAR-related scripts as edit candidates" : "the suggested MonoBehaviour template as the first edit candidate"}.`,
+      "Do not hardcode EasyAR license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets.",
+      "Run easyar_review_csharp_scripts before Unity compilation."
+    ],
+    security: "Programming context reports script paths, counts, static findings, and recommended workflow only. It does not include EasyAR local config secret values."
   };
 }
 
@@ -7496,6 +7648,70 @@ function buildDeviceValidationChecklistMarkdown(checklist: Awaited<ReturnType<ty
     "## Security",
     "",
     checklist.security,
+    ""
+  ].join("\n");
+}
+
+function buildProgrammingContextMarkdown(context: Awaited<ReturnType<typeof buildProgrammingContext>>): string {
+  return [
+    `# EasyAR Programming Context - ${context.sample.name}`,
+    "",
+    `Generated at: ${context.generatedAt}`,
+    `Project: ${context.projectPath}`,
+    `Sample id: ${context.sample.id}`,
+    `Status: ${context.sample.implementationStatus}`,
+    `Goal: ${context.goal ?? "not provided"}`,
+    "",
+    "## Script Inventory",
+    "",
+    `Total scripts: ${context.scriptInventory.totalScripts}`,
+    `EasyAR-related scripts: ${context.scriptInventory.easyarScripts.length}`,
+    `MonoBehaviours: ${context.scriptInventory.monoBehaviours.length}`,
+    `Generated helpers: ${context.scriptInventory.generatedHelpers.length}`,
+    "",
+    "### EasyAR-Related Scripts",
+    "",
+    ...markdownIssueList(context.scriptInventory.easyarScripts.map((script) => `${script.path} (${script.lineCount} lines)`), "No non-generated EasyAR-related scripts were found."),
+    "",
+    "### MonoBehaviours",
+    "",
+    ...markdownIssueList(context.scriptInventory.monoBehaviours.map((script) => `${script.path} (${script.lineCount} lines)`), "No non-generated MonoBehaviour scripts were found."),
+    "",
+    "### Generated Helpers",
+    "",
+    ...markdownIssueList(context.scriptInventory.generatedHelpers.map((script) => script.path), "No generated EasyAR helper scripts were found."),
+    "",
+    "## Readiness Summary",
+    "",
+    `Ready: ${context.readinessSummary.ready ? "yes" : "no"}`,
+    ...markdownIssueList(context.readinessSummary.failingChecks, "No failing readiness checks."),
+    "",
+    "## Script Review",
+    "",
+    `Reviewed files: ${context.scriptReview.reviewedFileCount}`,
+    `Issue count: ${context.scriptReview.issueCount}`,
+    ...markdownIssueList(context.scriptReview.issues.map((issue) => `${issue.severity} ${issue.file}${issue.line ? `:${issue.line}` : ""} - ${issue.title}`), "No static script issues detected."),
+    "",
+    "## Recommended Workflow",
+    "",
+    ...context.recommendedWorkflow.map((step) => `- ${step}`),
+    "",
+    "## Suggested Template",
+    "",
+    `Tool: ${context.suggestedTemplate.tool}`,
+    `Arguments: ${JSON.stringify(context.suggestedTemplate.arguments)}`,
+    "",
+    "## Related Artifacts",
+    "",
+    ...Object.entries(context.relatedArtifacts).map(([name, relativePath]) => `- ${name}: ${relativePath}`),
+    "",
+    "## Next Actions",
+    "",
+    ...context.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    context.security,
     ""
   ].join("\n");
 }

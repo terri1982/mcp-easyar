@@ -42,6 +42,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - prepare a Unity project with EasyAR local config templates and secret ignore rules
 - validate local EasyAR config files without exposing secrets
 - write local EasyAR Unity config from environment-backed secrets without returning secret values
+- generate focused Unity programming context before editing C# scripts
 - generate Unity MonoBehaviour script templates for common EasyAR workflows
 - write C# scripts safely inside a Unity project
 - review Unity C# scripts for common EasyAR and AR sample risks
@@ -238,6 +239,8 @@ After registration/login, the user creates or locates the EasyAR Sense license a
 - `easyar_create_build_settings_helper`: create `Assets/Editor/EasyARBuildSettingsHelper.cs` for Build Settings automation.
 - `easyar_create_device_build_helper`: create `Assets/Editor/EasyARDeviceBuildHelper.cs` for Unity player builds.
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
+- `easyar_generate_programming_context`: generate a focused Unity C# script inventory, generated helper summary, static review, and recommended programming workflow before editing scripts.
+- `easyar_write_programming_context`: write the focused programming context to `Assets/EasyARGenerated/<sampleId>/PROGRAMMING_CONTEXT.md`.
 - `easyar_generate_code_plan`: generate a focused Unity C# implementation plan before editing sample code.
 - `easyar_write_code_plan`: write the focused C# implementation plan to `Assets/EasyARGenerated/<sampleId>/CODE_PLAN.md`.
 - `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.

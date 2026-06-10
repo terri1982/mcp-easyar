@@ -25,6 +25,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused run result and `RUN_RESULT.md` artifact generation for compile, build, and device validation handoff.
 - Redacted GitHub issue report and `ISSUE_REPORT.md` artifact generation for focused sample failures.
 - GitHub issue template and focused Image Tracking / Cloud Recognition troubleshooting guide.
+- Focused Unity programming context and `PROGRAMMING_CONTEXT.md` artifact generation before C# planning or edits.
 - Focused Unity C# code planning and `CODE_PLAN.md` artifact generation before sample script edits.
 - Focused Unity C# change summary and `CODE_CHANGE.md` artifact generation after sample script edits.
 - Focused sample runbooks and support directories generated under `Assets/EasyARGenerated/<sampleId>/`.
