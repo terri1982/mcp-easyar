@@ -17,6 +17,7 @@ Initial public MVP for `mcp-easyar`.
 - Client config and setup reports now support `local-dist`, `package-bin`, and `npx` entrypoint modes for Codex, Claude Desktop, and generic stdio clients.
 - Release manifest now lists local clone, global npm package, and npx install profiles with matching client config calls.
 - Deployment readiness now checks npm package files, bin target, public package status, and install-profile documentation.
+- Sample import guides now include expected `Assets/Samples` locations and post-import verification calls through import checklist, readiness, and focused preflight.
 - Focused sample run-through scope for Image Tracking and Cloud Recognition, with other samples marked deferred.
 - Focused workflow state navigator and `WORKFLOW_STATE.md` artifact generation for next MCP/Unity action selection.
 - Ordered focused sample run sequence generation for Codex/Claude MCP calls and Unity batch methods.

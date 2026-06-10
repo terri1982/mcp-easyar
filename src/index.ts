@@ -4527,6 +4527,37 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
   const unityPackageSampleName = sample.id === "cloud-recognition"
     ? "ImageTracking_CloudRecognition"
     : sample.unityScenes[0] ?? sample.name;
+  const expectedImportLocations = [
+    path.join("Assets", "Samples"),
+    path.join("Assets", "Samples", "EasyAR Sense Unity Plugin"),
+    path.join("Assets", "Samples", "EasyAR Sense Unity Plugin", officialInfo.packageVersions.easyarSenseUnityPlugin),
+    path.join("Assets", "Samples", "EasyAR Sense Unity Plugin", officialInfo.packageVersions.easyarSenseUnityPlugin, "ImageTracking"),
+    path.join("Assets", "Samples", "EasyAR Sense Unity Plugin", officialInfo.packageVersions.easyarSenseUnityPlugin, "ImageTracking", unityPackageSampleName)
+  ];
+  const postImportVerification = [
+    {
+      tool: "easyar_generate_import_checklist",
+      arguments: { projectPath: root, sampleId: sample.id },
+      expected: "focused-sample-scene-imported is OK and PackageCache candidates are no longer the only sample evidence."
+    },
+    {
+      tool: "easyar_write_import_checklist",
+      arguments: { projectPath: root, sampleId: sample.id },
+      expected: `Assets/EasyARGenerated/${sample.id}/IMPORT_CHECKLIST.md records the imported focused sample scene.`
+    },
+    {
+      tool: "easyar_check_sample_readiness",
+      arguments: { projectPath: root, sampleId: sample.id },
+      expected: sample.id === "cloud-recognition"
+        ? "Cloud Recognition readiness no longer reports a missing sample scene; local cloud credentials may still block device validation."
+        : "Image Tracking readiness no longer reports a missing sample scene; target assets may still block device validation."
+    },
+    {
+      tool: "easyar_write_focused_preflight",
+      arguments: { projectPath: root, sampleId: sample.id, platform: "android" },
+      expected: "PREFLIGHT.md advances from import blockers to the next real blocker or Unity batch step."
+    }
+  ];
   const steps = [
     {
       order: 1,
@@ -4568,6 +4599,7 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
     importComplete: matchingScenes.length > 0,
     importAvailableFromPackageCache: packageCacheSamples.length > 0,
     expectedUnityPackageSampleName: unityPackageSampleName,
+    expectedImportLocations,
     importedScenes,
     packageCacheSamples,
     evidence: {
@@ -4575,12 +4607,8 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
       packageCacheSample: packageCacheItem?.evidence ?? "No PackageCache sample evidence found."
     },
     steps,
-    mcpAfterImport: [
-      { tool: "easyar_generate_import_checklist", arguments: { projectPath: root, sampleId: sample.id } },
-      { tool: "easyar_write_import_checklist", arguments: { projectPath: root, sampleId: sample.id } },
-      { tool: "easyar_check_sample_readiness", arguments: { projectPath: root, sampleId: sample.id } },
-      { tool: "easyar_next_workflow_step", arguments: { projectPath: root, sampleId: sample.id, platform: "android" } }
-    ],
+    mcpAfterImport: postImportVerification.map((call) => ({ tool: call.tool, arguments: call.arguments })),
+    postImportVerification,
     nextActions: matchingScenes.length > 0
       ? [
           "Focused sample scene is already imported. Continue with easyar_prepare_unity_project and easyar_next_workflow_step.",
@@ -7438,6 +7466,10 @@ function buildSampleImportGuideMarkdown(guide: Awaited<ReturnType<typeof buildSa
     "",
     ...markdownIssueList(guide.importedScenes, "No matching focused sample scenes are imported under Assets yet."),
     "",
+    "## Expected Import Locations",
+    "",
+    ...guide.expectedImportLocations.map((location) => `- ${location}`),
+    "",
     "## PackageCache Candidates",
     "",
     ...markdownIssueList(guide.packageCacheSamples, "No matching PackageCache Samples~ candidates were found."),
@@ -7453,6 +7485,14 @@ function buildSampleImportGuideMarkdown(guide: Awaited<ReturnType<typeof buildSa
     "## MCP After Import",
     "",
     ...guide.mcpAfterImport.map((call) => `- ${call.tool}: ${JSON.stringify(call.arguments)}`),
+    "",
+    "## Post-Import Verification",
+    "",
+    ...guide.postImportVerification.flatMap((call) => [
+      `- Tool: \`${call.tool}\``,
+      `  Arguments: \`${JSON.stringify(call.arguments)}\``,
+      `  Expected: ${call.expected}`
+    ]),
     "",
     "## Next Actions",
     "",

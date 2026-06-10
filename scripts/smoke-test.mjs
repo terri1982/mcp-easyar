@@ -1077,6 +1077,9 @@ try {
   assertTextIncludes(cloudImportGuide, "\"importComplete\": false");
   assertTextIncludes(cloudImportGuide, "\"importAvailableFromPackageCache\": true");
   assertTextIncludes(cloudImportGuide, "ImageTracking_CloudRecognition");
+  assertTextIncludes(cloudImportGuide, "\"expectedImportLocations\"");
+  assertTextIncludes(cloudImportGuide, "\"postImportVerification\"");
+  assertTextIncludes(cloudImportGuide, "easyar_write_focused_preflight");
   assertTextIncludes(cloudImportGuide, "Window > Package Manager");
   assertTextIncludes(cloudImportGuide, "Assets/Samples");
 
@@ -1092,6 +1095,9 @@ try {
   assert(cloudImportGuideMarkdown.includes("EasyAR Sample Import Guide - Cloud Recognition"), "Cloud import guide markdown should include title");
   assert(cloudImportGuideMarkdown.includes("Unity Steps"), "Cloud import guide markdown should include Unity steps");
   assert(cloudImportGuideMarkdown.includes("ImageTracking_CloudRecognition"), "Cloud import guide markdown should include UPM sample name");
+  assert(cloudImportGuideMarkdown.includes("Expected Import Locations"), "Cloud import guide markdown should include expected import locations");
+  assert(cloudImportGuideMarkdown.includes("Post-Import Verification"), "Cloud import guide markdown should include verification calls");
+  assert(cloudImportGuideMarkdown.includes("easyar_write_focused_preflight"), "Cloud import guide markdown should include preflight verification");
 
   const preparedCloud = await callTool("easyar_prepare_unity_project", {
     projectPath,
