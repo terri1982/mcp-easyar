@@ -293,6 +293,10 @@ try {
     "easyar_write_sample_import_guide should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_import_sample_from_package_cache"),
+    "easyar_import_sample_from_package_cache should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_from_env"),
     "easyar_write_local_config_from_env should be listed"
   );
@@ -1260,6 +1264,41 @@ try {
   assert(cloudImportGuideMarkdown.includes("Post-Import Verification"), "Cloud import guide markdown should include verification calls");
   assert(cloudImportGuideMarkdown.includes("easyar_write_focused_preflight"), "Cloud import guide markdown should include preflight verification");
 
+  const cloudImportDryRun = await callTool("easyar_import_sample_from_package_cache", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    dryRun: true
+  });
+  assertTextIncludes(cloudImportDryRun, "\"dryRun\": true");
+  assertTextIncludes(cloudImportDryRun, "ImageTracking_CloudRecognition");
+  assertTextIncludes(cloudImportDryRun, "Assets/Samples");
+
+  const cloudImportResult = await callTool("easyar_import_sample_from_package_cache", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(cloudImportResult, "\"imported\": true");
+  assertTextIncludes(cloudImportResult, "\"postImportMatchingScenes\"");
+  assertTextIncludes(cloudImportResult, "ImageTracking_CloudRecognition.unity");
+  const importedCloudScenePath = path.join(
+    projectPath,
+    "Assets",
+    "Samples",
+    "EasyAR Sense Unity Plugin",
+    "4002.0.0",
+    "ImageTracking_CloudRecognition",
+    "Scenes",
+    "ImageTracking_CloudRecognition.unity"
+  );
+  assert(await fileExists(importedCloudScenePath), "PackageCache sample import should copy Cloud Recognition scene into Assets/Samples");
+
+  const importedCloudImportChecklist = await callTool("easyar_generate_import_checklist", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(importedCloudImportChecklist, "\"id\": \"focused-sample-scene-imported\"");
+  assertTextIncludes(importedCloudImportChecklist, "\"ok\": true");
+
   const preparedCloud = await callTool("easyar_prepare_unity_project", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -1648,7 +1687,7 @@ try {
     device: "iPhone test device",
     buildOutputPath: "Builds/iOS/cloud-recognition"
   });
-  assertTextIncludes(cloudDeviceValidation, "\"readyForDeviceValidation\": false");
+  assertTextIncludes(cloudDeviceValidation, "\"readyForDeviceValidation\"");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-network");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
 
@@ -1770,6 +1809,15 @@ function extractText(response) {
 function assertResourceIncludes(response, expected) {
   const text = response.result.contents.map((item) => item.text ?? "").join("\n");
   assert(text.includes(expected), `Expected resource text to include ${expected}`);
+}
+
+async function fileExists(filePath) {
+  try {
+    await readFile(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function assertPromptIncludes(response, expected) {

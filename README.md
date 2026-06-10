@@ -253,6 +253,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_import_checklist`: write the official import checklist to `Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md`.
 - `easyar_generate_sample_import_guide`: generate Unity Package Manager steps, expected import locations, and post-import verification calls for importing the focused official sample from PackageCache `Samples~` into `Assets/Samples`.
 - `easyar_write_sample_import_guide`: write the focused sample import guide to `Assets/EasyARGenerated/<sampleId>/SAMPLE_IMPORT_GUIDE.md`.
+- `easyar_import_sample_from_package_cache`: copy a focused sample already present in local Unity PackageCache `Samples~` into `Assets/Samples` without downloading packages or exposing secrets.
 - `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.
 - `easyar_write_run_sequence`: write the focused run sequence to `Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md`.
 - `easyar_generate_artifact_index`: generate an index of focused handoff artifacts, including account onboarding/materials, and recommended reading order.

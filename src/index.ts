@@ -2,7 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { access, mkdir, open, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, open, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -110,6 +110,7 @@ const toolCatalog = [
   "easyar_write_import_checklist",
   "easyar_generate_sample_import_guide",
   "easyar_write_sample_import_guide",
+  "easyar_import_sample_from_package_cache",
   "easyar_generate_run_sequence",
   "easyar_write_run_sequence",
   "easyar_generate_artifact_index",
@@ -1536,6 +1537,23 @@ server.tool(
       nextActions: guide.nextActions,
       note: "The sample import guide contains local package/sample paths and manual Unity steps only; it does not include secret values."
     });
+  }
+);
+
+server.tool(
+  "easyar_import_sample_from_package_cache",
+  "Copy a focused EasyAR sample that already exists in local Unity PackageCache Samples~ into Assets/Samples without downloading private content.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    overwrite: z.boolean().default(false).describe("Whether to overwrite an existing imported sample directory."),
+    dryRun: z.boolean().default(false).describe("Report the copy plan without writing files.")
+  },
+  async ({ projectPath, sampleId, overwrite, dryRun }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await importSampleFromPackageCache(root, sample, overwrite, dryRun));
   }
 );
 
@@ -5427,6 +5445,162 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
   };
 }
 
+async function importSampleFromPackageCache(root: string, sample: SampleInfo, overwrite: boolean, dryRun: boolean) {
+  const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
+  const sourceRelativePath = packageCacheSamples[0] ?? null;
+  const sourcePath = sourceRelativePath ? path.join(root, sourceRelativePath) : null;
+  if (!sourcePath || !sourceRelativePath) {
+    return {
+      generatedAt: new Date().toISOString(),
+      projectPath: root,
+      sample: {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      },
+      imported: false,
+      dryRun,
+      sourcePath: null,
+      targetPath: null,
+      targetExists: false,
+      packageCacheSamples,
+      nextActions: [
+        `Run easyar_generate_sample_import_guide projectPath=${root} sampleId=${sample.id}.`,
+        "Open Unity Package Manager and import the official EasyAR sample after the package is available in PackageCache."
+      ],
+      security: "No files were copied. This tool only imports samples already present in local Unity PackageCache."
+    };
+  }
+
+  const packageInfo = await readPackageCacheInfo(sourcePath);
+  const sampleFolderName = path.basename(sourcePath);
+  const targetPath = path.join(root, "Assets", "Samples", packageInfo.displayName, packageInfo.version, sampleFolderName);
+  const targetExists = await exists(targetPath);
+  const plannedActions = [
+    `Copy ${sourceRelativePath} to ${path.relative(root, targetPath)}.`,
+    `Rerun easyar_write_import_checklist projectPath=${root} sampleId=${sample.id}.`,
+    `Rerun easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=android.`
+  ];
+
+  if (targetExists && !overwrite) {
+    return {
+      generatedAt: new Date().toISOString(),
+      projectPath: root,
+      sample: {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      },
+      imported: false,
+      skipped: true,
+      dryRun,
+      reason: "Target sample directory already exists and overwrite=false.",
+      sourcePath,
+      targetPath,
+      targetExists,
+      package: packageInfo,
+      packageCacheSamples,
+      nextActions: [
+        `Use overwrite=true to replace ${path.relative(root, targetPath)}, or rerun import checks if the existing sample is correct.`,
+        ...plannedActions.slice(1)
+      ],
+      security: "Existing files were not overwritten. No private packages were downloaded."
+    };
+  }
+
+  if (!dryRun) {
+    await mkdir(path.dirname(targetPath), { recursive: true });
+    await cp(sourcePath, targetPath, {
+      recursive: true,
+      force: overwrite,
+      errorOnExist: !overwrite
+    });
+    const sourceMetaPath = `${sourcePath}.meta`;
+    if (await exists(sourceMetaPath)) {
+      await cp(sourceMetaPath, `${targetPath}.meta`, {
+        force: overwrite,
+        errorOnExist: !overwrite
+      });
+    }
+  }
+
+  const postImportChecklist = dryRun ? null : await buildImportChecklist(root, sample);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    imported: !dryRun,
+    skipped: false,
+    dryRun,
+    sourcePath,
+    targetPath,
+    targetExistsBefore: targetExists,
+    package: packageInfo,
+    packageCacheSamples,
+    postImportReadyForFocusedPreparation: postImportChecklist?.readyForFocusedPreparation ?? null,
+    postImportMatchingScenes: postImportChecklist?.matchingScenes ?? null,
+    nextActions: dryRun
+      ? plannedActions
+      : [
+          `Imported ${sample.name} into ${path.relative(root, targetPath)}.`,
+          `Run easyar_write_import_checklist projectPath=${root} sampleId=${sample.id}.`,
+          `Run easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}.`,
+          `Run easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=android.`
+        ],
+    security: "This tool copies only from local Unity PackageCache Samples~ into Assets/Samples. It does not download packages, bypass EasyAR account access, or include secret values."
+  };
+}
+
+async function readPackageCacheInfo(samplePath: string): Promise<{ displayName: string; version: string; packageRoot: string | null }> {
+  const samplesMarker = `${path.sep}Samples~${path.sep}`;
+  const markerIndex = samplePath.indexOf(samplesMarker);
+  const packageRoot = markerIndex >= 0 ? samplePath.slice(0, markerIndex) : null;
+  if (packageRoot) {
+    try {
+      const packageJson = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8")) as { displayName?: string; version?: string };
+      return {
+        displayName: sanitizeAssetFolderName(packageJson.displayName ?? "EasyAR Sense Unity Plugin"),
+        version: sanitizeAssetFolderName(normalizeUnityPackageVersion(packageJson.version)),
+        packageRoot
+      };
+    } catch {
+      const folderName = path.basename(packageRoot);
+      return {
+        displayName: "EasyAR Sense Unity Plugin",
+        version: sanitizeAssetFolderName(normalizeUnityPackageVersion(parsePackageCacheFolderVersion(folderName))),
+        packageRoot
+      };
+    }
+  }
+  return {
+    displayName: "EasyAR Sense Unity Plugin",
+    version: officialInfo.packageVersions.easyarSenseUnityPlugin,
+    packageRoot: null
+  };
+}
+
+function normalizeUnityPackageVersion(version: string | undefined): string {
+  const value = version?.split("+")[0]?.trim();
+  if (typeof value === "string" && isNonPlaceholderString(value)) {
+    return value;
+  }
+  return officialInfo.packageVersions.easyarSenseUnityPlugin ?? "unknown";
+}
+
+function parsePackageCacheFolderVersion(folderName: string): string | undefined {
+  const match = folderName.match(/@([^@]+)$/);
+  return match?.[1];
+}
+
+function sanitizeAssetFolderName(value: string): string {
+  return value.replace(/[\\/:*?"<>|]/g, "_").trim() || "EasyAR Sense Unity Plugin";
+}
+
 async function buildWorkflowState(
   root: string,
   sample: SampleInfo,
@@ -5847,7 +6021,7 @@ async function buildFocusedPreflight(
     preflightCheck("account-materials", accountMaterials.missingRequired.length === 0, "account", accountMaterials.missingRequired.length > 0 ? `Missing account material(s): ${accountMaterials.missingRequired.join(", ")}.` : "Required account materials are present or not required.", "Run easyar_write_account_onboarding and easyar_write_account_materials, then prepare official account values."),
     preflightCheck("local-config", localConfig.valid, "config", localConfig.valid ? "Local EasyAR config is valid." : `Local config failing check(s): ${localConfig.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_write_local_config_from_env or fill ProjectSettings/EasyAR/easyar.local.json locally, then validate again."),
     preflightCheck("unity-environment", unityEnvironment.readyForUnityBatch, "unity", unityEnvironment.readyForUnityBatch ? `Unity batch path ready: ${unityEnvironment.recommendedUnityPath}.` : "No Unity executable path is ready for batch automation.", "Run easyar_write_unity_environment_report and set EASYAR_UNITY_PATH or pass unityPath explicitly."),
-    preflightCheck("official-imports", importChecklist.readyForFocusedPreparation, "import", importChecklist.readyForFocusedPreparation ? "Official plugin and focused import requirements are present." : `Missing import item(s): ${importChecklist.items.filter((item) => item.required && !item.ok).map((item) => item.id).join(", ")}.`, "Run easyar_generate_sample_import_guide and import the focused official sample through Unity Package Manager Samples."),
+    preflightCheck("official-imports", importChecklist.readyForFocusedPreparation, "import", importChecklist.readyForFocusedPreparation ? "Official plugin and focused import requirements are present." : `Missing import item(s): ${importChecklist.items.filter((item) => item.required && !item.ok).map((item) => item.id).join(", ")}.`, buildImportChecklistAction(importChecklist)),
     preflightCheck("sample-readiness", readiness.ready, "readiness", readiness.ready ? "Focused sample readiness checks passed." : `Readiness failing check(s): ${readiness.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_prepare_unity_project, import official assets, and rerun easyar_check_sample_readiness."),
     preflightCheck("scene-build-settings", sceneAudit.readyForUnityValidation, "scene", sceneAudit.readyForUnityValidation ? "Scene audit is ready for Unity validation." : `Scene blocker(s): ${sceneAudit.blockers.map((blocker) => blocker.id).join(", ")}.`, "Run easyar_create_build_settings_helper and execute the generated Build Settings helper in Unity batch mode."),
     preflightCheck("script-review", scriptReview.issueCount === 0, "code", scriptReview.issueCount === 0 ? "No static C# script issues were found." : `Static script review found ${scriptReview.issueCount} issue(s).`, "Fix script review issues, then write CODE_CHANGE.md and run Unity compile check.")
@@ -5911,6 +6085,15 @@ async function buildFocusedPreflight(
     },
     security: "Focused preflight reports field presence, paths, blockers, and next calls only. It does not include EasyAR tokens, license keys, Cloud Recognition secrets, signing keys, or provisioning secrets."
   };
+}
+
+function buildImportChecklistAction(importChecklist: Awaited<ReturnType<typeof buildImportChecklist>>): string {
+  const missingRequired = importChecklist.items.filter((item) => item.required && !item.ok);
+  const missingScene = missingRequired.find((item) => item.id === "focused-sample-scene-imported");
+  if (missingScene && importChecklist.packageCacheSamples.length > 0) {
+    return "Run easyar_import_sample_from_package_cache with dryRun=true first, then import the focused sample from local PackageCache or use easyar_write_sample_import_guide for manual Unity steps.";
+  }
+  return missingRequired[0]?.action ?? "Run easyar_generate_import_checklist and resolve the first missing official import item.";
 }
 
 function preflightCheck(id: string, ok: boolean, area: string, detail: string, action: string) {

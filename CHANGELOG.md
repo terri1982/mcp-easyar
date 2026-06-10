@@ -60,6 +60,7 @@ Initial public MVP for `mcp-easyar`.
 - Production validation evidence matrix and `PRODUCTION_VALIDATION.md` artifact writing across release manifest, deployment readiness, official EasyAR endpoints, verification commands, official access, and focused sample completion evidence.
 - Official EasyAR Unity Plugin and focused sample import checklist generation with `IMPORT_CHECKLIST.md` artifacts.
 - Unity Package Manager focused sample import guide generation with `SAMPLE_IMPORT_GUIDE.md` artifacts.
+- Local PackageCache focused sample import tool for copying authorized EasyAR `Samples~` content into `Assets/Samples` without downloading packages or exposing secrets.
 - Unity project inspection and sample readiness diagnostics.
 - Sample-specific readiness checks for Image Tracking target assets and Cloud Recognition credentials.
 - Image Tracking scene detection by Unity scene content markers such as `ImageTarget`, `ImageTracker`, and `TargetDataFileSource`, so custom scene names can still be validated.

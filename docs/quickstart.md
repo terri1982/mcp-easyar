@@ -129,6 +129,7 @@ easyar_generate_focused_preflight projectPath=/path/to/UnityProject sampleId=ima
 easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_generate_sample_import_guide projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_sample_import_guide projectPath=/path/to/UnityProject sampleId=image-tracking
+easyar_import_sample_from_package_cache projectPath=/path/to/UnityProject sampleId=cloud-recognition dryRun=true
 easyar_write_workflow_state projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_generate_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
@@ -149,7 +150,7 @@ For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRe
 
 Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page or Unity Package Manager Samples before expecting a real device run to succeed. If `easyar_generate_import_checklist` reports a PackageCache `Samples~` candidate but no imported scene, run `easyar_generate_sample_import_guide`; for Cloud Recognition this guide points users to import `ImageTracking_CloudRecognition` from Package Manager into `Assets/Samples`.
 
-`SAMPLE_IMPORT_GUIDE.md` lists expected `Assets/Samples/...` import locations and post-import verification calls. After importing in Unity, run the listed import checklist, readiness, and focused preflight calls before continuing to Unity batch automation.
+`SAMPLE_IMPORT_GUIDE.md` lists expected `Assets/Samples/...` import locations and post-import verification calls. If the matching sample is already present under local `Library/PackageCache/**/Samples~`, `easyar_import_sample_from_package_cache` can copy it into `Assets/Samples` for the focused sample. After importing, run the listed import checklist, readiness, and focused preflight calls before continuing to Unity batch automation.
 
 When unsure what to do next, call `easyar_next_workflow_step` again. It inspects import status, readiness, local config, scene/Build Settings state, script review, device validation blockers, and handoff artifacts, then returns the next recommended MCP call.
 
