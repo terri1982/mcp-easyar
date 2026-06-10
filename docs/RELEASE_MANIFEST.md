@@ -55,6 +55,7 @@ Entrypoint mode: `npx`
 
 - Built entrypoint: `node /absolute/path/to/mcp-easyar/dist/index.js`
 - Package bin: `easyar-mcp`
+- Install check: `easyar-mcp-check`
 - npx package: `npx -y mcp-easyar`
 
 ## Verification Commands
@@ -63,6 +64,7 @@ Entrypoint mode: `npx`
 npm run typecheck
 npm test
 npm run bin:smoke
+npm run install:check
 npm run pack:check
 ```
 
@@ -135,6 +137,7 @@ Before publishing or tagging a release:
 npm run typecheck
 npm test
 npm run bin:smoke
+npm run install:check
 npm run pack:check
 ```
 

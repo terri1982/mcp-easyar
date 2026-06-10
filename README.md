@@ -88,6 +88,14 @@ npm run build
 
 For package-based clients after publishing, use `npm install -g mcp-easyar` with `entrypointMode=package-bin`, or `entrypointMode=npx` for `npx -y mcp-easyar`.
 
+After installing the package, verify the MCP entrypoint without exposing account secrets:
+
+```bash
+easyar-mcp-check
+```
+
+For a local build, use `npm run install:check`.
+
 ## Run
 
 ```bash
@@ -151,6 +159,7 @@ npm run build
 npm run typecheck
 npm test
 npm run bin:smoke
+npm run install:check
 npm run pack:check
 ```
 
@@ -172,6 +181,7 @@ Before publishing a release or npm package:
 npm run typecheck
 npm test
 npm run bin:smoke
+npm run install:check
 npm run pack:check
 ```
 

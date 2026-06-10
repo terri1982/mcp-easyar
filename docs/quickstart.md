@@ -7,6 +7,7 @@ This workflow supports both new and registered EasyAR users connecting Codex, Cl
 ```bash
 npm install
 npm run build
+npm run install:check
 ```
 
 ## 2. Configure A Client

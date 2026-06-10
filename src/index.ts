@@ -4149,6 +4149,7 @@ async function buildReleaseManifest() {
     "npm run typecheck",
     "npm test",
     "npm run bin:smoke",
+    "npm run install:check",
     "npm run pack:check"
   ];
   const mcpEntrypoints = [
@@ -4160,6 +4161,11 @@ async function buildReleaseManifest() {
     {
       label: "Package bin",
       command: binName,
+      args: []
+    },
+    {
+      label: "Install check",
+      command: "easyar-mcp-check",
       args: []
     },
     {

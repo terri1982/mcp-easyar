@@ -4,7 +4,8 @@
   "description": "Official EasyAR MCP server for registered users building EasyAR Unity samples and projects.",
   "type": "module",
   "bin": {
-    "easyar-mcp": "dist/index.js"
+    "easyar-mcp": "dist/index.js",
+    "easyar-mcp-check": "dist/install-check.js"
   },
   "files": [
     "dist",
@@ -19,8 +20,9 @@
     "bin:smoke": "npm run build && MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs",
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "install:check": "npm run build && node dist/install-check.js",
     "pack:check": "npm run build && npm pack --dry-run",
-    "postbuild": "chmod +x dist/index.js",
+    "postbuild": "chmod +x dist/index.js dist/install-check.js",
     "start": "node dist/index.js",
     "test": "npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs",
     "typecheck": "tsc --noEmit"

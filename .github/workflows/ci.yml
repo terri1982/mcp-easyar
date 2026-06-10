@@ -35,5 +35,8 @@ jobs:
       - name: Bin smoke test
         run: npm run bin:smoke
 
+      - name: Install check
+        run: npm run install:check
+
       - name: Package dry run
         run: npm run pack:check

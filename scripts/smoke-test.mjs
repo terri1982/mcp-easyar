@@ -536,6 +536,8 @@ try {
   assertTextIncludes(releaseManifest, "\"binName\": \"easyar-mcp\"");
   assertTextIncludes(releaseManifest, "\"installProfiles\"");
   assertTextIncludes(releaseManifest, "npm install -g mcp-easyar");
+  assertTextIncludes(releaseManifest, "npm run install:check");
+  assertTextIncludes(releaseManifest, "easyar-mcp-check");
   assertTextIncludes(releaseManifest, "\"command\": \"npx\"");
   assertTextIncludes(releaseManifest, "easyar_check_client_setup");
   assertTextIncludes(releaseManifest, "image-tracking");
@@ -551,6 +553,7 @@ try {
   assert(committedReleaseManifest.includes("Install Profiles"), "Committed release manifest should include install profiles");
   assert(committedReleaseManifest.includes("npm install -g mcp-easyar"), "Committed release manifest should include global install profile");
   assert(committedReleaseManifest.includes("npx -y mcp-easyar"), "Committed release manifest should include npx entrypoint");
+  assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {
@@ -563,6 +566,7 @@ try {
   );
   assert(releaseManifestMarkdown.includes("mcp-easyar Release Manifest"), "Release manifest markdown should include title");
   assert(releaseManifestMarkdown.includes("easyar-mcp"), "Release manifest markdown should include bin name");
+  assert(releaseManifestMarkdown.includes("easyar-mcp-check"), "Release manifest markdown should include install check bin");
   assert(releaseManifestMarkdown.includes("Install Profiles"), "Release manifest markdown should include install profiles");
   assert(releaseManifestMarkdown.includes("entrypointMode=package-bin"), "Release manifest markdown should include package-bin client config");
   await rm(releaseManifestRoot, { recursive: true, force: true });
