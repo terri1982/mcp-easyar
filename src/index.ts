@@ -8822,8 +8822,37 @@ function buildTargetSwitchSnippet(platform: typeof buildPlatforms[number]): stri
 }
 
 function buildLocalConfigExample(sample: SampleInfo): string {
+  const needsCloudRecognition = sample.id === "cloud-recognition";
   return `${JSON.stringify(
     {
+      _instructions: {
+        purpose: "Copy this file to easyar.local.json and fill it locally after official EasyAR registration/login.",
+        officialAccountFlow: [
+          "Register or log in through https://www.easyar.cn/ or the EasyAR development center in a browser.",
+          "Create or locate the EasyAR Sense license for the Unity bundle/package identifier below.",
+          ...(needsCloudRecognition
+            ? ["Create or locate Cloud Recognition/CRS credentials in the official EasyAR account, then fill appId, appKey, and appSecret together."]
+            : ["Cloud Recognition credentials can stay empty for the Image Tracking focused sample."])
+        ],
+        neverShareInChat: [
+          "EasyAR website password",
+          "SMS/email/authenticator verification codes",
+          "easyar.accountToken",
+          "easyar.licenseKey",
+          "easyar.cloudRecognition.appKey",
+          "easyar.cloudRecognition.appSecret"
+        ],
+        envAlternative: {
+          tool: "easyar_write_local_config_from_env",
+          accountToken: ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"],
+          licenseKey: ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"],
+          bundleIdentifier: ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"],
+          cloudAppId: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
+          cloudAppKey: ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
+          cloudAppSecret: ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]
+        },
+        validation: "Run easyar_validate_local_config after editing. The MCP server reports field presence and placeholders only, never secret values."
+      },
       sampleId: sample.id,
       sampleName: sample.name,
       easyar: {

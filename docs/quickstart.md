@@ -144,6 +144,8 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 
 Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials, or write the local file from environment-backed secrets:
 
+The generated example is valid JSON with an `_instructions` block. It tells first-time users which values come from EasyAR registration/login, which Cloud Recognition/CRS fields must be filled together, which values must never be pasted into chat, and which environment variables can be used with `easyar_write_local_config_from_env`.
+
 ```bash
 export EASYAR_API_TOKEN=your_registered_user_token
 export EASYAR_LICENSE_KEY=your_easyar_sense_license_key

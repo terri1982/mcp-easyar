@@ -734,6 +734,14 @@ try {
   assertTextIncludes(prepared, "EasyARMobileSettingsHelper.cs");
   assertTextIncludes(prepared, "EasyARSampleValidationHelper.cs");
   assertTextIncludes(prepared, "Assets/EasyARGenerated/image-tracking/RUNBOOK.md");
+  const imageLocalConfigExample = await readFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
+    "utf8"
+  );
+  assert(imageLocalConfigExample.includes("\"_instructions\""), "Local config example should include instructions");
+  assert(imageLocalConfigExample.includes("neverShareInChat"), "Local config example should include secret sharing policy");
+  assert(imageLocalConfigExample.includes("easyar_write_local_config_from_env"), "Local config example should include env-backed writer");
+  assert(imageLocalConfigExample.includes("EASYAR_LICENSE_KEY"), "Local config example should list license env var");
 
   const imageTrackingRunbook = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "RUNBOOK.md"),
@@ -1023,6 +1031,14 @@ try {
     overwrite: true
   });
   assertTextIncludes(preparedCloud, "Assets/EasyARGenerated/cloud-recognition/RUNBOOK.md");
+  const cloudLocalConfigExample = await readFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
+    "utf8"
+  );
+  assert(cloudLocalConfigExample.includes("Cloud Recognition/CRS credentials"), "Cloud config example should guide official Cloud Recognition credentials");
+  assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_APP_ID"), "Cloud config example should list app id env var");
+  assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_APP_KEY"), "Cloud config example should list app key env var");
+  assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_APP_SECRET"), "Cloud config example should list app secret env var");
   const cloudRunbook = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "RUNBOOK.md"),
     "utf8"
