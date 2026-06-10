@@ -35,6 +35,7 @@ const toolCatalog = [
   "easyar_auth_status",
   "easyar_check_account",
   "easyar_validate_license",
+  "easyar_discover_downloads",
   "easyar_generate_client_config",
   "easyar_generate_sample_plan",
   "easyar_generate_run_sequence",
@@ -405,12 +406,14 @@ server.tool(
       tokenPreview: auth.tokenPreview,
       accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
       licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
-      readyForAccountScopedContent: auth.hasToken && auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured,
+      downloadsEndpointConfigured: auth.downloadsEndpointConfigured,
+      readyForAccountScopedContent: auth.hasToken && auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured && auth.downloadsEndpointConfigured,
       requiredEnvironment: [
         "EASYAR_API_BASE_URL",
         "EASYAR_API_TOKEN",
         "EASYAR_ACCOUNT_STATUS_ENDPOINT",
-        "EASYAR_LICENSE_VALIDATE_ENDPOINT"
+        "EASYAR_LICENSE_VALIDATE_ENDPOINT",
+        "EASYAR_DOWNLOADS_ENDPOINT"
       ],
       security: "Secret values are never returned by this tool."
     });
@@ -455,6 +458,40 @@ server.tool(
 );
 
 server.tool(
+  "easyar_discover_downloads",
+  "Call a configured official EasyAR downloads endpoint to discover account-scoped SDK/sample packages without exposing tokens.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to read Unity version."),
+    sampleId: z.string().optional().describe("Optional focused sample id, for example image-tracking or cloud-recognition."),
+    packageKind: z.enum(["unity-plugin", "unity-samples", "native-sdk", "xr-extension", "unknown"]).default("unity-samples")
+  },
+  async ({ projectPath, sampleId, packageKind }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = sampleId ? findSample(sampleId) : null;
+    const unityVersion = root ? await readUnityVersion(root) : null;
+    const result = await easyarApi.discoverDownloads({
+      sampleId: sample?.id ?? sampleId,
+      packageKind,
+      unityVersion
+    });
+
+    return jsonText({
+      ...result,
+      input: {
+        projectPath: root,
+        sampleId: sample?.id ?? sampleId ?? null,
+        packageKind,
+        unityVersion
+      },
+      security: "EASYAR_API_TOKEN is never returned. This tool only calls configured official EasyAR endpoints and does not bypass download authorization."
+    });
+  }
+);
+
+server.tool(
   "easyar_generate_client_config",
   "Generate MCP client configuration snippets for connecting Codex, Claude Desktop, or another stdio MCP client.",
   {
@@ -468,6 +505,7 @@ server.tool(
       EASYAR_API_BASE_URL: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
       EASYAR_ACCOUNT_STATUS_ENDPOINT: process.env.EASYAR_ACCOUNT_STATUS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/account/status",
       EASYAR_LICENSE_VALIDATE_ENDPOINT: process.env.EASYAR_LICENSE_VALIDATE_ENDPOINT ?? "https://www.easyar.cn/path/to/official/license/validate",
+      EASYAR_DOWNLOADS_ENDPOINT: process.env.EASYAR_DOWNLOADS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/downloads",
       ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
     };
     const config = buildClientConfig(client, entrypoint, env);

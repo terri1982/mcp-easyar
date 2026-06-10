@@ -4,6 +4,7 @@ export type EasyARAuthStatus = {
   tokenPreview: string | null;
   accountStatusEndpointConfigured: boolean;
   licenseValidationEndpointConfigured: boolean;
+  downloadsEndpointConfigured: boolean;
 };
 
 export type EasyARApiClient = {
@@ -11,12 +12,19 @@ export type EasyARApiClient = {
   accountScopedFeatures(): string[];
   checkAccount(): Promise<EasyARRemoteCheckResult>;
   validateLicense(input: EasyARLicenseValidationInput): Promise<EasyARRemoteCheckResult>;
+  discoverDownloads(input: EasyARDownloadDiscoveryInput): Promise<EasyARRemoteCheckResult>;
 };
 
 export type EasyARLicenseValidationInput = {
   licenseKey?: string;
   bundleIdentifier?: string;
   platform?: string;
+};
+
+export type EasyARDownloadDiscoveryInput = {
+  sampleId?: string;
+  packageKind?: string;
+  unityVersion?: string | null;
 };
 
 export type EasyARRemoteCheckResult = {
@@ -34,6 +42,7 @@ export function createEasyARApiClient(env: NodeJS.ProcessEnv = process.env): Eas
   const token = env.EASYAR_API_TOKEN;
   const accountStatusEndpoint = env.EASYAR_ACCOUNT_STATUS_ENDPOINT;
   const licenseValidationEndpoint = env.EASYAR_LICENSE_VALIDATE_ENDPOINT;
+  const downloadsEndpoint = env.EASYAR_DOWNLOADS_ENDPOINT;
 
   return {
     authStatus() {
@@ -42,7 +51,8 @@ export function createEasyARApiClient(env: NodeJS.ProcessEnv = process.env): Eas
         hasToken: Boolean(token),
         tokenPreview: token ? `${token.slice(0, 4)}...${token.slice(-4)}` : null,
         accountStatusEndpointConfigured: Boolean(accountStatusEndpoint),
-        licenseValidationEndpointConfigured: Boolean(licenseValidationEndpoint)
+        licenseValidationEndpointConfigured: Boolean(licenseValidationEndpoint),
+        downloadsEndpointConfigured: Boolean(downloadsEndpoint)
       };
     },
     accountScopedFeatures() {
@@ -73,6 +83,20 @@ export function createEasyARApiClient(env: NodeJS.ProcessEnv = process.env): Eas
           platform: input.platform
         },
         missingEndpointSummary: "EASYAR_LICENSE_VALIDATE_ENDPOINT is not configured.",
+        missingTokenSummary: "EASYAR_API_TOKEN is not configured."
+      });
+    },
+    async discoverDownloads(input) {
+      return callOfficialEndpoint({
+        endpoint: downloadsEndpoint,
+        token,
+        method: "POST",
+        body: {
+          sampleId: input.sampleId,
+          packageKind: input.packageKind,
+          unityVersion: input.unityVersion
+        },
+        missingEndpointSummary: "EASYAR_DOWNLOADS_ENDPOINT is not configured.",
         missingTokenSummary: "EASYAR_API_TOKEN is not configured."
       });
     }

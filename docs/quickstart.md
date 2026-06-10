@@ -25,6 +25,7 @@ EASYAR_API_BASE_URL=https://www.easyar.cn
 EASYAR_API_TOKEN=your_registered_user_token
 EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
 EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
+EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
 
@@ -41,6 +42,7 @@ If official EasyAR account endpoints are configured, verify account and license 
 ```text
 easyar_check_account
 easyar_validate_license projectPath=/path/to/UnityProject platform=android
+easyar_discover_downloads projectPath=/path/to/UnityProject sampleId=image-tracking packageKind=unity-samples
 ```
 
 ## 3. Choose A Sample

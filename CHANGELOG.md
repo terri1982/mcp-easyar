@@ -25,6 +25,7 @@ Initial public MVP for `mcp-easyar`.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Authorization status checks that do not expose secret values.
 - Configurable official EasyAR account-status and license-validation endpoint calls.
+- Configurable official EasyAR downloads endpoint calls for account-scoped SDK/sample package discovery.
 - Unity project inspection and sample readiness diagnostics.
 - Sample-specific readiness checks for Image Tracking target assets and Cloud Recognition credentials.
 - Focused Unity log diagnostics for Image Tracking target loading/detection and Cloud Recognition credential/network failures.

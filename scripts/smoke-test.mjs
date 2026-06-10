@@ -13,7 +13,8 @@ const child = spawn(command, args, {
     EASYAR_API_BASE_URL: "https://www.easyar.cn",
     EASYAR_API_TOKEN: "",
     EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
-    EASYAR_LICENSE_VALIDATE_ENDPOINT: ""
+    EASYAR_LICENSE_VALIDATE_ENDPOINT: "",
+    EASYAR_DOWNLOADS_ENDPOINT: ""
   },
   stdio: ["pipe", "pipe", "pipe"]
 });
@@ -88,6 +89,10 @@ try {
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_run_unity_compile_check"),
     "easyar_run_unity_compile_check should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_discover_downloads"),
+    "easyar_discover_downloads should be listed"
   );
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_run_sequence"),
@@ -165,6 +170,7 @@ try {
   assertTextIncludes(authStatus, "\"hasToken\": false");
   assertTextIncludes(authStatus, "\"accountStatusEndpointConfigured\": false");
   assertTextIncludes(authStatus, "Secret values are never returned");
+  assertTextIncludes(authStatus, "\"downloadsEndpointConfigured\": false");
 
   const accountCheck = await callTool("easyar_check_account", {});
   assertTextIncludes(accountCheck, "\"configured\": false");
@@ -178,6 +184,14 @@ try {
   assertTextIncludes(remoteLicenseCheck, "\"configured\": false");
   assertTextIncludes(remoteLicenseCheck, "\"hasLicenseKey\": true");
   assertTextIncludes(remoteLicenseCheck, "licenseKey are never returned");
+
+  const downloadDiscovery = await callTool("easyar_discover_downloads", {
+    sampleId: "image-tracking",
+    packageKind: "unity-samples"
+  });
+  assertTextIncludes(downloadDiscovery, "\"configured\": false");
+  assertTextIncludes(downloadDiscovery, "EASYAR_DOWNLOADS_ENDPOINT is not configured");
+  assertTextIncludes(downloadDiscovery, "\"sampleId\": \"image-tracking\"");
 
   const clientConfig = await callTool("easyar_generate_client_config", {
     client: "claude-desktop",
