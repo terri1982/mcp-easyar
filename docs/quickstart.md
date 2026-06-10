@@ -102,6 +102,12 @@ For custom code, use:
 easyar_write_csharp_file
 ```
 
+Review generated or edited scripts before compiling:
+
+```text
+easyar_review_csharp_scripts projectPath=/path/to/UnityProject
+```
+
 ## 7. Final Readiness Check
 
 Call:

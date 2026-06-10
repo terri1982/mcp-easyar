@@ -46,6 +46,7 @@ const toolCatalog = [
   "easyar_create_sample_runner",
   "easyar_create_mono_behaviour",
   "easyar_write_csharp_file",
+  "easyar_review_csharp_scripts",
   "easyar_unity_environment",
   "easyar_run_unity_method"
 ] as const;
@@ -140,7 +141,7 @@ const quickstartWorkflow = [
   "8. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "9. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
   "10. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "11. Use `easyar_create_mono_behaviour` or `easyar_write_csharp_file` for project code.",
+  "11. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
   "12. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
@@ -247,7 +248,8 @@ server.tool(
           "generate player build helper",
           "run Unity batch methods",
           "analyze Unity logs",
-          "write C# scripts"
+          "write C# scripts",
+          "review C# scripts"
         ]
       },
       recommendedFirstCalls: [
@@ -834,6 +836,66 @@ server.tool(
 );
 
 server.tool(
+  "easyar_review_csharp_scripts",
+  "Review Unity C# scripts for common EasyAR workflow risks before opening or building the project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    relativePaths: z.array(z.string()).optional().describe("Optional .cs paths to review. Defaults to Assets/**/*.cs."),
+    maxFiles: z.number().int().positive().max(200).default(80),
+    maxIssues: z.number().int().positive().max(200).default(80)
+  },
+  async ({ projectPath, relativePaths, maxFiles, maxIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const files = relativePaths && relativePaths.length > 0
+      ? relativePaths.map((relativePath) => {
+          const target = path.resolve(root, relativePath);
+          assertInside(root, target);
+          if (!target.endsWith(".cs")) {
+            throw new Error("easyar_review_csharp_scripts only reviews .cs files.");
+          }
+          return target;
+        })
+      : (await findFiles(root, ["Assets"], /\.cs$/i, maxFiles)).map((relativePath) => path.join(root, relativePath));
+
+    const reviewed: string[] = [];
+    const issues: ScriptReviewIssue[] = [];
+    for (const filePath of files.slice(0, maxFiles)) {
+      if (!await exists(filePath)) {
+        issues.push({
+          id: "script-missing",
+          severity: "high",
+          file: path.relative(root, filePath),
+          line: null,
+          title: "Script file does not exist",
+          evidence: null,
+          recommendation: "Check the relativePaths input and rerun the review."
+        });
+        continue;
+      }
+
+      const text = await readFile(filePath, "utf8");
+      reviewed.push(path.relative(root, filePath));
+      issues.push(...reviewCsharpScript(path.relative(root, filePath), text));
+      if (issues.length >= maxIssues) {
+        break;
+      }
+    }
+
+    const limitedIssues = issues.slice(0, maxIssues);
+    return jsonText({
+      projectPath: root,
+      reviewedFiles: reviewed,
+      reviewedFileCount: reviewed.length,
+      issueCount: limitedIssues.length,
+      issues: limitedIssues,
+      nextActions: buildScriptReviewActions(limitedIssues),
+      note: "This is a static review. Unity compilation and device testing remain the source of truth."
+    });
+  }
+);
+
+server.tool(
   "easyar_unity_environment",
   "Inspect local Unity executable configuration and common install locations without launching Unity.",
   {},
@@ -1283,6 +1345,186 @@ function findEvidence(lines: string[], pattern: RegExp): string[] {
     .map((line) => line.trim().slice(0, 500));
 }
 
+type ScriptReviewIssue = {
+  id: string;
+  severity: "high" | "medium" | "low";
+  file: string;
+  line: number | null;
+  title: string;
+  evidence: string | null;
+  recommendation: string;
+};
+
+function reviewCsharpScript(relativePath: string, text: string): ScriptReviewIssue[] {
+  const issues: ScriptReviewIssue[] = [];
+  const lines = text.split(/\r?\n/);
+  const addIssue = (
+    id: string,
+    severity: ScriptReviewIssue["severity"],
+    line: number | null,
+    title: string,
+    evidence: string | null,
+    recommendation: string
+  ) => {
+    issues.push({
+      id,
+      severity,
+      file: relativePath,
+      line,
+      title,
+      evidence: evidence?.trim().slice(0, 500) ?? null,
+      recommendation
+    });
+  };
+
+  const usingEasyAR = /\busing\s+EasyAR\b|EasyAR\./.test(text);
+  const isMonoBehaviour = /:\s*MonoBehaviour\b/.test(text);
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    if (/(license\w*|appSecret|appKey|accountToken)\s*=\s*"[^"]{8,}"/i.test(line)) {
+      addIssue(
+        "hardcoded-easyar-secret",
+        "high",
+        lineNumber,
+        "Possible EasyAR secret is hardcoded in a C# script",
+        line,
+        "Move license keys, cloud recognition credentials, and account tokens into local config or secret injection."
+      );
+    }
+
+    if (/\basync\s+void\b/.test(line) && !/\b(async\s+void\s+(Start|Awake|OnEnable|OnDisable|Update|FixedUpdate|LateUpdate)\s*\()/.test(line)) {
+      addIssue(
+        "async-void",
+        "medium",
+        lineNumber,
+        "async void method can hide exceptions",
+        line,
+        "Use Task-returning methods for internal async work and surface failures through Unity logs."
+      );
+    }
+  });
+
+  const updateBody = extractMethodBody(text, "Update");
+  if (updateBody && /\b(GameObject\.Find|FindObjectOfType|FindObjectsOfType|Resources\.Load)\s*\(/.test(updateBody)) {
+    addIssue(
+      "expensive-update-lookup",
+      "medium",
+      findLineNumber(lines, /\bvoid\s+Update\s*\(/),
+      "Update performs expensive scene or resource lookups",
+      firstMatchingLine(updateBody, /\b(GameObject\.Find|FindObjectOfType|FindObjectsOfType|Resources\.Load)\s*\(/),
+      "Cache references in Awake/Start or assign them with [SerializeField] before running AR tracking loops."
+    );
+  }
+
+  if (isMonoBehaviour && /\bStartCoroutine\s*\(/.test(text) && !/\bStopCoroutine\s*\(|\bStopAllCoroutines\s*\(/.test(text)) {
+    addIssue(
+      "coroutine-not-stopped",
+      "low",
+      findLineNumber(lines, /\bStartCoroutine\s*\(/),
+      "Coroutine is started without an obvious stop path",
+      firstMatchingLine(text, /\bStartCoroutine\s*\(/),
+      "Stop long-running coroutines in OnDisable/OnDestroy so AR session transitions do not leak work."
+    );
+  }
+
+  if (isMonoBehaviour && /\bInvokeRepeating\s*\(/.test(text) && !/\bCancelInvoke\s*\(/.test(text)) {
+    addIssue(
+      "invoke-not-cancelled",
+      "low",
+      findLineNumber(lines, /\bInvokeRepeating\s*\(/),
+      "InvokeRepeating is used without CancelInvoke",
+      firstMatchingLine(text, /\bInvokeRepeating\s*\(/),
+      "Call CancelInvoke in OnDisable/OnDestroy for predictable sample teardown."
+    );
+  }
+
+  if (isMonoBehaviour && /\[SerializeField\]\s+private\s+[\w<>\[\].]+\s+(\w+)\s*;/.test(text)) {
+    const serializedFields = Array.from(text.matchAll(/\[SerializeField\]\s+private\s+[\w<>\[\].]+\s+(\w+)\s*;/g)).map((match) => match[1]);
+    for (const field of serializedFields) {
+      const fieldUsePattern = new RegExp(`\\b${escapeRegExp(field)}\\s*!=\\s*null|\\b${escapeRegExp(field)}\\s*==\\s*null`);
+      if (!fieldUsePattern.test(text)) {
+        addIssue(
+          "serialized-field-no-null-check",
+          "low",
+          findLineNumber(lines, new RegExp(`\\b${escapeRegExp(field)}\\b`)),
+          "Serialized field has no obvious null guard",
+          field,
+          "Add a null check or validation log before using Inspector-assigned AR references."
+        );
+      }
+    }
+  }
+
+  if (usingEasyAR && !/try\s*\{|catch\s*\(|Debug\.Log(Error|Warning)?\s*\(/.test(text)) {
+    addIssue(
+      "easyar-code-no-diagnostics",
+      "low",
+      null,
+      "EasyAR-related script has little diagnostic logging",
+      null,
+      "Add focused Debug.LogWarning/Debug.LogError messages around EasyAR initialization, target events, and credential-dependent paths."
+    );
+  }
+
+  if (/\bInput\.touchCount\b/.test(text) && !/\bInput\.GetTouch\s*\(\s*0\s*\)\.phase\b/.test(text)) {
+    addIssue(
+      "touch-without-phase-check",
+      "medium",
+      findLineNumber(lines, /\bInput\.touchCount\b/),
+      "Touch input is read without an obvious phase check",
+      firstMatchingLine(text, /\bInput\.touchCount\b/),
+      "Gate placement logic on TouchPhase.Began or a deliberate gesture phase to avoid repeated placement every frame."
+    );
+  }
+
+  return issues;
+}
+
+function buildScriptReviewActions(issues: ScriptReviewIssue[]): string[] {
+  if (issues.length === 0) {
+    return ["No static script review issues were detected. Run Unity compilation and device tests next."];
+  }
+  const actions = new Set<string>();
+  if (issues.some((issue) => issue.id === "hardcoded-easyar-secret")) {
+    actions.add("Move EasyAR secrets into ProjectSettings/EasyAR/easyar.local.json or environment-backed secret storage.");
+  }
+  if (issues.some((issue) => issue.severity === "high")) {
+    actions.add("Fix high-severity script issues before running Unity batch builds.");
+  }
+  actions.add("Patch focused scripts with easyar_write_csharp_file, then run Unity compilation or easyar_analyze_unity_log.");
+  return Array.from(actions);
+}
+
+function extractMethodBody(text: string, methodName: string): string | null {
+  const match = new RegExp(`\\b(?:private|public|protected|internal)?\\s*(?:static\\s+)?void\\s+${methodName}\\s*\\([^)]*\\)\\s*\\{`).exec(text);
+  if (!match) {
+    return null;
+  }
+  let depth = 0;
+  for (let index = match.index; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(match.index, index + 1);
+      }
+    }
+  }
+  return text.slice(match.index);
+}
+
+function findLineNumber(lines: string[], pattern: RegExp): number | null {
+  const index = lines.findIndex((line) => pattern.test(line));
+  return index >= 0 ? index + 1 : null;
+}
+
+function firstMatchingLine(text: string, pattern: RegExp): string | null {
+  return text.split(/\r?\n/).find((line) => pattern.test(line))?.trim() ?? null;
+}
+
 async function walk(root: string, dirPath: string, pattern: RegExp, found: string[], limit: number): Promise<void> {
   if (found.length >= limit) {
     return;
@@ -1724,6 +1966,10 @@ async function ensureGitignoreEntries(gitignorePath: string, entries: string[]) 
 
 function escapeCsharp(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function runUnity(unity: string, projectPath: string, executeMethod: string, timeoutSeconds: number) {

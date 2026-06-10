@@ -16,6 +16,7 @@ Initial public MVP for `mcp-easyar`.
 - Unity Editor helper generation for sample scene opening, mobile player settings, Build Settings configuration, and device/player builds.
 - Unity C# MonoBehaviour templates for image tracking, surface placement, cloud recognition, and lifecycle workflows.
 - Safe C# file writing constrained to the selected Unity project.
+- Static Unity C# script review for common EasyAR secret, lifecycle, input, and performance risks.
 - Unity batch method execution helper.
 - Unity Editor/build log analysis for EasyAR license, plugin import, camera permission, compile, Android/Gradle, iOS signing, and scene setup issues.
 - GitHub Actions CI with build, typecheck, MCP smoke test, executable bin smoke test, and package dry run.

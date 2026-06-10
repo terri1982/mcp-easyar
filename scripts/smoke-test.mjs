@@ -65,6 +65,10 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_create_mobile_settings_helper"),
     "easyar_create_mobile_settings_helper should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_review_csharp_scripts"),
+    "easyar_review_csharp_scripts should be listed"
+  );
 
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
@@ -233,6 +237,37 @@ try {
     "utf8"
   );
   assert(generatedScript.includes("OnTargetFound"), "Generated script should include OnTargetFound");
+
+  await writeFile(
+    path.join(projectPath, "Assets", "Scripts", "RiskyEasyARController.cs"),
+    [
+      "using UnityEngine;",
+      "using EasyAR;",
+      "",
+      "public sealed class RiskyEasyARController : MonoBehaviour",
+      "{",
+      "    [SerializeField] private GameObject contentRoot;",
+      "    private string licenseKey = \"hardcoded-easyar-license-value\";",
+      "",
+      "    private void Update()",
+      "    {",
+      "        GameObject.Find(\"ARCamera\");",
+      "        if (Input.touchCount > 0)",
+      "        {",
+      "            contentRoot.SetActive(true);",
+      "        }",
+      "    }",
+      "}"
+    ].join("\n"),
+    "utf8"
+  );
+  const scriptReview = await callTool("easyar_review_csharp_scripts", {
+    projectPath,
+    relativePaths: ["Assets/Scripts/RiskyEasyARController.cs"]
+  });
+  assertTextIncludes(scriptReview, "hardcoded-easyar-secret");
+  assertTextIncludes(scriptReview, "expensive-update-lookup");
+  assertTextIncludes(scriptReview, "touch-without-phase-check");
 
   const logAnalysis = await callTool("easyar_analyze_unity_log", {
     logText: [

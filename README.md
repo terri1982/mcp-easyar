@@ -22,6 +22,7 @@ This MVP focuses on local Unity project assistance:
 - validate local EasyAR config files without exposing secrets
 - generate Unity MonoBehaviour script templates for common EasyAR workflows
 - write C# scripts safely inside a Unity project
+- review Unity C# scripts for common EasyAR and AR sample risks
 - run a Unity static editor method in batch mode
 - inspect Unity executable configuration before batch mode runs
 - analyze Unity Editor/build logs for common EasyAR and platform issues
@@ -146,6 +147,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
 - `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
+- `easyar_review_csharp_scripts`: review Unity C# scripts for common EasyAR secret, lifecycle, input, and performance risks.
 - `easyar_unity_environment`: inspect `EASYAR_UNITY_PATH` and common Unity install locations without launching Unity.
 - `easyar_run_unity_method`: execute a Unity static editor method in batch mode.
 - `easyar_analyze_unity_log`: analyze Unity Editor/build logs and suggest next debugging actions.
