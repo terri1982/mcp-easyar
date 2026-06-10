@@ -11,7 +11,9 @@ const child = spawn(command, args, {
   env: {
     ...process.env,
     EASYAR_API_BASE_URL: "https://www.easyar.cn",
-    EASYAR_API_TOKEN: ""
+    EASYAR_API_TOKEN: "",
+    EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
+    EASYAR_LICENSE_VALIDATE_ENDPOINT: ""
   },
   stdio: ["pipe", "pipe", "pipe"]
 });
@@ -79,7 +81,21 @@ try {
 
   const authStatus = await callTool("easyar_auth_status", {});
   assertTextIncludes(authStatus, "\"hasToken\": false");
+  assertTextIncludes(authStatus, "\"accountStatusEndpointConfigured\": false");
   assertTextIncludes(authStatus, "Secret values are never returned");
+
+  const accountCheck = await callTool("easyar_check_account", {});
+  assertTextIncludes(accountCheck, "\"configured\": false");
+  assertTextIncludes(accountCheck, "EASYAR_ACCOUNT_STATUS_ENDPOINT is not configured");
+
+  const remoteLicenseCheck = await callTool("easyar_validate_license", {
+    licenseKey: "test-license-key",
+    bundleIdentifier: "com.easyar.testsample",
+    platform: "android"
+  });
+  assertTextIncludes(remoteLicenseCheck, "\"configured\": false");
+  assertTextIncludes(remoteLicenseCheck, "\"hasLicenseKey\": true");
+  assertTextIncludes(remoteLicenseCheck, "licenseKey are never returned");
 
   const clientConfig = await callTool("easyar_generate_client_config", {
     client: "claude-desktop",
@@ -131,7 +147,8 @@ try {
         }
       },
       unity: {
-        targetPlatform: "android"
+        targetPlatform: "android",
+        bundleIdentifier: "com.easyar.testsample"
       }
     }),
     "utf8"

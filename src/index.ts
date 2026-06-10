@@ -31,6 +31,8 @@ const toolCatalog = [
   "easyar_list_samples",
   "easyar_official_info",
   "easyar_auth_status",
+  "easyar_check_account",
+  "easyar_validate_license",
   "easyar_generate_client_config",
   "easyar_generate_sample_plan",
   "easyar_inspect_unity_project",
@@ -130,15 +132,16 @@ const quickstartWorkflow = [
   "",
   "1. Build the server with `npm install && npm run build`.",
   "2. Use `easyar_generate_client_config` to create a Codex or Claude Desktop MCP config snippet.",
-  "3. Configure `EASYAR_API_BASE_URL`, `EASYAR_API_TOKEN`, and optionally `EASYAR_UNITY_PATH` locally.",
-  "4. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
-  "5. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "6. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
-  "7. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
-  "8. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
-  "9. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "10. Use `easyar_create_mono_behaviour` or `easyar_write_csharp_file` for project code.",
-  "11. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
+  "3. Configure `EASYAR_API_BASE_URL`, `EASYAR_API_TOKEN`, official validation endpoints, and optionally `EASYAR_UNITY_PATH` locally.",
+  "4. Use `easyar_check_account` and `easyar_validate_license` after official EasyAR endpoints are configured.",
+  "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
+  "6. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
+  "7. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
+  "8. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
+  "9. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
+  "10. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "11. Use `easyar_create_mono_behaviour` or `easyar_write_csharp_file` for project code.",
+  "12. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -227,7 +230,9 @@ server.tool(
       authorization: {
         apiBaseUrl: auth.apiBaseUrl,
         hasToken: auth.hasToken,
-        readyForAccountScopedContent: auth.hasToken,
+        accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
+        licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
+        readyForAccountScopedContent: auth.hasToken && auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured,
         accountScopedFeatures: easyarApi.accountScopedFeatures()
       },
       capabilities: {
@@ -247,6 +252,7 @@ server.tool(
       },
       recommendedFirstCalls: [
         "easyar_auth_status",
+        "easyar_check_account",
         "easyar_list_samples",
         "easyar_generate_sample_plan",
         "easyar_inspect_unity_project",
@@ -284,12 +290,53 @@ server.tool(
       apiBaseUrl: auth.apiBaseUrl,
       hasToken: auth.hasToken,
       tokenPreview: auth.tokenPreview,
-      readyForAccountScopedContent: auth.hasToken,
+      accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
+      licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
+      readyForAccountScopedContent: auth.hasToken && auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured,
       requiredEnvironment: [
         "EASYAR_API_BASE_URL",
-        "EASYAR_API_TOKEN"
+        "EASYAR_API_TOKEN",
+        "EASYAR_ACCOUNT_STATUS_ENDPOINT",
+        "EASYAR_LICENSE_VALIDATE_ENDPOINT"
       ],
       security: "Secret values are never returned by this tool."
+    });
+  }
+);
+
+server.tool(
+  "easyar_check_account",
+  "Call a configured official EasyAR account-status endpoint with EASYAR_API_TOKEN without exposing secrets.",
+  {},
+  async () => jsonText(await easyarApi.checkAccount())
+);
+
+server.tool(
+  "easyar_validate_license",
+  "Call a configured official EasyAR license-validation endpoint without exposing license keys or account tokens.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, reads ProjectSettings/EasyAR/easyar.local.json for a license key."),
+    licenseKey: z.string().optional().describe("Optional EasyAR license key. Prefer projectPath/local config or secret injection; returned output is redacted."),
+    bundleIdentifier: z.string().optional().describe("Application bundle/package identifier bound to the EasyAR license."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("unknown")
+  },
+  async ({ projectPath, licenseKey, bundleIdentifier, platform }) => {
+    const localConfig = projectPath ? await readLocalConfigForRemoteValidation(projectPath) : {};
+    const result = await easyarApi.validateLicense({
+      licenseKey: licenseKey ?? localConfig.licenseKey,
+      bundleIdentifier: bundleIdentifier ?? localConfig.bundleIdentifier,
+      platform
+    });
+
+    return jsonText({
+      ...result,
+      input: {
+        projectPath: projectPath ? resolveProjectPath(projectPath) : null,
+        hasLicenseKey: Boolean(licenseKey ?? localConfig.licenseKey),
+        bundleIdentifier: bundleIdentifier ?? localConfig.bundleIdentifier ?? null,
+        platform
+      },
+      security: "EASYAR_API_TOKEN and licenseKey are never returned by this tool."
     });
   }
 );
@@ -306,6 +353,8 @@ server.tool(
     const entrypoint = serverPath ?? process.argv[1] ?? "dist/index.js";
     const env = {
       EASYAR_API_BASE_URL: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn",
+      EASYAR_ACCOUNT_STATUS_ENDPOINT: process.env.EASYAR_ACCOUNT_STATUS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/account/status",
+      EASYAR_LICENSE_VALIDATE_ENDPOINT: process.env.EASYAR_LICENSE_VALIDATE_ENDPOINT ?? "https://www.easyar.cn/path/to/official/license/validate",
       ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
     };
     const config = buildClientConfig(client, entrypoint, env);
@@ -1012,6 +1061,27 @@ async function readJsonFile(filePath: string): Promise<unknown> {
   }
 }
 
+async function readLocalConfigForRemoteValidation(projectPath: string): Promise<{
+  licenseKey?: string;
+  bundleIdentifier?: string;
+}> {
+  const root = resolveProjectPath(projectPath);
+  await ensureDirectory(root);
+  const target = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+  if (!await exists(target)) {
+    return {};
+  }
+
+  const parsed = await readJsonFile(target);
+  const value = isRecord(parsed) ? parsed : {};
+  const easyar = isRecord(value.easyar) ? value.easyar : {};
+  const unity = isRecord(value.unity) ? value.unity : {};
+  return {
+    licenseKey: typeof easyar.licenseKey === "string" ? easyar.licenseKey : undefined,
+    bundleIdentifier: typeof unity.bundleIdentifier === "string" ? unity.bundleIdentifier : undefined
+  };
+}
+
 function validateLocalConfig(config: unknown) {
   const value = isRecord(config) ? config : {};
   const easyar = isRecord(value.easyar) ? value.easyar : {};
@@ -1045,6 +1115,11 @@ function validateLocalConfig(config: unknown) {
       detail: "unity.targetPlatform is configured."
     },
     {
+      id: "bundle-identifier",
+      ok: isOptionalNonPlaceholderString(unity.bundleIdentifier),
+      detail: "unity.bundleIdentifier is empty or configured for remote license validation."
+    },
+    {
       id: "cloud-recognition",
       ok: hasCloudRecognitionConfig(cloudRecognition),
       detail: "cloudRecognition credentials are either all configured or all intentionally empty."
@@ -1068,6 +1143,9 @@ function localConfigAction(checkId: string): string {
   if (checkId === "target-platform") {
     return "Set unity.targetPlatform to android, ios, or standalone.";
   }
+  if (checkId === "bundle-identifier") {
+    return "Set unity.bundleIdentifier to the Android package name or iOS bundle identifier bound to the EasyAR license.";
+  }
   if (checkId === "cloud-recognition") {
     return "Either leave all cloudRecognition fields empty or fill appId, appKey, and appSecret together.";
   }
@@ -1080,6 +1158,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNonPlaceholderString(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0 && !/paste-|placeholder|your_/i.test(value);
+}
+
+function isOptionalNonPlaceholderString(value: unknown): boolean {
+  return value === undefined || value === null || value === "" || isNonPlaceholderString(value);
 }
 
 function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
@@ -1461,6 +1543,7 @@ function buildLocalConfigExample(sample: SampleInfo): string {
       },
       unity: {
         targetPlatform: "android",
+        bundleIdentifier: defaultBundleIdentifier(sample),
         notes: sample.setupNotes
       }
     },

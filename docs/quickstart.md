@@ -23,6 +23,8 @@ Set these environment variables locally:
 ```bash
 EASYAR_API_BASE_URL=https://www.easyar.cn
 EASYAR_API_TOKEN=your_registered_user_token
+EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
+EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
 
@@ -33,6 +35,13 @@ easyar_unity_environment
 ```
 
 Never commit account tokens, license keys, cloud recognition credentials, or mobile signing secrets.
+
+If official EasyAR account endpoints are configured, verify account and license access with:
+
+```text
+easyar_check_account
+easyar_validate_license projectPath=/path/to/UnityProject platform=android
+```
 
 ## 3. Choose A Sample
 

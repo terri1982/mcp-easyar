@@ -10,9 +10,10 @@ Initial public MVP for `mcp-easyar`.
 - Official EasyAR links, package-version notes, sample catalog, checklist, and quickstart resources.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Authorization status checks that do not expose secret values.
+- Configurable official EasyAR account-status and license-validation endpoint calls.
 - Unity project inspection and sample readiness diagnostics.
 - EasyAR local config template generation and validation without returning secrets.
-- Unity Editor helper generation for sample scene opening, Build Settings configuration, and device/player builds.
+- Unity Editor helper generation for sample scene opening, mobile player settings, Build Settings configuration, and device/player builds.
 - Unity C# MonoBehaviour templates for image tracking, surface placement, cloud recognition, and lifecycle workflows.
 - Safe C# file writing constrained to the selected Unity project.
 - Unity batch method execution helper.

@@ -27,6 +27,7 @@ This MVP focuses on local Unity project assistance:
 - analyze Unity Editor/build logs for common EasyAR and platform issues
 - expose EasyAR workflow guidance as MCP resources
 - check EasyAR account environment configuration without exposing secrets
+- call configured official EasyAR account/license validation endpoints without exposing secrets
 - generate MCP client configuration snippets for Codex and Claude
 
 The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
@@ -57,8 +58,12 @@ Optional environment variables:
 ```bash
 EASYAR_API_BASE_URL=https://www.easyar.cn
 EASYAR_API_TOKEN=your_registered_user_token
+EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
+EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
+
+`EASYAR_ACCOUNT_STATUS_ENDPOINT` and `EASYAR_LICENSE_VALIDATE_ENDPOINT` are intentionally configurable. Connect them to authorized EasyAR account APIs in production; the open-source default does not guess or bypass private EasyAR endpoints.
 
 ## Claude Desktop
 
@@ -127,6 +132,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_server_status`: return server version, capability summary, resources, authorization state, and recommended first calls.
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
 - `easyar_auth_status`: check EasyAR API environment configuration without returning secrets.
+- `easyar_check_account`: call a configured official EasyAR account-status endpoint with `EASYAR_API_TOKEN`.
+- `easyar_validate_license`: call a configured official EasyAR license-validation endpoint using local config or explicit input without returning secrets.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
