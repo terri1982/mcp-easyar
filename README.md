@@ -22,6 +22,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - write focused run reports into Unity projects as Markdown artifacts
 - audit focused sample scenes, Build Settings hints, EasyAR import signals, and sample-specific blockers
 - recognize Image Tracking scenes by scene content markers as well as official sample naming hints
+- report EasyAR PackageCache `Samples~` candidates when focused sample scenes have not been imported into `Assets/Samples`
 - generate focused support bundles that summarize project state, scene audit, run report, and latest Unity log diagnostics
 - generate real-device validation checklists for focused Image Tracking and Cloud Recognition tests
 - write device validation checklists into Unity projects as Markdown artifacts

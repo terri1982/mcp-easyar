@@ -186,7 +186,7 @@ const samples: SampleInfo[] = [
     name: "Cloud Recognition",
     description: "Recognize targets through EasyAR cloud services and use results to drive AR content.",
     implementationStatus: "focused",
-    unityScenes: ["CloudRecognition", "CloudRecognizer"],
+    unityScenes: ["CloudRecognition", "CloudRecognizer", "ImageTracking_CloudRecognition"],
     requiredCapabilities: ["Network access", "Cloud recognition credentials", "EasyAR license key"],
     setupNotes: [
       "Configure official EasyAR cloud recognition credentials from the registered account.",
@@ -3206,6 +3206,7 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
   const easyarSignals = filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 120));
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
   const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
+  const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
   const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
 
   const checks = [
@@ -3238,7 +3239,9 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
       ok: matchingScenes.length > 0,
       detail: matchingScenes.length > 0
         ? `Found matching sample scene(s): ${matchingScenes.join(", ")}.`
-        : `No scene matched hints: ${sample.unityScenes.join(", ")}. Import the official ${sample.name} sample scene.`
+        : packageCacheSamples.length > 0
+          ? `No imported scene matched hints: ${sample.unityScenes.join(", ")}. Package cache contains sample candidate(s): ${packageCacheSamples.join(", ")}.`
+          : `No scene matched hints: ${sample.unityScenes.join(", ")}. Import the official ${sample.name} sample scene.`
     },
     {
       id: "local-config-template",
@@ -3289,6 +3292,7 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
     ready: checks.every((check) => check.ok),
     checks,
     matchingScenes,
+    packageCacheSamples,
     nextActions
   };
 }
@@ -3298,6 +3302,7 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
   const easyarSignals = filterOfficialEasyARSignals(allEasyARSignals);
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
   const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
+  const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
   const targetAssets = sample.id === "image-tracking"
     ? await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, 80)
     : [];
@@ -3326,8 +3331,21 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
       ok: matchingScenes.length > 0,
       evidence: matchingScenes.length > 0
         ? `Matching sample scene(s): ${matchingScenes.join(", ")}`
-        : `No scene matched focused sample hints: ${sample.unityScenes.join(", ")}.`,
-      action: `Import the official ${sample.name} sample scene from the EasyAR Unity sample package.`
+        : packageCacheSamples.length > 0
+          ? `No imported scene matched focused sample hints. Package cache sample candidate(s): ${packageCacheSamples.join(", ")}`
+          : `No scene matched focused sample hints: ${sample.unityScenes.join(", ")}.`,
+      action: packageCacheSamples.length > 0
+        ? `Import ${sample.name} from Unity Package Manager Samples, then rerun easyar_generate_import_checklist.`
+        : `Import the official ${sample.name} sample scene from the EasyAR Unity sample package.`
+    },
+    {
+      id: "package-cache-sample-available",
+      required: false,
+      ok: packageCacheSamples.length > 0,
+      evidence: packageCacheSamples.length > 0
+        ? `Package cache sample candidate(s): ${packageCacheSamples.join(", ")}`
+        : "No matching EasyAR Samples~ package cache sample was found.",
+      action: "Open Unity Package Manager, select EasyAR Sense Unity Plugin, and import the matching official sample into Assets/Samples."
     },
     {
       id: "sample-scope-supported",
@@ -4669,6 +4687,57 @@ async function sceneContentMatchesSample(root: string, sample: SampleInfo, scene
     return /CloudRecognition|CloudRecognizer|CloudRecogniz/i.test(text);
   }
   return false;
+}
+
+async function findPackageCacheSamplePaths(root: string, sample: SampleInfo, limit: number): Promise<string[]> {
+  const packageCacheRoot = path.join(root, "Library", "PackageCache");
+  if (!await exists(packageCacheRoot)) {
+    return [];
+  }
+  const found: string[] = [];
+  await walkPackageCacheSamples(root, packageCacheRoot, sample, found, limit, 5);
+  return found;
+}
+
+async function walkPackageCacheSamples(
+  root: string,
+  dirPath: string,
+  sample: SampleInfo,
+  found: string[],
+  limit: number,
+  depth: number
+): Promise<void> {
+  if (found.length >= limit || depth < 0) {
+    return;
+  }
+  let entries;
+  try {
+    entries = await readdir(dirPath, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (found.length >= limit) {
+      return;
+    }
+    const fullPath = path.join(dirPath, entry.name);
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const relativePath = path.relative(root, fullPath);
+    if (relativePath.includes(`Samples~${path.sep}`) && packageCacheSamplePathMatches(sample, relativePath)) {
+      found.push(relativePath);
+      continue;
+    }
+    await walkPackageCacheSamples(root, fullPath, sample, found, limit, depth - 1);
+  }
+}
+
+function packageCacheSamplePathMatches(sample: SampleInfo, relativePath: string): boolean {
+  const normalized = relativePath.toLowerCase();
+  return sample.unityScenes.some((hint) => normalized.includes(hint.toLowerCase()))
+    || (sample.id === "cloud-recognition" && normalized.includes("cloudrecognition"))
+    || (sample.id === "image-tracking" && normalized.includes("imagetracking"));
 }
 
 function readinessAction(checkId: string, sample: SampleInfo): string {

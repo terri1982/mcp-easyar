@@ -53,9 +53,15 @@ easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=image-track
 Common blockers:
 
 - `cloud-recognition-credentials`: `ProjectSettings/EasyAR/easyar.local.json` does not contain non-placeholder `appId`, `appKey`, and `appSecret`.
+- `focused-sample-scene-imported`: the Cloud Recognition sample exists in the EasyAR package cache but has not been imported into `Assets/Samples`.
+- `package-cache-sample-available`: the MCP server found a candidate under `Library/PackageCache/**/Samples~`; import it through Unity Package Manager Samples.
 - `cloud-recognition-network`: Unity or device logs indicate timeout, unreachable host, TLS, DNS, or service connectivity problems.
 - `sample-scene`: no Cloud Recognition scene candidate was found, or the matching scene is not enabled in Build Settings.
 - `camera-permission`: the app cannot access camera permission on device.
+
+Package cache note:
+
+EasyAR package samples can appear under `Library/PackageCache/.../Samples~/ImageTracking/ImageTracking_CloudRecognition` before they are imported into the project. The MCP server reports these paths as import candidates, but Unity must still import the sample into `Assets/Samples` before Build Settings and scene validation can succeed.
 
 Recommended flow:
 

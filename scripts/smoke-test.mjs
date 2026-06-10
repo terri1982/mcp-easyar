@@ -782,12 +782,31 @@ try {
   assertTextIncludes(preparedReadiness, "EasyARBuildSettingsHelper.cs exists");
   assertTextIncludes(preparedReadiness, "ImageTarget.jpg");
 
+  await mkdir(
+    path.join(projectPath, "Library", "PackageCache", "com.easyar.sense@4002.0.0", "Samples~", "ImageTracking", "ImageTracking_CloudRecognition", "Scenes"),
+    { recursive: true }
+  );
+  await writeFile(
+    path.join(projectPath, "Library", "PackageCache", "com.easyar.sense@4002.0.0", "Samples~", "ImageTracking", "ImageTracking_CloudRecognition", "Scenes", "ImageTracking_CloudRecognition.unity"),
+    "%YAML 1.1\nm_Name: CloudRecognizer\nCloudRecognizerFrameFilter:\n",
+    "utf8"
+  );
+
   const missingCloudReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,
     sampleId: "cloud-recognition"
   });
   assertTextIncludes(missingCloudReadiness, "cloud-recognition-credentials");
   assertTextIncludes(missingCloudReadiness, "credentials are incomplete");
+  assertTextIncludes(missingCloudReadiness, "ImageTracking_CloudRecognition");
+
+  const missingCloudImportChecklist = await callTool("easyar_generate_import_checklist", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(missingCloudImportChecklist, "package-cache-sample-available");
+  assertTextIncludes(missingCloudImportChecklist, "ImageTracking_CloudRecognition");
+  assertTextIncludes(missingCloudImportChecklist, "Unity Package Manager Samples");
 
   const preparedCloud = await callTool("easyar_prepare_unity_project", {
     projectPath,
