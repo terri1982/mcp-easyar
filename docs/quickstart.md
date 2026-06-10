@@ -26,6 +26,12 @@ EASYAR_API_TOKEN=your_registered_user_token
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
 ```
 
+You can inspect local Unity path discovery with:
+
+```text
+easyar_unity_environment
+```
+
 Never commit account tokens, license keys, cloud recognition credentials, or mobile signing secrets.
 
 ## 3. Choose A Sample

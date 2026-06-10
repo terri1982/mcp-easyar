@@ -84,6 +84,9 @@ try {
   assertTextIncludes(clientConfig, "\"mcpServers\"");
   assertTextIncludes(clientConfig, "your_registered_user_token");
 
+  const unityEnvironment = await callTool("easyar_unity_environment", {});
+  assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
+
   const projectPath = await createUnityProject();
   const initialReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,

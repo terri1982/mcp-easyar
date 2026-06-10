@@ -42,6 +42,7 @@ const toolCatalog = [
   "easyar_create_sample_runner",
   "easyar_create_mono_behaviour",
   "easyar_write_csharp_file",
+  "easyar_unity_environment",
   "easyar_run_unity_method"
 ] as const;
 
@@ -733,6 +734,30 @@ server.tool(
 );
 
 server.tool(
+  "easyar_unity_environment",
+  "Inspect local Unity executable configuration and common install locations without launching Unity.",
+  {},
+  async () => {
+    const configuredPath = process.env.EASYAR_UNITY_PATH ?? null;
+    const configuredExists = configuredPath ? await exists(configuredPath) : false;
+    const candidates = await findUnityCandidates();
+
+    return jsonText({
+      configuredPath,
+      configuredExists,
+      pathCommand: "Unity",
+      candidates,
+      recommendedUnityPath: configuredExists
+        ? configuredPath
+        : candidates.find((candidate) => candidate.exists)?.path ?? null,
+      nextActions: configuredExists || candidates.some((candidate) => candidate.exists)
+        ? ["Use the recommendedUnityPath as EASYAR_UNITY_PATH or pass it as unityPath to easyar_run_unity_method."]
+        : ["Install Unity through Unity Hub, then set EASYAR_UNITY_PATH to the Unity executable path."]
+    });
+  }
+);
+
+server.tool(
   "easyar_run_unity_method",
   "Run a Unity static editor method in batch mode for project automation.",
   {
@@ -840,6 +865,52 @@ async function findFiles(root: string, relativeDirs: string[], pattern: RegExp, 
     }
   }
   return found.map((filePath) => path.relative(root, filePath));
+}
+
+async function findUnityCandidates() {
+  const candidates = [
+    "/Applications/Unity/Hub/Editor",
+    path.join(process.env.PROGRAMFILES ?? "C:\\Program Files", "Unity", "Hub", "Editor"),
+    path.join(process.env.HOME ?? "", "Unity", "Hub", "Editor"),
+    "/opt/Unity/Editor"
+  ];
+
+  const executablePaths = new Set<string>();
+  for (const candidate of candidates) {
+    if (!candidate || !await exists(candidate)) {
+      continue;
+    }
+    await collectUnityExecutables(candidate, executablePaths, 3);
+  }
+
+  executablePaths.add("Unity");
+  return Promise.all(
+    Array.from(executablePaths).map(async (candidatePath) => ({
+      path: candidatePath,
+      exists: candidatePath === "Unity" ? false : await exists(candidatePath)
+    }))
+  );
+}
+
+async function collectUnityExecutables(dirPath: string, found: Set<string>, depth: number): Promise<void> {
+  if (depth < 0) {
+    return;
+  }
+  let entries;
+  try {
+    entries = await readdir(dirPath, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      await collectUnityExecutables(fullPath, found, depth - 1);
+    } else if (entry.name === "Unity" || entry.name === "Unity.exe") {
+      found.add(fullPath);
+    }
+  }
 }
 
 function matchSampleScenes(sample: SampleInfo, scenePaths: string[]): string[] {
