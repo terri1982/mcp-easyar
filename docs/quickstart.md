@@ -1,6 +1,6 @@
 # mcp-easyar Quickstart
 
-This workflow is for registered EasyAR users connecting Codex, Claude, or another MCP client to local Unity project automation.
+This workflow supports both new and registered EasyAR users connecting Codex, Claude, or another MCP client to local Unity project automation.
 
 ## 1. Build The Server
 
@@ -10,6 +10,15 @@ npm run build
 ```
 
 ## 2. Configure A Client
+
+If you do not have an EasyAR account yet, start with the account guide:
+
+```text
+easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
+easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition
+```
+
+The guide sends users to the official EasyAR website and development center. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 Ask the MCP server for a client snippet:
 
@@ -41,6 +50,15 @@ easyar_unity_environment
 ```
 
 Never commit account tokens, license keys, cloud recognition credentials, or mobile signing secrets.
+
+For first-time EasyAR users, the intended order is:
+
+1. Register or log in on the official EasyAR website/development center.
+2. Create or locate an EasyAR Sense license key for the app bundle/package identifier.
+3. For Cloud Recognition, create or locate appId, appKey, and appSecret in the official account.
+4. Put MCP API tokens in the MCP client environment or secret store.
+5. Put license and Cloud Recognition values only in `ProjectSettings/EasyAR/easyar.local.json`.
+6. Run `easyar_validate_local_config` and `easyar_check_official_access`.
 
 If official EasyAR account endpoints are configured, verify account and license access with:
 

@@ -49,6 +49,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - find and analyze the latest Unity log after a failed batch run
 - expose EasyAR workflow guidance as MCP resources
 - expose MCP prompts for Image Tracking, Cloud Recognition, and Unity programming assistance
+- guide unregistered users through official EasyAR registration, development center login, license creation, and Cloud Recognition credential setup without collecting passwords
 - check Codex/Claude/generic MCP client setup before users paste config
 - write client setup reports for handoff and troubleshooting
 - recommend the next focused workflow step from current project evidence
@@ -185,6 +186,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
 - `easyar_release_manifest`: generate a consumer-facing install/release manifest with package metadata, entrypoints, focused scope, env names, and verification commands.
 - `easyar_write_release_manifest`: write the release manifest to `docs/RELEASE_MANIFEST.md` or a selected path.
+- `easyar_account_onboarding`: guide new or existing EasyAR users through official registration/login, license setup, Cloud Recognition credentials, and local MCP setup without collecting passwords or secrets.
+- `easyar_write_account_onboarding`: write the account onboarding guide to `Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md` or `EasyARGenerated/ACCOUNT_ONBOARDING.md`.
 - `easyar_onboarding_report`: generate a first-run project onboarding report across client setup, official access, release manifest, and workflow state.
 - `easyar_write_onboarding_report`: write the onboarding report to `Assets/EasyARGenerated/<sampleId>/ONBOARDING.md`.
 - `easyar_next_workflow_step`: inspect current focused project state and recommend the next MCP/Unity action.

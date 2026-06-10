@@ -192,6 +192,14 @@ try {
     "easyar_write_onboarding_report should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_account_onboarding"),
+    "easyar_account_onboarding should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_account_onboarding"),
+    "easyar_write_account_onboarding should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_next_workflow_step"),
     "easyar_next_workflow_step should be listed"
   );
@@ -249,6 +257,16 @@ try {
   assertTextIncludes(authStatus, "Secret values are never returned");
   assertTextIncludes(authStatus, "\"downloadsEndpointConfigured\": false");
   assertTextIncludes(authStatus, "\"cloudCredentialsEndpointConfigured\": false");
+
+  const accountOnboarding = await callTool("easyar_account_onboarding", {
+    sampleId: "cloud-recognition",
+    accountStage: "not-registered"
+  });
+  assertTextIncludes(accountOnboarding, "\"stage\": \"not-registered\"");
+  assertTextIncludes(accountOnboarding, "https://www.easyar.cn/");
+  assertTextIncludes(accountOnboarding, "https://portal.easyar.com/");
+  assertTextIncludes(accountOnboarding, "Register an EasyAR account");
+  assertTextIncludes(accountOnboarding, "MCP does not ask for or store EasyAR website passwords");
 
   const accountCheck = await callTool("easyar_check_account", {});
   assertTextIncludes(accountCheck, "\"configured\": false");
@@ -386,6 +404,21 @@ try {
   );
   assert(onboardingMarkdown.includes("EasyAR Onboarding - Image Tracking"), "Onboarding markdown should include title");
   assert(onboardingMarkdown.includes("official-access"), "Onboarding markdown should include official access blockers");
+
+  const writtenAccountOnboarding = await callTool("easyar_write_account_onboarding", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    accountStage: "not-registered"
+  });
+  assertTextIncludes(writtenAccountOnboarding, "ACCOUNT_ONBOARDING.md");
+  const accountOnboardingMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md"),
+    "utf8"
+  );
+  assert(accountOnboardingMarkdown.includes("EasyAR Account Onboarding"), "Account onboarding markdown should include title");
+  assert(accountOnboardingMarkdown.includes("Register an EasyAR account"), "Account onboarding markdown should guide registration");
+  assert(accountOnboardingMarkdown.includes("https://portal.easyar.com/"), "Account onboarding markdown should include development center");
+  assert(!accountOnboardingMarkdown.includes("test-account-token"), "Account onboarding markdown should not include test tokens");
 
   const initialWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,

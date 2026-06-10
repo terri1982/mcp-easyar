@@ -45,6 +45,7 @@ npm run pack:check
 
 - `easyar_server_status`
 - `easyar_release_manifest`
+- `easyar_account_onboarding`
 - `easyar_check_client_setup`
 - `easyar_auth_status`
 - `easyar_check_official_access`

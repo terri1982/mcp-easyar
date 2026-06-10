@@ -75,6 +75,8 @@ const toolCatalog = [
   "easyar_list_samples",
   "easyar_official_info",
   "easyar_auth_status",
+  "easyar_account_onboarding",
+  "easyar_write_account_onboarding",
   "easyar_check_account",
   "easyar_validate_license",
   "easyar_discover_downloads",
@@ -479,6 +481,61 @@ server.tool(
         "EASYAR_CLOUD_CREDENTIALS_ENDPOINT"
       ],
       security: "Secret values are never returned by this tool."
+    });
+  }
+);
+
+server.tool(
+  "easyar_account_onboarding",
+  "Guide new or existing EasyAR users through official registration, login, license, Cloud Recognition credentials, and local MCP setup without collecting passwords or secrets.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to inspect local EasyAR config and Unity bundle identifier."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs account cloud credentials."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    accountStage: z.enum(["unknown", "not-registered", "registered-not-logged-in", "logged-in", "has-license", "has-cloud-credentials"]).default("unknown").describe("What the user currently knows about their EasyAR account state.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    return jsonText(await buildAccountOnboardingReport(root, sample, platform, accountStage));
+  }
+);
+
+server.tool(
+  "easyar_write_account_onboarding",
+  "Write the EasyAR account registration/login and local secret setup guide as a Markdown artifact.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, writes to Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md by default."),
+    outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs account cloud credentials."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    accountStage: z.enum(["unknown", "not-registered", "registered-not-logged-in", "logged-in", "has-license", "has-cloud-credentials"]).default("unknown"),
+    relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md for Unity projects or EasyARGenerated/ACCOUNT_ONBOARDING.md for outputRoot."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing account onboarding artifact.")
+  },
+  async ({ projectPath, outputRoot, sampleId, platform, accountStage, relativePath, overwrite }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
+    await ensureDirectory(root);
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    const report = await buildAccountOnboardingReport(projectPath ? root : null, sample, platform, accountStage);
+    const defaultRelativePath = projectPath
+      ? path.join("Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md")
+      : path.join("EasyARGenerated", "ACCOUNT_ONBOARDING.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildAccountOnboardingMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      stage: report.stage,
+      sample: sample.name,
+      nextActions: report.nextActions,
+      note: "The account onboarding artifact contains links, checklist items, and local file paths only. It does not include account passwords, tokens, license keys, appKey, or appSecret values."
     });
   }
 );
@@ -2453,6 +2510,269 @@ function deploymentNextActions(
   return Array.from(actions);
 }
 
+async function buildAccountOnboardingReport(
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  accountStage: "unknown" | "not-registered" | "registered-not-logged-in" | "logged-in" | "has-license" | "has-cloud-credentials"
+) {
+  const auth = readAuthConfig();
+  const localConfig = root ? await buildLocalConfigValidationReport(root) : null;
+  const cloudConfig = root ? await readCloudRecognitionConfig(root) : {};
+  const localConfigPath = root ? path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json") : null;
+  const bundleIdentifier = root ? (await readLocalConfigForRemoteValidation(root)).bundleIdentifier ?? defaultBundleIdentifier(sample) : defaultBundleIdentifier(sample);
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const derivedStage = deriveAccountOnboardingStage(accountStage, auth, localConfig, cloudConfig, needsCloudRecognition);
+  const humanSteps = buildAccountHumanSteps(derivedStage, needsCloudRecognition, bundleIdentifier, platform);
+  const mcpSteps = buildAccountMcpSteps(root, sample, platform, needsCloudRecognition);
+  const blockers = buildAccountOnboardingBlockers(derivedStage, auth, localConfig, cloudConfig, needsCloudRecognition, root);
+  const nextActions = buildAccountOnboardingNextActions(derivedStage, blockers, root, sample, platform, needsCloudRecognition);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    stage: derivedStage,
+    requestedStage: accountStage,
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    needsCloudRecognition,
+    officialLinks: {
+      website: "https://www.easyar.cn/",
+      developCenter: "https://portal.easyar.com/",
+      docsGettingStarted: "https://help.easyar.com/EasyAR%20Sense/v3/GettingStarted/Getting-Started-with-EasyAR.html",
+      apiKeyDocs: "https://www.easyar.com/doc/zh-hant/develop/apikey-auth.html",
+      downloads: officialInfo.docs.downloads,
+      samples: officialInfo.docs.samples
+    },
+    localFiles: {
+      localConfig: localConfigPath,
+      localConfigExists: localConfig ? localConfig.checks.find((check) => check.id === "file-exists")?.ok ?? false : null,
+      localConfigValid: localConfig?.valid ?? null,
+      bundleIdentifier,
+      cloudCredentialPresence: needsCloudRecognition
+        ? {
+            appId: isNonPlaceholderString(cloudConfig.appId),
+            appKey: isNonPlaceholderString(cloudConfig.appKey),
+            appSecret: isNonPlaceholderString(cloudConfig.appSecret)
+          }
+        : null
+    },
+    environment: {
+      apiBaseUrl: auth.apiBaseUrl,
+      apiTokenConfigured: auth.hasToken,
+      accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
+      licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
+      downloadsEndpointConfigured: auth.downloadsEndpointConfigured,
+      cloudCredentialsEndpointConfigured: auth.cloudCredentialsEndpointConfigured
+    },
+    humanSteps,
+    mcpSteps,
+    blockers,
+    nextActions,
+    security: [
+      "MCP does not ask for or store EasyAR website passwords.",
+      "Register and log in only through official EasyAR pages.",
+      "Put tokens in local MCP client environment or a secret store, not in source control.",
+      "Put licenseKey and Cloud Recognition appId/appKey/appSecret only in ProjectSettings/EasyAR/easyar.local.json or another local secret source.",
+      "MCP reports only presence, status, paths, and redacted metadata."
+    ]
+  };
+}
+
+function deriveAccountOnboardingStage(
+  accountStage: "unknown" | "not-registered" | "registered-not-logged-in" | "logged-in" | "has-license" | "has-cloud-credentials",
+  auth: ReturnType<typeof readAuthConfig>,
+  localConfig: Awaited<ReturnType<typeof buildLocalConfigValidationReport>> | null,
+  cloudConfig: Record<string, unknown>,
+  needsCloudRecognition: boolean
+) {
+  if (accountStage !== "unknown") {
+    return accountStage;
+  }
+  if (needsCloudRecognition && hasCompleteCloudRecognitionConfig(cloudConfig)) {
+    return "has-cloud-credentials";
+  }
+  if (localConfig?.checks.some((check) => check.id === "license-key" && check.ok)) {
+    return "has-license";
+  }
+  if (auth.hasToken) {
+    return "logged-in";
+  }
+  return "not-registered";
+}
+
+function buildAccountHumanSteps(
+  stage: string,
+  needsCloudRecognition: boolean,
+  bundleIdentifier: string,
+  platform: string
+) {
+  const steps = [
+    {
+      id: "register",
+      requiredWhen: ["not-registered"],
+      title: "Register an EasyAR account",
+      action: "Open https://www.easyar.cn/ and use the official register/sign-up entry. Activate the account from the registration email if required.",
+      doneWhen: "You can open the EasyAR development center with your registered account."
+    },
+    {
+      id: "login",
+      requiredWhen: ["not-registered", "registered-not-logged-in"],
+      title: "Log in to EasyAR development center",
+      action: "Open https://portal.easyar.com/ or the Development Center link from the EasyAR website and log in there. Do not paste your password into an MCP client.",
+      doneWhen: "The development center dashboard is visible in the browser."
+    },
+    {
+      id: "create-license",
+      requiredWhen: ["not-registered", "registered-not-logged-in", "logged-in"],
+      title: "Create or locate an EasyAR Sense license key",
+      action: `In the development center, create or open the SDK authorization/license entry for ${platform}. Use bundle/package identifier ${bundleIdentifier} when the portal asks for it.`,
+      doneWhen: "A license key for the matching EasyAR Sense major version and bundle/package identifier is available."
+    },
+    {
+      id: "download-plugin",
+      requiredWhen: ["not-registered", "registered-not-logged-in", "logged-in", "has-license"],
+      title: "Download or import the official EasyAR Unity Plugin and samples",
+      action: "Use official EasyAR downloads or Unity Package Manager Samples. Import the focused sample into Assets/Samples before Unity validation.",
+      doneWhen: "easyar_generate_import_checklist reports the official plugin and focused sample scene are imported."
+    },
+    ...(needsCloudRecognition
+      ? [
+          {
+            id: "create-cloud-credentials",
+            requiredWhen: ["not-registered", "registered-not-logged-in", "logged-in", "has-license"],
+            title: "Create or locate Cloud Recognition credentials",
+            action: "In the EasyAR development center, create or open the Cloud Recognition/CRS service configuration and copy appId, appKey, and appSecret into the local config file only.",
+            doneWhen: "easyar_validate_local_config reports cloudRecognition appId, appKey, and appSecret are present and not placeholders."
+          }
+        ]
+      : [])
+  ];
+
+  return steps.map((step) => ({
+    ...step,
+    active: step.requiredWhen.includes(stage)
+  }));
+}
+
+function buildAccountMcpSteps(
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  needsCloudRecognition: boolean
+) {
+  const projectPath = root ?? "/path/to/UnityProject";
+  return [
+    {
+      tool: "easyar_auth_status",
+      arguments: {},
+      purpose: "Check whether MCP client environment has EasyAR API token and official endpoint configuration."
+    },
+    {
+      tool: "easyar_prepare_unity_project",
+      arguments: { projectPath, sampleId: sample.id },
+      purpose: "Create easyar.local.json.example, generated runbook, helper scripts, and secret ignore rules."
+    },
+    {
+      tool: "easyar_validate_local_config",
+      arguments: { projectPath },
+      purpose: needsCloudRecognition
+        ? "Check local license and Cloud Recognition credential presence without printing values."
+        : "Check local license presence without printing values."
+    },
+    {
+      tool: "easyar_check_official_access",
+      arguments: { projectPath, sampleId: sample.id, platform },
+      purpose: "Check account/license/download/cloud endpoint readiness when official EasyAR endpoints are configured."
+    },
+    {
+      tool: "easyar_next_workflow_step",
+      arguments: { projectPath, sampleId: sample.id, platform },
+      purpose: "Continue from the current local evidence after account setup is complete."
+    }
+  ];
+}
+
+function buildAccountOnboardingBlockers(
+  stage: string,
+  auth: ReturnType<typeof readAuthConfig>,
+  localConfig: Awaited<ReturnType<typeof buildLocalConfigValidationReport>> | null,
+  cloudConfig: Record<string, unknown>,
+  needsCloudRecognition: boolean,
+  root: string | null
+) {
+  const blockers: Array<{ id: string; detail: string; action: string }> = [];
+  if (stage === "not-registered") {
+    blockers.push({
+      id: "easyar-account",
+      detail: "No EasyAR account is assumed yet.",
+      action: "Register on the official EasyAR website, then log in to the development center."
+    });
+  }
+  if (!auth.hasToken) {
+    blockers.push({
+      id: "mcp-api-token",
+      detail: "EASYAR_API_TOKEN is not configured for account-scoped MCP endpoint calls.",
+      action: "After login/API key setup, place an official token in the MCP client environment or secret store."
+    });
+  }
+  if (root && !(localConfig?.checks.find((check) => check.id === "file-exists")?.ok ?? false)) {
+    blockers.push({
+      id: "local-config-file",
+      detail: "ProjectSettings/EasyAR/easyar.local.json does not exist.",
+      action: "Run easyar_prepare_unity_project, copy easyar.local.json.example to easyar.local.json, and fill local official values."
+    });
+  }
+  if (root && !(localConfig?.checks.some((check) => check.id === "license-key" && check.ok) ?? false)) {
+    blockers.push({
+      id: "license-key",
+      detail: "EasyAR license key is missing or still a placeholder in local config.",
+      action: "Create or copy the EasyAR Sense license key from the official development center into easyar.local.json."
+    });
+  }
+  if (needsCloudRecognition && !hasCompleteCloudRecognitionConfig(cloudConfig)) {
+    blockers.push({
+      id: "cloud-recognition-credentials",
+      detail: "Cloud Recognition appId/appKey/appSecret are missing or incomplete.",
+      action: "Create or locate Cloud Recognition credentials in the EasyAR development center and fill appId, appKey, and appSecret locally."
+    });
+  }
+  return blockers;
+}
+
+function buildAccountOnboardingNextActions(
+  stage: string,
+  blockers: Array<{ id: string; detail: string; action: string }>,
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  needsCloudRecognition: boolean
+) {
+  const actions: string[] = [];
+  if (stage === "not-registered") {
+    actions.push("Register on https://www.easyar.cn/ and activate the account if required.");
+  }
+  if (stage === "registered-not-logged-in" || stage === "not-registered") {
+    actions.push("Log in to https://portal.easyar.com/ through the browser, not through MCP.");
+  }
+  actions.push("Create or locate an EasyAR Sense license key for the app bundle/package identifier.");
+  if (needsCloudRecognition) {
+    actions.push("Create or locate Cloud Recognition credentials and keep appKey/appSecret out of chat and source control.");
+  }
+  if (root) {
+    actions.push(`Run easyar_prepare_unity_project projectPath=${root} sampleId=${sample.id}.`);
+    actions.push(`Fill ProjectSettings/EasyAR/easyar.local.json, then run easyar_validate_local_config projectPath=${root}.`);
+    actions.push(`Run easyar_check_official_access projectPath=${root} sampleId=${sample.id} platform=${platform}.`);
+  } else {
+    actions.push("When a Unity project exists, run easyar_prepare_unity_project and easyar_validate_local_config.");
+  }
+  return Array.from(new Set([...blockers.map((blocker) => blocker.action), ...actions])).slice(0, 12);
+}
+
 async function buildOfficialAccessReport(
   root: string,
   sample: SampleInfo,
@@ -2749,6 +3069,7 @@ async function buildReleaseManifest() {
     firstCalls: [
       "easyar_server_status",
       "easyar_release_manifest",
+      "easyar_account_onboarding",
       "easyar_check_client_setup",
       "easyar_auth_status",
       "easyar_check_official_access",
@@ -6386,6 +6707,81 @@ function buildDeploymentReadinessMarkdown(report: DeploymentReadinessReport): st
     "## Next Actions",
     "",
     ...report.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    ...report.security.map((item) => `- ${item}`),
+    ""
+  ].join("\n");
+}
+
+function buildAccountOnboardingMarkdown(report: Awaited<ReturnType<typeof buildAccountOnboardingReport>>): string {
+  return [
+    "# EasyAR Account Onboarding",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Stage: ${report.stage}`,
+    `Requested stage: ${report.requestedStage}`,
+    `Project: ${report.projectPath ?? "not provided"}`,
+    `Sample: ${report.sample.name} (${report.sample.id})`,
+    `Platform: ${report.platform}`,
+    `Needs Cloud Recognition: ${report.needsCloudRecognition ? "yes" : "no"}`,
+    "",
+    "## Official Links",
+    "",
+    `- EasyAR website: ${report.officialLinks.website}`,
+    `- Development center: ${report.officialLinks.developCenter}`,
+    `- Getting started docs: ${report.officialLinks.docsGettingStarted}`,
+    `- API Key docs: ${report.officialLinks.apiKeyDocs}`,
+    `- Downloads: ${report.officialLinks.downloads}`,
+    `- Samples docs: ${report.officialLinks.samples}`,
+    "",
+    "## Human Steps",
+    "",
+    ...report.humanSteps.flatMap((step, index) => [
+      `${index + 1}. ${step.active ? "[NEXT] " : ""}${step.title}`,
+      `   Action: ${step.action}`,
+      `   Done when: ${step.doneWhen}`
+    ]),
+    "",
+    "## MCP Steps",
+    "",
+    ...report.mcpSteps.flatMap((step, index) => [
+      `${index + 1}. ${step.tool}`,
+      `   Arguments: ${JSON.stringify(step.arguments)}`,
+      `   Purpose: ${step.purpose}`
+    ]),
+    "",
+    "## Local Files",
+    "",
+    `Local config: ${report.localFiles.localConfig ?? "not available until projectPath is provided"}`,
+    `Local config exists: ${report.localFiles.localConfigExists === null ? "unknown" : report.localFiles.localConfigExists ? "yes" : "no"}`,
+    `Local config valid: ${report.localFiles.localConfigValid === null ? "unknown" : report.localFiles.localConfigValid ? "yes" : "no"}`,
+    `Bundle/package identifier: ${report.localFiles.bundleIdentifier}`,
+    ...(report.localFiles.cloudCredentialPresence
+      ? [
+          `Cloud appId present: ${report.localFiles.cloudCredentialPresence.appId ? "yes" : "no"}`,
+          `Cloud appKey present: ${report.localFiles.cloudCredentialPresence.appKey ? "yes" : "no"}`,
+          `Cloud appSecret present: ${report.localFiles.cloudCredentialPresence.appSecret ? "yes" : "no"}`
+        ]
+      : []),
+    "",
+    "## Environment",
+    "",
+    `API base URL: ${report.environment.apiBaseUrl}`,
+    `API token configured: ${report.environment.apiTokenConfigured ? "yes" : "no"}`,
+    `Account endpoint configured: ${report.environment.accountStatusEndpointConfigured ? "yes" : "no"}`,
+    `License endpoint configured: ${report.environment.licenseValidationEndpointConfigured ? "yes" : "no"}`,
+    `Downloads endpoint configured: ${report.environment.downloadsEndpointConfigured ? "yes" : "no"}`,
+    `Cloud credentials endpoint configured: ${report.environment.cloudCredentialsEndpointConfigured ? "yes" : "no"}`,
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(report.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No account onboarding blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "No next actions recorded."),
     "",
     "## Security",
     "",
