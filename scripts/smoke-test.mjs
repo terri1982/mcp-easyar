@@ -409,8 +409,8 @@ try {
   });
   assertTextIncludes(accountOnboarding, "\"stage\": \"not-registered\"");
   assertTextIncludes(accountOnboarding, "https://www.easyar.cn/");
-  assertTextIncludes(accountOnboarding, "https://portal.easyar.com/");
   assertTextIncludes(accountOnboarding, "Register an EasyAR account");
+  assertTextIncludes(accountOnboarding, "Development Center entry");
   assertTextIncludes(accountOnboarding, "\"entryQuestion\": \"Do you already have an EasyAR account?\"");
   assertTextIncludes(accountOnboarding, "\"id\": \"new-user\"");
   assertTextIncludes(accountOnboarding, "easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=registered-not-logged-in sampleId=cloud-recognition");
@@ -666,7 +666,7 @@ try {
   assert(accountOnboardingMarkdown.includes("First Run Guide"), "Account onboarding markdown should include first-run guide");
   assert(accountOnboardingMarkdown.includes("No, I have not registered yet."), "Account onboarding markdown should include new-user route");
   assert(accountOnboardingMarkdown.includes("What The User Never Provides To MCP"), "Account onboarding markdown should include secret boundary");
-  assert(accountOnboardingMarkdown.includes("https://portal.easyar.com/"), "Account onboarding markdown should include development center");
+  assert(accountOnboardingMarkdown.includes("https://www.easyar.cn/"), "Account onboarding markdown should include official EasyAR website");
   assert(!accountOnboardingMarkdown.includes("test-account-token"), "Account onboarding markdown should not include test tokens");
 
   const writtenAccountMaterials = await callTool("easyar_write_account_materials", {

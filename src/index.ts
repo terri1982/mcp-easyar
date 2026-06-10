@@ -3302,6 +3302,9 @@ async function buildProductionValidationReport(
   const releaseManifest = await buildReleaseManifest();
   const officialContract = buildOfficialApiContract(process.env.EASYAR_API_BASE_URL, false);
   const missingOfficialEnv = officialContract.environment.required.filter((name) => {
+    if (name === "EASYAR_API_BASE_URL") {
+      return !isNonPlaceholderString(officialContract.environment.baseUrl);
+    }
     const configured = officialContract.environment.configured as Record<string, boolean>;
     return !configured[name];
   });
@@ -3860,7 +3863,7 @@ function buildAccountOnboardingNextActions(
     actions.push("Register on https://www.easyar.cn/ and activate the account if required.");
   }
   if (stage === "registered-not-logged-in" || stage === "not-registered") {
-    actions.push("Log in to https://portal.easyar.com/ through the browser, not through MCP.");
+    actions.push("Log in through the Development Center entry on https://www.easyar.cn/ in the browser, not through MCP.");
   }
   actions.push("Create or locate an EasyAR Sense license key for the app bundle/package identifier.");
   if (needsCloudRecognition) {
