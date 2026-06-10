@@ -57,6 +57,8 @@ Entrypoint mode: `npx`
 - `npm run install:check`
 - `npm run package:smoke`
 - `npm run pack:check`
+- `npm run release:check`
+- `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check`
 
 ## First MCP Calls
 

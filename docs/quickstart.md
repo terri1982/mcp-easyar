@@ -308,6 +308,18 @@ easyar_write_production_validation projectPath=/path/to/UnityProject platform=an
 
 `PRODUCTION_VALIDATION.md` is intentionally strict. It stays incomplete until release files, official EasyAR account endpoints, recorded verification commands, official access reports, and both focused sample completion reports all provide real evidence. After the verification commands pass for the release commit, regenerate it with `verificationEvidence=passed`.
 
+For repository/package verification, run:
+
+```bash
+npm run release:check
+```
+
+Before a real npm publish or release tag, enforce the final production gate:
+
+```bash
+EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
+```
+
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
 ```text

@@ -4252,7 +4252,7 @@ async function buildProductionValidationReport(
       "verification-commands",
       "Local package and CI verification commands",
       verificationEvidence === "passed",
-      "npm run typecheck, npm test, npm run bin:smoke, npm run install:check, npm run package:smoke, and npm run pack:check have passed for the commit being released.",
+      "npm run release:check has passed for the commit being released, and EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check passes before the final release tag or npm publish.",
       verificationEvidence === "passed"
         ? "Caller recorded verificationEvidence=passed."
         : "No current verification evidence was provided to this report.",
@@ -5598,7 +5598,9 @@ async function buildReleaseManifest() {
     "npm run bin:smoke",
     "npm run install:check",
     "npm run package:smoke",
-    "npm run pack:check"
+    "npm run pack:check",
+    "npm run release:check",
+    "EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check"
   ];
   const mcpEntrypoints = [
     {

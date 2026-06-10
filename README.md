@@ -188,7 +188,10 @@ npm run bin:smoke
 npm run install:check
 npm run package:smoke
 npm run pack:check
+npm run release:check
 ```
+
+`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
