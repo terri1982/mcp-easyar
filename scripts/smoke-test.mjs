@@ -191,6 +191,14 @@ try {
     "easyar_write_completion_report should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_focused_scope_status"),
+    "easyar_generate_focused_scope_status should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_focused_scope_status"),
+    "easyar_write_focused_scope_status should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_issue_report"),
     "easyar_generate_issue_report should be listed"
   );
@@ -1470,6 +1478,31 @@ try {
   assertTextIncludes(blockedCompletionReport, "\"runThroughComplete\": false");
   assertTextIncludes(blockedCompletionReport, "\"latestRunResultStatus\": \"blocked\"");
 
+  const focusedScopeStatus = await callTool("easyar_generate_focused_scope_status", {
+    projectPath,
+    platform: "android"
+  });
+  assertTextIncludes(focusedScopeStatus, "\"allFocusedSamplesComplete\": false");
+  assertTextIncludes(focusedScopeStatus, "\"focusedSampleIds\"");
+  assertTextIncludes(focusedScopeStatus, "\"image-tracking\"");
+  assertTextIncludes(focusedScopeStatus, "\"cloud-recognition\"");
+  assertTextIncludes(focusedScopeStatus, "\"blockedCount\": 1");
+  assertTextIncludes(focusedScopeStatus, "\"notRunCount\": 1");
+
+  const writtenFocusedScopeStatus = await callTool("easyar_write_focused_scope_status", {
+    projectPath,
+    platform: "android"
+  });
+  assertTextIncludes(writtenFocusedScopeStatus, "FOCUSED_SCOPE_STATUS.md");
+  const focusedScopeStatusMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md"),
+    "utf8"
+  );
+  assert(focusedScopeStatusMarkdown.includes("EasyAR Focused Scope Status"), "Focused scope status markdown should include title");
+  assert(focusedScopeStatusMarkdown.includes("All focused samples complete: no"), "Focused scope status markdown should mark incomplete scope");
+  assert(focusedScopeStatusMarkdown.includes("Image Tracking"), "Focused scope status markdown should include Image Tracking");
+  assert(focusedScopeStatusMarkdown.includes("Cloud Recognition"), "Focused scope status markdown should include Cloud Recognition");
+
   const issueReport = await callTool("easyar_generate_issue_report", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -1540,6 +1573,7 @@ try {
   assertTextIncludes(artifactIndex, "ACCOUNT_ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_MATERIALS.md");
   assertTextIncludes(artifactIndex, "UNITY_ENVIRONMENT.md");
+  assertTextIncludes(artifactIndex, "FOCUSED_SCOPE_STATUS.md");
   assertTextIncludes(artifactIndex, "PREFLIGHT.md");
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
@@ -1567,6 +1601,7 @@ try {
   assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
   assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
   assert(artifactIndexMarkdown.includes("UNITY_ENVIRONMENT.md"), "Artifact index markdown should list Unity environment");
+  assert(artifactIndexMarkdown.includes("FOCUSED_SCOPE_STATUS.md"), "Artifact index markdown should list focused scope status");
   assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("COMPLETION_REPORT.md"), "Artifact index markdown should list completion report");
@@ -1575,6 +1610,10 @@ try {
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("RUN_REPORT.md"),
     "Artifact read order should place preflight before run report"
+  );
+  assert(
+    artifactIndexMarkdown.indexOf("FOCUSED_SCOPE_STATUS.md") < artifactIndexMarkdown.indexOf("PREFLIGHT.md"),
+    "Artifact read order should place focused scope status before per-sample preflight"
   );
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("SUPPORT_BUNDLE.md"),

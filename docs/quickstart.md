@@ -217,6 +217,14 @@ easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=cloud-
 
 `COMPLETION_REPORT.md` parses the latest `RUN_RESULT.md`, checks focused preflight readiness again, verifies device-validation blockers, and summarizes latest Unity log diagnostics. It reports `not-run` when no run result exists, `blocked` or `failed` when the latest evidence is not passed, and `passed` only when the focused sample has evidence for a completed run-through.
 
+For the current focused scope, aggregate Image Tracking and Cloud Recognition:
+
+```text
+easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=android
+```
+
+`FOCUSED_SCOPE_STATUS.md` reports whether both focused samples are complete and lists the next action for each incomplete sample. Deferred samples stay out of this status until the user asks to continue.
+
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
 ```text

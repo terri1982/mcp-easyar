@@ -124,6 +124,8 @@ const toolCatalog = [
   "easyar_write_run_result",
   "easyar_generate_completion_report",
   "easyar_write_completion_report",
+  "easyar_generate_focused_scope_status",
+  "easyar_write_focused_scope_status",
   "easyar_generate_issue_report",
   "easyar_write_issue_report",
   "easyar_inspect_unity_project",
@@ -1934,6 +1936,61 @@ server.tool(
       blockerCount: report.blockers.length,
       nextActions: report.nextActions,
       note: "The completion report summarizes evidence only. It does not contain secret values or raw logs."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_focused_scope_status",
+  "Generate a two-sample focused scope status across Image Tracking and Cloud Recognition completion reports.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, platform, maxScriptIssues, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    return jsonText(await buildFocusedScopeStatus(root, platform, maxScriptIssues, maxLogBytes, maxLogIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_focused_scope_status",
+  "Write the focused Image Tracking and Cloud Recognition scope status to Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    relativePath: z.string().optional().describe("Optional status path inside the project. Defaults to Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing focused scope status artifact.")
+  },
+  async ({ projectPath, platform, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const status = await buildFocusedScopeStatus(root, platform, maxScriptIssues, maxLogBytes, maxLogIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(root, "Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildFocusedScopeStatusMarkdown(status), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      allFocusedSamplesComplete: status.allFocusedSamplesComplete,
+      focusedSampleCount: status.focusedSampleCount,
+      completedCount: status.completedCount,
+      blockedCount: status.blockedCount,
+      failedCount: status.failedCount,
+      notRunCount: status.notRunCount,
+      nextActions: status.nextActions,
+      note: "The focused scope status summarizes sample completion artifacts only and does not contain secret values."
     });
   }
 );
@@ -5505,6 +5562,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "ACCOUNT_ONBOARDING.md",
     "ACCOUNT_MATERIALS.md",
     "UNITY_ENVIRONMENT.md",
+    "FOCUSED_SCOPE_STATUS.md",
     "PREFLIGHT.md",
     "WORKFLOW_STATE.md",
     "OFFICIAL_ACCESS.md",
@@ -5566,6 +5624,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join("Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
       purpose: "Unity executable discovery, EASYAR_UNITY_PATH setup, and batch compile dry-run guidance.",
       generateWith: `easyar_write_unity_environment_report sampleId=${sample.id}`
+    },
+    {
+      name: "Focused Scope Status",
+      relativePath: path.join("Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md"),
+      purpose: "Overall Image Tracking and Cloud Recognition completion state and next actions.",
+      generateWith: "easyar_write_focused_scope_status"
     },
     {
       name: "Focused Preflight",
@@ -6095,6 +6159,85 @@ function buildCompletionNextActions(
   }
   actions.push(`Regenerate this report with easyar_write_completion_report projectPath=${root} sampleId=${sample.id} platform=${platform}.`);
   return Array.from(new Set(actions)).slice(0, 14);
+}
+
+async function buildFocusedScopeStatus(
+  root: string,
+  platform: typeof mobilePlatforms[number],
+  maxScriptIssues: number,
+  maxLogBytes: number,
+  maxLogIssues: number
+) {
+  const focused = focusedSamples();
+  const reports = await Promise.all(focused.map((sample) => {
+    const outputPath = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    return buildCompletionReport(root, sample, platform, outputPath, maxScriptIssues, maxLogBytes, maxLogIssues);
+  }));
+  const items = reports.map((report) => ({
+    sampleId: report.sample.id,
+    sampleName: report.sample.name,
+    completionStatus: report.completionStatus,
+    runThroughComplete: report.runThroughComplete,
+    blockerCount: report.blockers.length,
+    latestRunResultStatus: report.summary.latestRunResultStatus,
+    completionReportPath: path.relative(root, path.join(focusedSampleGeneratedDir(root, findSample(report.sample.id)), "COMPLETION_REPORT.md")),
+    runResultPath: report.parsedRunResult.relativePath,
+    nextActions: report.nextActions.slice(0, 5)
+  }));
+  const completedCount = items.filter((item) => item.completionStatus === "passed").length;
+  const failedCount = items.filter((item) => item.completionStatus === "failed").length;
+  const blockedCount = items.filter((item) => item.completionStatus === "blocked").length;
+  const notRunCount = items.filter((item) => item.completionStatus === "not-run").length;
+  const allFocusedSamplesComplete = items.length > 0 && items.every((item) => item.runThroughComplete);
+  const nextActions = buildFocusedScopeNextActions(root, platform, items);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    platform,
+    scope: "focused-samples",
+    focusedSampleIds: focused.map((sample) => sample.id),
+    deferredSampleIds: deferredSamples().map((sample) => sample.id),
+    focusedSampleCount: items.length,
+    completedCount,
+    blockedCount,
+    failedCount,
+    notRunCount,
+    allFocusedSamplesComplete,
+    items,
+    nextActions,
+    security: "Focused scope status reports completion states, artifact paths, and next calls only. It does not include EasyAR tokens, license keys, Cloud Recognition appKey/appSecret, signing keys, provisioning secrets, or raw Unity logs."
+  };
+}
+
+function buildFocusedScopeNextActions(
+  root: string,
+  platform: typeof mobilePlatforms[number],
+  items: Array<{
+    sampleId: string;
+    completionStatus: typeof runResultStatuses[number];
+    runThroughComplete: boolean;
+    nextActions: string[];
+  }>
+) {
+  if (items.length > 0 && items.every((item) => item.runThroughComplete)) {
+    return [
+      "Keep FOCUSED_SCOPE_STATUS.md plus each sample COMPLETION_REPORT.md as focused scope evidence.",
+      "Do not start deferred samples until the user asks to continue."
+    ];
+  }
+  const actions: string[] = [];
+  for (const item of items.filter((candidate) => !candidate.runThroughComplete)) {
+    actions.push(`Run easyar_write_completion_report projectPath=${root} sampleId=${item.sampleId} platform=${platform}.`);
+    if (item.completionStatus === "not-run") {
+      actions.push(`Run the ${item.sampleId} compile/build/device sequence and record RUN_RESULT.md with easyar_write_run_result.`);
+    }
+    actions.push(...item.nextActions);
+  }
+  actions.push(`Regenerate focused scope status with easyar_write_focused_scope_status projectPath=${root} platform=${platform}.`);
+  return Array.from(new Set(actions)).slice(0, 16);
 }
 
 async function buildIssueReport(input: {
@@ -8396,6 +8539,54 @@ function buildCompletionReportMarkdown(report: Awaited<ReturnType<typeof buildCo
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildFocusedScopeStatusMarkdown(status: Awaited<ReturnType<typeof buildFocusedScopeStatus>>): string {
+  return [
+    "# EasyAR Focused Scope Status",
+    "",
+    `Generated at: ${status.generatedAt}`,
+    `Project: ${status.projectPath}`,
+    `Platform: ${status.platform}`,
+    `Scope: ${status.scope}`,
+    `All focused samples complete: ${status.allFocusedSamplesComplete ? "yes" : "no"}`,
+    "",
+    "## Summary",
+    "",
+    `Focused sample count: ${status.focusedSampleCount}`,
+    `Completed: ${status.completedCount}`,
+    `Blocked: ${status.blockedCount}`,
+    `Failed: ${status.failedCount}`,
+    `Not run: ${status.notRunCount}`,
+    `Focused samples: ${status.focusedSampleIds.join(", ")}`,
+    `Deferred samples: ${status.deferredSampleIds.join(", ")}`,
+    "",
+    "## Samples",
+    "",
+    ...status.items.flatMap((item) => [
+      `### ${item.sampleName}`,
+      "",
+      `Sample id: ${item.sampleId}`,
+      `Completion status: ${item.completionStatus}`,
+      `Run-through complete: ${item.runThroughComplete ? "yes" : "no"}`,
+      `Blocker count: ${item.blockerCount}`,
+      `Latest run result status: ${item.latestRunResultStatus ?? "none"}`,
+      `Completion report: ${item.completionReportPath}`,
+      `Run result: ${item.runResultPath}`,
+      "",
+      "Next actions:",
+      ...markdownIssueList(item.nextActions, "No sample-specific next actions."),
+      ""
+    ]),
+    "## Next Actions",
+    "",
+    ...markdownIssueList(status.nextActions, "Focused sample scope is complete."),
+    "",
+    "## Security",
+    "",
+    status.security,
     ""
   ].join("\n");
 }

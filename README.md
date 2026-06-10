@@ -244,6 +244,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
 - `easyar_generate_completion_report`: summarize final focused sample completion status across preflight, device validation, `RUN_RESULT.md`, and latest Unity log evidence.
 - `easyar_write_completion_report`: write the final focused completion report to `Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md`.
+- `easyar_generate_focused_scope_status`: aggregate Image Tracking and Cloud Recognition completion states into one focused-scope status.
+- `easyar_write_focused_scope_status`: write the focused-scope status to `Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md`.
 - `easyar_generate_issue_report`: generate a redacted GitHub issue body for focused Image Tracking or Cloud Recognition failures.
 - `easyar_write_issue_report`: write the redacted issue report to `Assets/EasyARGenerated/<sampleId>/ISSUE_REPORT.md`.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
