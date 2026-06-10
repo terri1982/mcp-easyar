@@ -14,6 +14,7 @@ Initial public MVP for `mcp-easyar`.
 - Ordered focused sample run sequence generation for Codex/Claude MCP calls and Unity batch methods.
 - Focused artifact index and `ARTIFACT_INDEX.md` generation for handoff artifact reading order.
 - Focused artifact index includes root account onboarding and account material artifacts before sample-specific handoff work.
+- Focused artifact reading order now prioritizes account onboarding, account materials, Unity environment, and `PREFLIGHT.md` before run reports and support bundles.
 - Focused run sequence Markdown artifact generation inside Unity projects.
 - Focused preflight gate and `PREFLIGHT.md` artifact generation across account, local config, Unity executable, import, scene, and script readiness.
 - Focused sample run report generation across readiness, local config, script review, and next phase.

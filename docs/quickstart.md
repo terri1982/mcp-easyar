@@ -118,6 +118,8 @@ easyar_write_run_result projectPath=/path/to/UnityProject sampleId=image-trackin
 easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=image-tracking overallStatus=blocked
 ```
 
+After writing artifacts, read `PREFLIGHT.md` first. It is the focused gate that tells Codex, Claude, or a human operator which blocker must be cleared before Unity batch automation or device builds.
+
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.
 
 Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page or Unity Package Manager Samples before expecting a real device run to succeed. If `easyar_generate_import_checklist` reports a PackageCache `Samples~` candidate but no imported scene, run `easyar_generate_sample_import_guide`; for Cloud Recognition this guide points users to import `ImageTracking_CloudRecognition` from Package Manager into `Assets/Samples`.

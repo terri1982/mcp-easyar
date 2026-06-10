@@ -4879,13 +4879,45 @@ async function buildArtifactIndex(root: string, sample: SampleInfo) {
       implementationStatus: sample.implementationStatus
     },
     artifacts,
-    readOrder: artifacts.map((artifact) => artifact.relativePath),
+    readOrder: focusedArtifactReadOrder(artifacts),
     missingArtifacts: missingArtifacts.map((artifact) => artifact.relativePath),
     nextActions: missingArtifacts.length > 0
       ? Array.from(new Set(missingArtifacts.map((artifact) => artifact.generateWith)))
-      : ["Read SUPPORT_BUNDLE.md first, then use RUN_RESULT.md and CODE_CHANGE.md for the latest handoff state."],
+      : ["Read PREFLIGHT.md first, then SUPPORT_BUNDLE.md, RUN_RESULT.md, and CODE_CHANGE.md for the latest handoff state."],
     security: "Artifact index contains file metadata only. Individual artifacts should not contain secret values."
   };
+}
+
+function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): string[] {
+  const priority = [
+    "ACCOUNT_ONBOARDING.md",
+    "ACCOUNT_MATERIALS.md",
+    "UNITY_ENVIRONMENT.md",
+    "PREFLIGHT.md",
+    "WORKFLOW_STATE.md",
+    "OFFICIAL_ACCESS.md",
+    "SAMPLE_IMPORT_GUIDE.md",
+    "IMPORT_CHECKLIST.md",
+    "RUN_SEQUENCE.md",
+    "RUN_REPORT.md",
+    "SCENE_AUDIT.md",
+    "SUPPORT_BUNDLE.md",
+    "DEVICE_VALIDATION.md",
+    "RUN_RESULT.md",
+    "ISSUE_REPORT.md",
+    "CODE_PLAN.md",
+    "CODE_CHANGE.md",
+    "ARTIFACT_INDEX.md"
+  ];
+  return [...artifacts]
+    .sort((left, right) => artifactPriority(left.relativePath, priority) - artifactPriority(right.relativePath, priority))
+    .map((artifact) => artifact.relativePath);
+}
+
+function artifactPriority(relativePath: string, priority: string[]): number {
+  const normalized = relativePath.replace(/\\/g, "/");
+  const index = priority.findIndex((name) => normalized.endsWith(name));
+  return index === -1 ? priority.length : index;
 }
 
 function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
@@ -8558,10 +8590,12 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
     "## Before Unity",
     "",
     "1. Run `easyar_write_account_onboarding` and `easyar_write_account_materials` if the EasyAR account, license, or Cloud Recognition credentials are not ready.",
-    "2. Import the official EasyAR Unity Plugin and matching official sample scenes.",
-    "3. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json`.",
-    "4. Fill the local EasyAR license key and account-scoped values without committing the file.",
-    "5. Run `easyar_validate_local_config` and `easyar_check_sample_readiness`.",
+    "2. Run `easyar_write_unity_environment_report` to record `EASYAR_UNITY_PATH` setup before any Unity batch command.",
+    "3. Run `easyar_write_focused_preflight` and read `PREFLIGHT.md` before executing Unity automation.",
+    "4. Import the official EasyAR Unity Plugin and matching official sample scenes.",
+    "5. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` or run `easyar_write_local_config_from_env`.",
+    "6. Fill the local EasyAR license key and account-scoped values without committing the file.",
+    "7. Run `easyar_validate_local_config` and `easyar_check_sample_readiness`.",
     "",
     "## Unity Automation",
     "",

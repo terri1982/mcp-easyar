@@ -716,6 +716,8 @@ try {
   assert(imageTrackingRunbook.includes("Image Tracking Checklist"), "Image Tracking runbook should include focused checklist");
   assert(imageTrackingRunbook.includes("easyar_write_account_onboarding"), "Image Tracking runbook should include account onboarding step");
   assert(imageTrackingRunbook.includes("easyar_write_account_materials"), "Image Tracking runbook should include account materials step");
+  assert(imageTrackingRunbook.includes("easyar_write_focused_preflight"), "Image Tracking runbook should include preflight step");
+  assert(imageTrackingRunbook.includes("easyar_write_local_config_from_env"), "Image Tracking runbook should include env-backed config step");
   const imageTargetsReadme = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "Targets", "README.md"),
     "utf8"
@@ -1347,6 +1349,14 @@ try {
   assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
+  assert(
+    artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("RUN_REPORT.md"),
+    "Artifact read order should place preflight before run report"
+  );
+  assert(
+    artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("SUPPORT_BUNDLE.md"),
+    "Artifact read order should place preflight before support bundle"
+  );
 
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
