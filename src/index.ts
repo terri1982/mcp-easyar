@@ -13764,6 +13764,12 @@ function buildLocalConfigBridgeEditor(sample: SampleInfo): string {
             }
 `
     : "";
+  const runtimeCloudFields = sample.id === "cloud-recognition"
+    ? `                + "    ,\\"cloudRecognition\\": {\\n"
+                + "      \\"appId\\": \\"" + JsonEscape(ReadOptionalJsonString(json, "appId")) + "\\",\\n"
+                + "      \\"apiKey\\": \\"" + JsonEscape(ReadOptionalJsonString(json, "apiKey")) + "\\"\\n"
+                + "    }\\n"`
+    : "";
 
   return `using System;
 using System.IO;
@@ -13792,9 +13798,9 @@ namespace EasyAR.EditorTools
 ${cloudValidation}
             var targetPath = Path.Combine(projectRoot, RuntimeRelativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
-            File.WriteAllText(targetPath, json);
+            File.WriteAllText(targetPath, BuildRuntimeJson(json));
             AssetDatabase.ImportAsset(RuntimeRelativePath);
-            UnityEngine.Debug.Log("Exported EasyAR runtime config to " + RuntimeRelativePath + " without printing secret values. The file must stay ignored by git.");
+            UnityEngine.Debug.Log("Exported EasyAR runtime config to " + RuntimeRelativePath + " without account tokens, API secrets, or printed secret values. The file must stay ignored by git.");
         }
 
         private static void RequireConfiguredJsonString(string json, string key, string message)
@@ -13817,6 +13823,49 @@ ${cloudValidation}
                 && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
                 && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
                 && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        private static string BuildRuntimeJson(string json)
+        {
+            return "{\\n"
+                + "  \\"easyar\\": {\\n"
+                + "    \\"licenseKey\\": \\"" + JsonEscape(ReadConfiguredJsonString(json, "licenseKey")) + "\\"\\n"
+${runtimeCloudFields}
+                + "  },\\n"
+                + "  \\"unity\\": {\\n"
+                + "    \\"targetPlatform\\": \\"" + JsonEscape(ReadOptionalJsonString(json, "targetPlatform")) + "\\",\\n"
+                + "    \\"bundleIdentifier\\": \\"" + JsonEscape(ReadOptionalJsonString(json, "bundleIdentifier")) + "\\"\\n"
+                + "  }\\n"
+                + "}\\n";
+        }
+
+        private static string ReadConfiguredJsonString(string json, string key)
+        {
+            var value = ReadOptionalJsonString(json, key);
+            return ContainsConfiguredValue(value) ? value : string.Empty;
+        }
+
+        private static string ReadOptionalJsonString(string json, string key)
+        {
+            var match = Regex.Match(json, "\\\\\\"" + Regex.Escape(key) + "\\\\\\"\\\\s*:\\\\s*\\\\\\"([^\\\\\\"]*)\\\\\\"");
+            return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
+        }
+
+        private static bool ContainsConfiguredValue(string value)
+        {
+            return value.Length > 0
+                && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        private static string JsonEscape(string value)
+        {
+            return (value ?? string.Empty)
+                .Replace("\\\\", "\\\\\\\\")
+                .Replace("\\"", "\\\\\\"")
+                .Replace("\\r", "\\\\r")
+                .Replace("\\n", "\\\\n");
         }
     }
 }
@@ -13846,20 +13895,14 @@ namespace EasyAR.Samples.Generated
         private Coroutine loadRoutine;
         public bool Loaded { get; private set; }
         public string LicenseKey { get; private set; }
-        public string AccountToken { get; private set; }
         public string BundleIdentifier { get; private set; }
         public string CloudRecognitionAppId { get; private set; }
         public string CloudRecognitionApiKey { get; private set; }
-        public string CloudRecognitionApiSecret { get; private set; }
-        public string CloudRecognitionAppKey { get; private set; }
-        public string CloudRecognitionAppSecret { get; private set; }
 
         public bool HasLicenseKey => IsConfigured(LicenseKey);
-        public bool HasAccountToken => IsConfigured(AccountToken);
         public bool HasCloudRecognitionCredentials =>
             IsConfigured(CloudRecognitionAppId)
-            && (IsConfigured(CloudRecognitionApiKey)
-                || (IsConfigured(CloudRecognitionAppKey) && IsConfigured(CloudRecognitionAppSecret)));
+            && IsConfigured(CloudRecognitionApiKey);
 
         private void Awake()
         {
@@ -13929,13 +13972,9 @@ namespace EasyAR.Samples.Generated
         public void ApplyJson(string json)
         {
             LicenseKey = ReadString(json, "licenseKey");
-            AccountToken = ReadString(json, "accountToken");
             BundleIdentifier = ReadString(json, "bundleIdentifier");
             CloudRecognitionAppId = ReadString(json, "appId");
             CloudRecognitionApiKey = ReadString(json, "apiKey");
-            CloudRecognitionApiSecret = ReadString(json, "apiSecret");
-            CloudRecognitionAppKey = ReadString(json, "appKey");
-            CloudRecognitionAppSecret = ReadString(json, "appSecret");
         }
 
         private static string ReadString(string json, string key)

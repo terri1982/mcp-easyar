@@ -229,7 +229,7 @@ easyar_create_local_config_bridge projectPath=/path/to/UnityProject sampleId=clo
 easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig
 ```
 
-The bridge copies `ProjectSettings/EasyAR/easyar.local.json` to `Assets/StreamingAssets/EasyAR/easyar.runtime.json` after validating required fields. The runtime file is ignored by git and is intended only for local device builds. `EasyARLocalConfigRuntime` reads the file at runtime and exposes values to user scripts without logging secret values.
+The bridge writes a minimized runtime copy to `Assets/StreamingAssets/EasyAR/easyar.runtime.json` after validating required fields. The runtime file is ignored by git and is intended only for local device builds. It includes only the fields a mobile sample needs at runtime, such as the EasyAR license key, Cloud Recognition `appId`/`apiKey`, and Unity identifiers; it does not export EasyAR account tokens, website passwords, `apiSecret`, or legacy `appSecret` values.
 
 Before any Unity batch command, write the Unity executable setup report:
 

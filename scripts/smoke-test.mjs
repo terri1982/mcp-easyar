@@ -1363,12 +1363,19 @@ try {
     "utf8"
   );
   assert(cloudBridgeEditor.includes("Cloud Recognition apiKey"), "Cloud bridge editor should validate cloud apiKey presence");
-  assert(cloudBridgeEditor.includes("File.WriteAllText(targetPath, json)"), "Cloud bridge editor should export runtime json");
+  assert(cloudBridgeEditor.includes("BuildRuntimeJson(json)"), "Cloud bridge editor should export a minimized runtime json");
+  assert(!cloudBridgeEditor.includes("cloudRecognition\\\": {\\\\\\\\n"), "Cloud bridge editor should not write literal backslash-n into runtime json");
+  assert(!cloudBridgeEditor.includes("accountToken\\\":"), "Cloud bridge editor should not export accountToken into runtime json");
+  assert(!cloudBridgeEditor.includes("apiSecret\\\":"), "Cloud bridge editor should not export apiSecret into runtime json");
+  assert(!cloudBridgeEditor.includes("appSecret\\\":"), "Cloud bridge editor should not export appSecret into runtime json");
   const cloudBridgeRuntime = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs"),
     "utf8"
   );
-  assert(cloudBridgeRuntime.includes("CloudRecognitionAppSecret"), "Cloud bridge runtime should expose cloud appSecret property");
+  assert(cloudBridgeRuntime.includes("CloudRecognitionApiKey"), "Cloud bridge runtime should expose cloud apiKey property");
+  assert(!cloudBridgeRuntime.includes("AccountToken"), "Cloud bridge runtime should not expose accountToken");
+  assert(!cloudBridgeRuntime.includes("CloudRecognitionApiSecret"), "Cloud bridge runtime should not expose cloud apiSecret property");
+  assert(!cloudBridgeRuntime.includes("CloudRecognitionAppSecret"), "Cloud bridge runtime should not expose cloud appSecret property");
   assert(!cloudBridgeRuntime.includes("test-license-key"), "Cloud bridge runtime should not contain local license value");
   assert(!cloudBridgeRuntime.includes("test-app-secret"), "Cloud bridge runtime should not contain local cloud secret value");
 
