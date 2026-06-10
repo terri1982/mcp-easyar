@@ -2,11 +2,11 @@
   <img src="assets/easyar-icon.png" alt="EasyAR logo" width="96" height="96">
 </p>
 
-# EasyAR Official MCP Server
+# mcp-easyar
 
 [![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
 
-EasyAR Official MCP Server helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
+`mcp-easyar` helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
 
 This MVP focuses on local Unity project assistance:
 
