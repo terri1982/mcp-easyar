@@ -1,0 +1,34 @@
+{
+  "name": "easyar-official-mcp-server",
+  "version": "0.1.0",
+  "description": "Official EasyAR MCP server for registered users building EasyAR Unity samples and projects.",
+  "type": "module",
+  "bin": {
+    "easyar-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "easyar",
+    "mcp",
+    "unity",
+    "augmented-reality"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.42",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

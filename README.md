@@ -1,0 +1,82 @@
+# EasyAR Official MCP Server
+
+EasyAR Official MCP Server helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
+
+This MVP focuses on local Unity project assistance:
+
+- inspect Unity project structure and EasyAR-related files
+- list common EasyAR Unity sample categories
+- generate an Editor runner script for opening sample scenes
+- write C# scripts safely inside a Unity project
+- run a Unity static editor method in batch mode
+- expose EasyAR workflow guidance as MCP resources
+
+The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
+
+Official references used by this MVP:
+
+- EasyAR sample apps: https://www.easyar.cn/doc/en/develop/samples.html
+- EasyAR download page: https://www.easyar.com/view/download.html
+- EasyAR download history: https://www.easyar.com/view/downloadHistory.html
+
+## Install
+
+```bash
+npm install
+npm run build
+```
+
+## Run
+
+```bash
+npm start
+```
+
+Optional environment variables:
+
+```bash
+EASYAR_API_BASE_URL=https://www.easyar.cn
+EASYAR_API_TOKEN=your_registered_user_token
+EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
+```
+
+## Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "easyar": {
+      "command": "node",
+      "args": ["/absolute/path/to/easyar-official-mcp-server/dist/index.js"],
+      "env": {
+        "EASYAR_API_BASE_URL": "https://www.easyar.cn",
+        "EASYAR_API_TOKEN": "your_registered_user_token"
+      }
+    }
+  }
+}
+```
+
+## Codex
+
+Use the same stdio command:
+
+```bash
+node /absolute/path/to/easyar-official-mcp-server/dist/index.js
+```
+
+## Tools
+
+- `easyar_list_samples`: list supported sample categories.
+- `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
+- `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
+- `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
+- `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
+- `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
+- `easyar_run_unity_method`: execute a Unity static editor method in batch mode.
+
+## Resources
+
+- `easyar://samples/catalog`
+- `easyar://official/info`
+- `easyar://unity/checklist`
