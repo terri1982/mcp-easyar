@@ -83,7 +83,18 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 
 When `ready` is `true`, open Unity or use batch mode to run the generated editor helpers, then build to a real Android or iOS device for camera/tracking validation.
 
-## 8. Debug Logs
+## 8. Generate A Device Build Helper
+
+After Build Settings are configured, generate a static build method:
+
+```text
+easyar_create_device_build_helper projectPath=/path/to/UnityProject platform=android outputPath=Builds/EasyARSample.apk overwrite=true
+easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARDeviceBuildHelper.Build
+```
+
+For iOS, use an output folder such as `Builds/iOS` and complete signing in Xcode or Unity Player Settings.
+
+## 9. Debug Logs
 
 If Unity compilation, Editor automation, or device builds fail, pass the relevant log excerpt back to the MCP server:
 

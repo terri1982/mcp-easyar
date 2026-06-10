@@ -108,6 +108,20 @@ try {
   });
   assertTextIncludes(standaloneBuildSettings, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
 
+  const deviceBuildHelper = await callTool("easyar_create_device_build_helper", {
+    projectPath,
+    platform: "android",
+    outputPath: "Builds/EasyARSample.apk",
+    developmentBuild: true
+  });
+  assertTextIncludes(deviceBuildHelper, "EasyAR.EditorTools.EasyARDeviceBuildHelper.Build");
+
+  const deviceBuildScript = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARDeviceBuildHelper.cs"),
+    "utf8"
+  );
+  assert(deviceBuildScript.includes("BuildPipeline.BuildPlayer"), "Device build helper should call BuildPipeline.BuildPlayer");
+
   const preparedReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,
     sampleId: "image-tracking"

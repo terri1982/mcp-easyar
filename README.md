@@ -15,6 +15,7 @@ This MVP focuses on local Unity project assistance:
 - list common EasyAR Unity sample categories
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for adding sample scenes to Unity Build Settings
+- generate an Editor helper for Android/iOS/Standalone player builds
 - prepare a Unity project with EasyAR local config templates and secret ignore rules
 - generate Unity MonoBehaviour script templates for common EasyAR workflows
 - write C# scripts safely inside a Unity project
@@ -123,6 +124,7 @@ Use `--private` instead of `--public` if this repository should not be public ye
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
 - `easyar_prepare_unity_project`: create a sample runner, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_build_settings_helper`: create `Assets/Editor/EasyARBuildSettingsHelper.cs` for Build Settings automation.
+- `easyar_create_device_build_helper`: create `Assets/Editor/EasyARDeviceBuildHelper.cs` for Unity player builds.
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
 - `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.

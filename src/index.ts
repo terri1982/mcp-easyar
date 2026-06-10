@@ -18,6 +18,7 @@ type SampleInfo = {
 
 const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "lifecycle"] as const;
 const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
+const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 
 const samples: SampleInfo[] = [
@@ -487,6 +488,42 @@ server.tool(
 );
 
 server.tool(
+  "easyar_create_device_build_helper",
+  "Create a Unity Editor script that builds the configured EasyAR sample scenes for Android, iOS, or standalone targets.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(deviceBuildPlatforms).describe("Target platform for the generated build helper."),
+    outputPath: z.string().describe("Build output path, for example Builds/EasyARSample.apk or Builds/iOS."),
+    developmentBuild: z.boolean().default(false).describe("Whether to create a Unity development build."),
+    overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
+  },
+  async ({ projectPath, platform, outputPath, developmentBuild, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const editorDir = path.join(root, "Assets", "Editor");
+    const filePath = path.join(editorDir, "EasyARDeviceBuildHelper.cs");
+
+    const written: string[] = [];
+    await writeGeneratedFile(
+      filePath,
+      buildDeviceBuildHelper(platform, outputPath, developmentBuild),
+      overwrite,
+      written
+    );
+
+    return jsonText({
+      created: written.includes(filePath) ? filePath : null,
+      skipped: written.includes(filePath) ? null : filePath,
+      platform,
+      outputPath,
+      developmentBuild,
+      executeMethod: "EasyAR.EditorTools.EasyARDeviceBuildHelper.Build",
+      nextStep: "Run easyar_run_unity_method with the returned executeMethod to start the Unity batch build."
+    });
+  }
+);
+
+server.tool(
   "easyar_create_sample_runner",
   "Create a Unity Editor script that opens EasyAR sample scenes by name.",
   {
@@ -944,6 +981,80 @@ ${switchTarget}
     }
 }
 `;
+}
+
+function buildDeviceBuildHelper(
+  platform: typeof deviceBuildPlatforms[number],
+  outputPath: string,
+  developmentBuild: boolean
+): string {
+  const target = deviceBuildTarget(platform);
+  const options = developmentBuild ? "BuildOptions.Development" : "BuildOptions.None";
+  return `using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+
+namespace EasyAR.EditorTools
+{
+    public static class EasyARDeviceBuildHelper
+    {
+        private const string OutputPath = "${escapeCsharp(outputPath)}";
+
+        [MenuItem("Tools/EasyAR/Build Device Player")]
+        public static void Build()
+        {
+            ${target.switchTarget}
+
+            var scenes = EditorBuildSettings.scenes
+                .Where(scene => scene != null && scene.enabled && !string.IsNullOrEmpty(scene.path))
+                .Select(scene => scene.path)
+                .ToArray();
+
+            if (scenes.Length == 0)
+            {
+                throw new InvalidOperationException("No enabled scenes found in Build Settings. Run EasyARBuildSettingsHelper.ConfigureBuildSettings first.");
+            }
+
+            var outputDirectory = Path.GetDirectoryName(OutputPath);
+            if (!string.IsNullOrEmpty(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
+            var report = BuildPipeline.BuildPlayer(scenes, OutputPath, ${target.buildTarget}, ${options});
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                throw new InvalidOperationException("EasyAR player build failed: " + report.summary.result);
+            }
+
+            UnityEngine.Debug.Log("EasyAR player build succeeded: " + OutputPath);
+        }
+    }
+}
+`;
+}
+
+function deviceBuildTarget(platform: typeof deviceBuildPlatforms[number]) {
+  if (platform === "android") {
+    return {
+      buildTarget: "BuildTarget.Android",
+      switchTarget: "EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);"
+    };
+  }
+
+  if (platform === "ios") {
+    return {
+      buildTarget: "BuildTarget.iOS",
+      switchTarget: "EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);"
+    };
+  }
+
+  return {
+    buildTarget: "BuildTarget.StandaloneOSX",
+    switchTarget: "EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneOSX);"
+  };
 }
 
 function buildTargetSwitchSnippet(platform: typeof buildPlatforms[number]): string {
