@@ -39,6 +39,8 @@ const toolCatalog = [
   "easyar_generate_sample_plan",
   "easyar_generate_run_sequence",
   "easyar_write_run_sequence",
+  "easyar_generate_artifact_index",
+  "easyar_write_artifact_index",
   "easyar_generate_run_report",
   "easyar_write_run_report",
   "easyar_audit_sample_scene",
@@ -161,7 +163,7 @@ const quickstartWorkflow = [
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_generate_run_report`, `easyar_audit_sample_scene`, and `easyar_write_support_bundle` for current project status.",
+  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_write_artifact_index`, `easyar_generate_run_report`, `easyar_audit_sample_scene`, and `easyar_write_support_bundle` for current project status.",
   "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
@@ -592,6 +594,53 @@ server.tool(
       outputPath: sequence.outputPath,
       phaseCount: sequence.phases.length,
       note: "The run sequence artifact contains MCP call arguments and Unity batch method names, not secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_artifact_index",
+  "Generate an index of focused sample handoff artifacts and recommended reading order.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition.")
+  },
+  async ({ projectPath, sampleId }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildArtifactIndex(root, sample));
+  }
+);
+
+server.tool(
+  "easyar_write_artifact_index",
+  "Write the focused sample handoff artifact index inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    relativePath: z.string().optional().describe("Optional index path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/ARTIFACT_INDEX.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing artifact index.")
+  },
+  async ({ projectPath, sampleId, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const index = await buildArtifactIndex(root, sample);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "ARTIFACT_INDEX.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildArtifactIndexMarkdown(index), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      presentCount: index.artifacts.filter((artifact) => artifact.exists).length,
+      missingCount: index.artifacts.filter((artifact) => !artifact.exists).length,
+      nextActions: index.nextActions
     });
   }
 );
@@ -2003,6 +2052,110 @@ async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScript
   };
 }
 
+async function buildArtifactIndex(root: string, sample: SampleInfo) {
+  const artifacts = await Promise.all(focusedArtifactDefinitions(root, sample).map(async (artifact, index) => {
+    const absolutePath = path.join(root, artifact.relativePath);
+    let fileInfo = {
+      exists: false,
+      sizeBytes: null as number | null,
+      modifiedAt: null as string | null
+    };
+    try {
+      const info = await stat(absolutePath);
+      fileInfo = {
+        exists: info.isFile(),
+        sizeBytes: info.isFile() ? info.size : null,
+        modifiedAt: info.isFile() ? info.mtime.toISOString() : null
+      };
+    } catch {
+      // Missing artifacts are reported below.
+    }
+    return {
+      order: index + 1,
+      ...artifact,
+      ...fileInfo
+    };
+  }));
+  const missingArtifacts = artifacts.filter((artifact) => !artifact.exists);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    artifacts,
+    readOrder: artifacts.map((artifact) => artifact.relativePath),
+    missingArtifacts: missingArtifacts.map((artifact) => artifact.relativePath),
+    nextActions: missingArtifacts.length > 0
+      ? Array.from(new Set(missingArtifacts.map((artifact) => artifact.generateWith)))
+      : ["Read SUPPORT_BUNDLE.md first, then use RUN_RESULT.md and CODE_CHANGE.md for the latest handoff state."],
+    security: "Artifact index contains file metadata only. Individual artifacts should not contain secret values."
+  };
+}
+
+function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
+  const base = path.relative(root, focusedSampleGeneratedDir(root, sample));
+  return [
+    {
+      name: "Runbook",
+      relativePath: path.join(base, "RUNBOOK.md"),
+      purpose: "Human-readable focused sample checklist.",
+      generateWith: `easyar_prepare_unity_project sampleId=${sample.id}`
+    },
+    {
+      name: "Run Sequence",
+      relativePath: path.join(base, "RUN_SEQUENCE.md"),
+      purpose: "Ordered MCP and Unity batch execution sequence.",
+      generateWith: `easyar_write_run_sequence sampleId=${sample.id}`
+    },
+    {
+      name: "Run Report",
+      relativePath: path.join(base, "RUN_REPORT.md"),
+      purpose: "Current readiness, config, script review, and next phase.",
+      generateWith: `easyar_write_run_report sampleId=${sample.id}`
+    },
+    {
+      name: "Scene Audit",
+      relativePath: path.join(base, "SCENE_AUDIT.md"),
+      purpose: "Scene candidates, Build Settings hints, EasyAR signals, and sample blockers.",
+      generateWith: `easyar_write_scene_audit sampleId=${sample.id}`
+    },
+    {
+      name: "Support Bundle",
+      relativePath: path.join(base, "SUPPORT_BUNDLE.md"),
+      purpose: "Single diagnostic handoff across report, audit, sequence, and latest Unity logs.",
+      generateWith: `easyar_write_support_bundle sampleId=${sample.id}`
+    },
+    {
+      name: "Run Result",
+      relativePath: path.join(base, "RUN_RESULT.md"),
+      purpose: "Latest compile, build, or device validation outcome.",
+      generateWith: `easyar_write_run_result sampleId=${sample.id}`
+    },
+    {
+      name: "Code Plan",
+      relativePath: path.join(base, "CODE_PLAN.md"),
+      purpose: "Scoped C# implementation plan before script edits.",
+      generateWith: `easyar_write_code_plan sampleId=${sample.id}`
+    },
+    {
+      name: "Code Change",
+      relativePath: path.join(base, "CODE_CHANGE.md"),
+      purpose: "C# change summary after script edits and before Unity compilation.",
+      generateWith: `easyar_write_code_change_summary sampleId=${sample.id}`
+    },
+    {
+      name: "Artifact Index",
+      relativePath: path.join(base, "ARTIFACT_INDEX.md"),
+      purpose: "Index of focused sample handoff artifacts and reading order.",
+      generateWith: `easyar_write_artifact_index sampleId=${sample.id}`
+    }
+  ];
+}
+
 async function buildSampleSceneAudit(root: string, sample: SampleInfo, maxCandidates: number) {
   const allEasyARSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, maxCandidates * 3);
   const easyarSignals = filterOfficialEasyARSignals(allEasyARSignals).slice(0, maxCandidates);
@@ -2082,7 +2235,8 @@ async function buildSupportBundle(input: {
     sceneAudit: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SCENE_AUDIT.md")),
     supportBundle: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SUPPORT_BUNDLE.md")),
     runResult: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_RESULT.md")),
-    codePlan: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "CODE_PLAN.md"))
+    codePlan: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "CODE_PLAN.md")),
+    artifactIndex: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "ARTIFACT_INDEX.md"))
   };
   const nextActions = Array.from(new Set([
     runReport.nextRecommendedPhase,
@@ -3326,6 +3480,46 @@ function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRu
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildArtifactIndexMarkdown(index: Awaited<ReturnType<typeof buildArtifactIndex>>): string {
+  return [
+    `# EasyAR Focused Artifact Index - ${index.sample.name}`,
+    "",
+    `Generated at: ${index.generatedAt}`,
+    `Project: ${index.projectPath}`,
+    `Sample id: ${index.sample.id}`,
+    `Status: ${index.sample.implementationStatus}`,
+    "",
+    "## Recommended Reading Order",
+    "",
+    ...index.readOrder.map((artifactPath, indexNumber) => `${indexNumber + 1}. ${artifactPath}`),
+    "",
+    "## Artifact Status",
+    "",
+    ...index.artifacts.flatMap((artifact) => [
+      `${artifact.order}. ${artifact.name}`,
+      `   - Path: ${artifact.relativePath}`,
+      `   - Exists: ${artifact.exists ? "yes" : "no"}`,
+      `   - Size bytes: ${artifact.sizeBytes ?? "unknown"}`,
+      `   - Modified at: ${artifact.modifiedAt ?? "unknown"}`,
+      `   - Purpose: ${artifact.purpose}`,
+      `   - Generate with: ${artifact.generateWith}`
+    ]),
+    "",
+    "## Missing Artifacts",
+    "",
+    ...markdownIssueList(index.missingArtifacts, "No missing focused artifacts."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(index.nextActions, "Read SUPPORT_BUNDLE.md first."),
+    "",
+    "## Security",
+    "",
+    index.security,
     ""
   ].join("\n");
 }

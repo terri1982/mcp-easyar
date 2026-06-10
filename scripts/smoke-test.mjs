@@ -94,6 +94,14 @@ try {
     "easyar_write_run_sequence should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_artifact_index"),
+    "easyar_generate_artifact_index should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_artifact_index"),
+    "easyar_write_artifact_index should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_audit_sample_scene"),
     "easyar_audit_sample_scene should be listed"
   );
@@ -723,6 +731,27 @@ try {
   assert(runResultMarkdown.includes("EasyAR Focused Run Result - Cloud Recognition"), "Run result markdown should include title");
   assert(runResultMarkdown.includes("Overall status: blocked"), "Run result markdown should include overall status");
   assert(runResultMarkdown.includes("appKey=<redacted>"), "Run result markdown should redact sensitive notes");
+
+  const artifactIndex = await callTool("easyar_generate_artifact_index", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
+  assertTextIncludes(artifactIndex, "CODE_PLAN.md");
+  assertTextIncludes(artifactIndex, "ARTIFACT_INDEX.md");
+
+  const writtenArtifactIndex = await callTool("easyar_write_artifact_index", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(writtenArtifactIndex, "ARTIFACT_INDEX.md");
+  const artifactIndexMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "ARTIFACT_INDEX.md"),
+    "utf8"
+  );
+  assert(artifactIndexMarkdown.includes("EasyAR Focused Artifact Index - Cloud Recognition"), "Artifact index markdown should include title");
+  assert(artifactIndexMarkdown.includes("Recommended Reading Order"), "Artifact index markdown should include reading order");
+  assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
 
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
