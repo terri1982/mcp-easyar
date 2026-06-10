@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -94,6 +94,41 @@ try {
   });
   assertTextIncludes(prepared, "easyar.local.json");
   assertTextIncludes(prepared, "EasyARBuildSettingsHelper.cs");
+
+  await copyFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json")
+  );
+  const placeholderConfig = await callTool("easyar_validate_local_config", {
+    projectPath
+  });
+  assertTextIncludes(placeholderConfig, "\"valid\": false");
+  assertTextIncludes(placeholderConfig, "easyar.licenseKey is present and not a placeholder");
+
+  await writeFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
+    JSON.stringify({
+      easyar: {
+        apiBaseUrl: "https://www.easyar.cn",
+        accountToken: "test-account-token",
+        licenseKey: "test-license-key",
+        cloudRecognition: {
+          appId: "",
+          appKey: "",
+          appSecret: ""
+        }
+      },
+      unity: {
+        targetPlatform: "android"
+      }
+    }),
+    "utf8"
+  );
+  const validConfig = await callTool("easyar_validate_local_config", {
+    projectPath
+  });
+  assertTextIncludes(validConfig, "\"valid\": true");
+  assertTextIncludes(validConfig, "Secret values are not returned");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),

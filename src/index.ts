@@ -32,6 +32,7 @@ const toolCatalog = [
   "easyar_generate_sample_plan",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
+  "easyar_validate_local_config",
   "easyar_analyze_unity_log",
   "easyar_prepare_unity_project",
   "easyar_create_build_settings_helper",
@@ -454,6 +455,54 @@ server.tool(
 );
 
 server.tool(
+  "easyar_validate_local_config",
+  "Validate ProjectSettings/EasyAR/easyar.local.json without returning secret values.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    configPath: z.string().optional().describe("Optional config path. Defaults to ProjectSettings/EasyAR/easyar.local.json inside the project.")
+  },
+  async ({ projectPath, configPath }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const target = configPath
+      ? path.resolve(root, configPath)
+      : path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+    assertInside(root, target);
+
+    if (!await exists(target)) {
+      return jsonText({
+        configPath: target,
+        valid: false,
+        checks: [
+          {
+            id: "file-exists",
+            ok: false,
+            detail: "Local config file does not exist."
+          }
+        ],
+        nextActions: [
+          "Run easyar_prepare_unity_project.",
+          "Copy ProjectSettings/EasyAR/easyar.local.json.example to ProjectSettings/EasyAR/easyar.local.json.",
+          "Fill the local file with official EasyAR account/license values."
+        ]
+      });
+    }
+
+    const parsed = await readJsonFile(target);
+    const checks = validateLocalConfig(parsed);
+    return jsonText({
+      configPath: target,
+      valid: checks.every((check) => check.ok),
+      checks,
+      security: "Secret values are not returned. This tool only reports presence and placeholder status.",
+      nextActions: checks
+        .filter((check) => !check.ok)
+        .map((check) => localConfigAction(check.id))
+    });
+  }
+);
+
+server.tool(
   "easyar_analyze_unity_log",
   "Analyze Unity Editor or build logs for common EasyAR, permission, license, compile, and build issues.",
   {
@@ -833,6 +882,91 @@ async function readLogFile(logPath: string): Promise<string> {
     throw new Error("Log file is larger than 5 MiB. Pass a smaller excerpt with logText.");
   }
   return readFile(resolved, "utf8");
+}
+
+async function readJsonFile(filePath: string): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function validateLocalConfig(config: unknown) {
+  const value = isRecord(config) ? config : {};
+  const easyar = isRecord(value.easyar) ? value.easyar : {};
+  const cloudRecognition = isRecord(easyar.cloudRecognition) ? easyar.cloudRecognition : {};
+  const unity = isRecord(value.unity) ? value.unity : {};
+
+  return [
+    {
+      id: "json-object",
+      ok: isRecord(config),
+      detail: "Config root is a JSON object."
+    },
+    {
+      id: "api-base-url",
+      ok: isNonPlaceholderString(easyar.apiBaseUrl),
+      detail: "easyar.apiBaseUrl is configured."
+    },
+    {
+      id: "account-token",
+      ok: isNonPlaceholderString(easyar.accountToken),
+      detail: "easyar.accountToken is present and not a placeholder."
+    },
+    {
+      id: "license-key",
+      ok: isNonPlaceholderString(easyar.licenseKey),
+      detail: "easyar.licenseKey is present and not a placeholder."
+    },
+    {
+      id: "target-platform",
+      ok: isNonPlaceholderString(unity.targetPlatform),
+      detail: "unity.targetPlatform is configured."
+    },
+    {
+      id: "cloud-recognition",
+      ok: hasCloudRecognitionConfig(cloudRecognition),
+      detail: "cloudRecognition credentials are either all configured or all intentionally empty."
+    }
+  ];
+}
+
+function localConfigAction(checkId: string): string {
+  if (checkId === "json-object") {
+    return "Replace the config file with valid JSON based on easyar.local.json.example.";
+  }
+  if (checkId === "api-base-url") {
+    return "Set easyar.apiBaseUrl to https://www.easyar.cn or the official EasyAR API base URL.";
+  }
+  if (checkId === "account-token") {
+    return "Set easyar.accountToken from the registered EasyAR account; do not commit this file.";
+  }
+  if (checkId === "license-key") {
+    return "Set easyar.licenseKey from the official EasyAR account/license configuration.";
+  }
+  if (checkId === "target-platform") {
+    return "Set unity.targetPlatform to android, ios, or standalone.";
+  }
+  if (checkId === "cloud-recognition") {
+    return "Either leave all cloudRecognition fields empty or fill appId, appKey, and appSecret together.";
+  }
+  return "Review ProjectSettings/EasyAR/easyar.local.json.";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonPlaceholderString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0 && !/paste-|placeholder|your_/i.test(value);
+}
+
+function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
+  const fields = [value.appId, value.appKey, value.appSecret];
+  const configuredCount = fields.filter(isNonPlaceholderString).length;
+  const emptyCount = fields.filter((field) => typeof field === "string" && field.trim() === "").length;
+  return configuredCount === fields.length || emptyCount === fields.length;
 }
 
 function summarizeLog(logText: string) {

@@ -51,6 +51,12 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 
 Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials.
 
+Then validate without exposing secrets:
+
+```text
+easyar_validate_local_config projectPath=/path/to/UnityProject
+```
+
 ## 5. Configure Build Settings
 
 After importing the official sample scene, call:
