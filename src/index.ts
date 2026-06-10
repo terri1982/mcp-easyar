@@ -77,6 +77,8 @@ const toolCatalog = [
   "easyar_auth_status",
   "easyar_account_onboarding",
   "easyar_write_account_onboarding",
+  "easyar_account_materials",
+  "easyar_write_account_materials",
   "easyar_check_account",
   "easyar_validate_license",
   "easyar_discover_downloads",
@@ -536,6 +538,60 @@ server.tool(
       sample: sample.name,
       nextActions: report.nextActions,
       note: "The account onboarding artifact contains links, checklist items, and local file paths only. It does not include account passwords, tokens, license keys, appKey, or appSecret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_account_materials",
+  "Generate a field-by-field checklist of EasyAR account materials, where each value comes from, where it must be stored, and whether it is safe to share.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to resolve local config paths and current field presence."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs the full account material set."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android")
+  },
+  async ({ projectPath, sampleId, platform }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    return jsonText(await buildAccountMaterialsReport(root, sample, platform));
+  }
+);
+
+server.tool(
+  "easyar_write_account_materials",
+  "Write the EasyAR account material checklist as a Markdown artifact.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, writes to Assets/EasyARGenerated/ACCOUNT_MATERIALS.md by default."),
+    outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs the full account material set."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/ACCOUNT_MATERIALS.md for Unity projects or EasyARGenerated/ACCOUNT_MATERIALS.md for outputRoot."),
+    overwrite: z.boolean().default(true)
+  },
+  async ({ projectPath, outputRoot, sampleId, platform, relativePath, overwrite }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
+    await ensureDirectory(root);
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    const report = await buildAccountMaterialsReport(projectPath ? root : null, sample, platform);
+    const defaultRelativePath = projectPath
+      ? path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md")
+      : path.join("EasyARGenerated", "ACCOUNT_MATERIALS.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildAccountMaterialsMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      requiredCount: report.materials.filter((item) => item.required).length,
+      missingRequiredCount: report.materials.filter((item) => item.required && !item.present).length,
+      nextActions: report.nextActions,
+      note: "The account materials artifact lists field names and storage locations only. It does not include secret values."
     });
   }
 );
@@ -2773,6 +2829,128 @@ function buildAccountOnboardingNextActions(
   return Array.from(new Set([...blockers.map((blocker) => blocker.action), ...actions])).slice(0, 12);
 }
 
+async function buildAccountMaterialsReport(
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown"
+) {
+  const auth = readAuthConfig();
+  const localConfig = root ? await buildLocalConfigValidationReport(root) : null;
+  const cloudConfig = root ? await readCloudRecognitionConfig(root) : {};
+  const remoteConfig = root ? await readLocalConfigForRemoteValidation(root) : {};
+  const localConfigPath = root
+    ? path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")
+    : "ProjectSettings/EasyAR/easyar.local.json";
+  const bundleIdentifier = remoteConfig.bundleIdentifier ?? defaultBundleIdentifier(sample);
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const licensePresent = localConfig?.checks.some((check) => check.id === "license-key" && check.ok) ?? false;
+  const materials = [
+    {
+      id: "easyar-account",
+      label: "EasyAR account",
+      required: true,
+      present: auth.hasToken || licensePresent || hasCompleteCloudRecognitionConfig(cloudConfig),
+      source: "Official EasyAR website registration and development center login.",
+      storeIn: "Browser session and EasyAR account only.",
+      sharePolicy: "Do not share the password with MCP, Codex, Claude, GitHub issues, or source files.",
+      mcpCheck: "easyar_account_onboarding"
+    },
+    {
+      id: "api-token",
+      label: "EASYAR_API_TOKEN",
+      required: false,
+      present: auth.hasToken,
+      source: "Official EasyAR development center API Key/token workflow, if official account APIs are enabled for this MCP deployment.",
+      storeIn: "MCP client environment, OS keychain, CI secret, or deployment secret store.",
+      sharePolicy: "Secret. Never paste into chat or commit. MCP only shows token presence and a redacted preview.",
+      mcpCheck: "easyar_auth_status"
+    },
+    {
+      id: "license-key",
+      label: "easyar.licenseKey",
+      required: true,
+      present: licensePresent,
+      source: `EasyAR development center SDK authorization/license entry for ${platform}; use bundle/package identifier ${bundleIdentifier}.`,
+      storeIn: localConfigPath,
+      sharePolicy: "Secret or account-scoped value. Do not commit or paste publicly.",
+      mcpCheck: "easyar_validate_local_config"
+    },
+    {
+      id: "bundle-identifier",
+      label: "unity.bundleIdentifier",
+      required: true,
+      present: isNonPlaceholderString(bundleIdentifier),
+      source: "Your Unity Player Settings package name/bundle identifier and the matching EasyAR license configuration.",
+      storeIn: localConfigPath,
+      sharePolicy: "Usually safe to share, but still avoid exposing private unreleased app identifiers in public issues if sensitive.",
+      mcpCheck: "easyar_validate_local_config"
+    },
+    ...(needsCloudRecognition
+      ? [
+          {
+            id: "cloud-app-id",
+            label: "easyar.cloudRecognition.appId",
+            required: true,
+            present: isNonPlaceholderString(cloudConfig.appId),
+            source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+            storeIn: localConfigPath,
+            sharePolicy: "Treat as sensitive account-scoped config. MCP reports presence only.",
+            mcpCheck: "easyar_validate_local_config"
+          },
+          {
+            id: "cloud-app-key",
+            label: "easyar.cloudRecognition.appKey",
+            required: true,
+            present: isNonPlaceholderString(cloudConfig.appKey),
+            source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+            storeIn: localConfigPath,
+            sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
+            mcpCheck: "easyar_validate_local_config"
+          },
+          {
+            id: "cloud-app-secret",
+            label: "easyar.cloudRecognition.appSecret",
+            required: true,
+            present: isNonPlaceholderString(cloudConfig.appSecret),
+            source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+            storeIn: localConfigPath,
+            sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
+            mcpCheck: "easyar_validate_local_config"
+          }
+        ]
+      : [])
+  ];
+  const missingRequired = materials.filter((item) => item.required && !item.present);
+  const nextActions = missingRequired.length > 0
+    ? Array.from(new Set(missingRequired.map((item) => `Provide ${item.label} from official EasyAR account flow and store it in ${item.storeIn}.`)))
+    : [
+        root
+          ? `Run easyar_validate_local_config projectPath=${root}.`
+          : "Run easyar_validate_local_config once a Unity project path is available.",
+        root
+          ? `Run easyar_check_official_access projectPath=${root} sampleId=${sample.id} platform=${platform}.`
+          : "Run easyar_check_official_access once a Unity project path is available."
+      ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    localConfigPath,
+    needsCloudRecognition,
+    readyForLocalConfigValidation: missingRequired.length === 0,
+    materials,
+    missingRequired: missingRequired.map((item) => item.id),
+    nextActions,
+    security: "This report never includes secret values. It lists field names, presence, source, storage location, and share policy only."
+  };
+}
+
 async function buildOfficialAccessReport(
   root: string,
   sample: SampleInfo,
@@ -3070,6 +3248,7 @@ async function buildReleaseManifest() {
       "easyar_server_status",
       "easyar_release_manifest",
       "easyar_account_onboarding",
+      "easyar_account_materials",
       "easyar_check_client_setup",
       "easyar_auth_status",
       "easyar_check_official_access",
@@ -6786,6 +6965,46 @@ function buildAccountOnboardingMarkdown(report: Awaited<ReturnType<typeof buildA
     "## Security",
     "",
     ...report.security.map((item) => `- ${item}`),
+    ""
+  ].join("\n");
+}
+
+function buildAccountMaterialsMarkdown(report: Awaited<ReturnType<typeof buildAccountMaterialsReport>>): string {
+  return [
+    "# EasyAR Account Materials",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath ?? "not provided"}`,
+    `Sample: ${report.sample.name} (${report.sample.id})`,
+    `Platform: ${report.platform}`,
+    `Local config: ${report.localConfigPath}`,
+    `Needs Cloud Recognition: ${report.needsCloudRecognition ? "yes" : "no"}`,
+    `Ready for local config validation: ${report.readyForLocalConfigValidation ? "yes" : "no"}`,
+    "",
+    "## Materials",
+    "",
+    ...report.materials.flatMap((item) => [
+      `### ${item.label}`,
+      "",
+      `Required: ${item.required ? "yes" : "no"}`,
+      `Present: ${item.present ? "yes" : "no"}`,
+      `Source: ${item.source}`,
+      `Store in: ${item.storeIn}`,
+      `Share policy: ${item.sharePolicy}`,
+      `MCP check: ${item.mcpCheck}`,
+      ""
+    ]),
+    "## Missing Required",
+    "",
+    ...markdownIssueList(report.missingRequired, "No required account materials are missing."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    report.security,
     ""
   ].join("\n");
 }

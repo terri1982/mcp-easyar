@@ -200,6 +200,14 @@ try {
     "easyar_write_account_onboarding should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_account_materials"),
+    "easyar_account_materials should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_account_materials"),
+    "easyar_write_account_materials should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_next_workflow_step"),
     "easyar_next_workflow_step should be listed"
   );
@@ -267,6 +275,13 @@ try {
   assertTextIncludes(accountOnboarding, "https://portal.easyar.com/");
   assertTextIncludes(accountOnboarding, "Register an EasyAR account");
   assertTextIncludes(accountOnboarding, "MCP does not ask for or store EasyAR website passwords");
+
+  const accountMaterials = await callTool("easyar_account_materials", {
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(accountMaterials, "easyar.cloudRecognition.appSecret");
+  assertTextIncludes(accountMaterials, "Never paste into chat");
+  assertTextIncludes(accountMaterials, "\"missingRequired\"");
 
   const accountCheck = await callTool("easyar_check_account", {});
   assertTextIncludes(accountCheck, "\"configured\": false");
@@ -419,6 +434,20 @@ try {
   assert(accountOnboardingMarkdown.includes("Register an EasyAR account"), "Account onboarding markdown should guide registration");
   assert(accountOnboardingMarkdown.includes("https://portal.easyar.com/"), "Account onboarding markdown should include development center");
   assert(!accountOnboardingMarkdown.includes("test-account-token"), "Account onboarding markdown should not include test tokens");
+
+  const writtenAccountMaterials = await callTool("easyar_write_account_materials", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(writtenAccountMaterials, "ACCOUNT_MATERIALS.md");
+  const accountMaterialsMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
+    "utf8"
+  );
+  assert(accountMaterialsMarkdown.includes("EasyAR Account Materials"), "Account materials markdown should include title");
+  assert(accountMaterialsMarkdown.includes("easyar.cloudRecognition.appSecret"), "Account materials markdown should list cloud secret field name");
+  assert(accountMaterialsMarkdown.includes("Secret. Never paste into chat"), "Account materials markdown should include sharing policy");
+  assert(!accountMaterialsMarkdown.includes("test-cloud-app-secret"), "Account materials markdown should not include secret values");
 
   const initialWorkflowState = await callTool("easyar_next_workflow_step", {
     projectPath,

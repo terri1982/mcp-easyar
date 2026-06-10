@@ -15,10 +15,12 @@ If you do not have an EasyAR account yet, start with the account guide:
 
 ```text
 easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
+easyar_account_materials sampleId=cloud-recognition
 easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition
+easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition
 ```
 
-The guide sends users to the official EasyAR website and development center. MCP does not ask for EasyAR website passwords and does not store account credentials.
+The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 Ask the MCP server for a client snippet:
 
