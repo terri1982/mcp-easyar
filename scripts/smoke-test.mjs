@@ -308,6 +308,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_local_config_handoff"),
     "easyar_write_local_config_handoff should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_config_integration_audit"),
+    "easyar_generate_config_integration_audit should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_config_integration_audit"),
+    "easyar_write_config_integration_audit should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -1081,6 +1089,51 @@ try {
   });
   assertTextIncludes(validConfig, "\"valid\": true");
   assertTextIncludes(validConfig, "Secret values are not returned");
+
+  await mkdir(path.join(projectPath, "Assets", "EasyAR"), { recursive: true });
+  await writeFile(
+    path.join(projectPath, "Assets", "EasyAR", "CloudConfigAdapter.asset"),
+    [
+      "%YAML 1.1",
+      "--- !u!114 &11400000",
+      "MonoBehaviour:",
+      "  m_Name: CloudConfigAdapter",
+      "  easyarLocalConfigPath: ProjectSettings/EasyAR/easyar.local.json",
+      "  licenseKeySource: local-config",
+      "  cloudRecognition:",
+      "    appId: local-config-field",
+      "    appKey: local-config-field",
+      "    appSecret: local-config-field",
+      "  note: CloudRecognition config asset points to local config without storing values"
+    ].join("\n"),
+    "utf8"
+  );
+  const configIntegrationAudit = await callTool("easyar_generate_config_integration_audit", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(configIntegrationAudit, "CloudConfigAdapter.asset");
+  assertTextIncludes(configIntegrationAudit, "local-config-reader");
+  assertTextIncludes(configIntegrationAudit, "cloud-credential-consumer");
+  assertTextIncludes(configIntegrationAudit, "license-consumer");
+  assert(!extractText(configIntegrationAudit).includes("env-test-account-token"), "Config integration audit should not return local account token values");
+  assert(!extractText(configIntegrationAudit).includes("env-test-license-key"), "Config integration audit should not return local license values");
+
+  const writtenConfigIntegrationAudit = await callTool("easyar_write_config_integration_audit", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(writtenConfigIntegrationAudit, "CONFIG_INTEGRATION.md");
+  const configIntegrationMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "CONFIG_INTEGRATION.md"),
+    "utf8"
+  );
+  assert(configIntegrationMarkdown.includes("EasyAR Config Integration Audit - Cloud Recognition"), "Config integration markdown should include title");
+  assert(configIntegrationMarkdown.includes("CloudConfigAdapter.asset"), "Config integration markdown should include candidate asset");
+  assert(configIntegrationMarkdown.includes("Local config reader found: yes"), "Config integration markdown should detect local config reader");
+  assert(configIntegrationMarkdown.includes("Cloud credential consumer found: yes"), "Config integration markdown should detect cloud credential consumer");
+  assert(!configIntegrationMarkdown.includes("env-test-account-token"), "Config integration markdown should not return local account token values");
+  assert(!configIntegrationMarkdown.includes("env-test-license-key"), "Config integration markdown should not return local license values");
 
   await mkdir(path.join(projectPath, "Assets", "Targets"), { recursive: true });
   await writeFile(path.join(projectPath, "Assets", "Targets", "ImageTarget.jpg"), "fake-image-target", "utf8");

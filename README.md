@@ -290,6 +290,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_create_build_settings_helper`: create `Assets/Editor/EasyARBuildSettingsHelper.cs` for Build Settings automation.
 - `easyar_create_device_build_helper`: create `Assets/Editor/EasyARDeviceBuildHelper.cs` for Unity player builds.
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
+- `easyar_generate_config_integration_audit`: audit how local EasyAR config can be wired into Unity scripts, scenes, prefabs, and assets without exposing secret values.
+- `easyar_write_config_integration_audit`: write the local-config integration audit to `Assets/EasyARGenerated/<sampleId>/CONFIG_INTEGRATION.md`.
 - `easyar_generate_programming_context`: generate a focused Unity C# script inventory, generated helper summary, static review, and recommended programming workflow before editing scripts.
 - `easyar_write_programming_context`: write the focused programming context to `Assets/EasyARGenerated/<sampleId>/PROGRAMMING_CONTEXT.md`.
 - `easyar_generate_code_plan`: generate a focused Unity C# implementation plan before editing sample code, including verification calls for script review, Unity compile, support bundle, and run result handoff.

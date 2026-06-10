@@ -151,6 +151,8 @@ const toolCatalog = [
   "easyar_write_code_plan",
   "easyar_create_mono_behaviour",
   "easyar_write_csharp_file",
+  "easyar_generate_config_integration_audit",
+  "easyar_write_config_integration_audit",
   "easyar_generate_programming_context",
   "easyar_write_programming_context",
   "easyar_generate_code_change_summary",
@@ -2837,6 +2839,59 @@ server.tool(
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, contents, "utf8");
     return jsonText({ written: target, bytes: Buffer.byteLength(contents, "utf8") });
+  }
+);
+
+server.tool(
+  "easyar_generate_config_integration_audit",
+  "Audit how ProjectSettings/EasyAR/easyar.local.json can be wired into EasyAR Unity scripts, scenes, prefabs, and assets without exposing secret values.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    maxFiles: z.number().int().positive().max(300).default(120),
+    maxCandidates: z.number().int().positive().max(100).default(40)
+  },
+  async ({ projectPath, sampleId, maxFiles, maxCandidates }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildConfigIntegrationAudit(root, sample, maxFiles, maxCandidates));
+  }
+);
+
+server.tool(
+  "easyar_write_config_integration_audit",
+  "Write a focused local-config integration audit to CONFIG_INTEGRATION.md for Unity programming handoff.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    relativePath: z.string().optional().describe("Optional output path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/CONFIG_INTEGRATION.md."),
+    maxFiles: z.number().int().positive().max(300).default(120),
+    maxCandidates: z.number().int().positive().max(100).default(40),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing config integration audit artifact.")
+  },
+  async ({ projectPath, sampleId, relativePath, maxFiles, maxCandidates, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const audit = await buildConfigIntegrationAudit(root, sample, maxFiles, maxCandidates);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "CONFIG_INTEGRATION.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildConfigIntegrationAuditMarkdown(audit), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      readyForConfigIntegration: audit.readyForConfigIntegration,
+      blockerCount: audit.blockers.length,
+      consumerCandidateCount: audit.consumerCandidates.length,
+      nextActions: audit.nextActions,
+      security: audit.security
+    });
   }
 );
 
@@ -6276,6 +6331,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "RUN_RESULT.md",
     "COMPLETION_REPORT.md",
     "ISSUE_REPORT.md",
+    "CONFIG_INTEGRATION.md",
     "PROGRAMMING_CONTEXT.md",
     "CODE_PLAN.md",
     "CODE_CHANGE.md",
@@ -6402,6 +6458,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "ISSUE_REPORT.md"),
       purpose: "Redacted GitHub issue body for focused sample failures.",
       generateWith: `easyar_write_issue_report sampleId=${sample.id}`
+    },
+    {
+      name: "Config Integration Audit",
+      relativePath: path.join(base, "CONFIG_INTEGRATION.md"),
+      purpose: "Local EasyAR config consumer candidates across scripts, scenes, prefabs, and assets.",
+      generateWith: `easyar_write_config_integration_audit sampleId=${sample.id}`
     },
     {
       name: "Programming Context",
@@ -7462,6 +7524,7 @@ async function buildProgrammingContext(
     },
     recommendedWorkflow: [
       "Read PREFLIGHT.md before editing scripts.",
+      "Call easyar_write_config_integration_audit before wiring license or Cloud Recognition fields.",
       "Call easyar_generate_code_plan or easyar_write_code_plan with the programming goal.",
       `Create or patch ${suggestedPrimaryFile} with easyar_create_mono_behaviour or easyar_write_csharp_file.`,
       "Run easyar_review_csharp_scripts after edits.",
@@ -7479,11 +7542,13 @@ async function buildProgrammingContext(
     },
     relatedArtifacts: {
       preflight: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "PREFLIGHT.md")),
+      configIntegration: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "CONFIG_INTEGRATION.md")),
       codePlan: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "CODE_PLAN.md")),
       codeChange: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "CODE_CHANGE.md")),
       programmingContext: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "PROGRAMMING_CONTEXT.md"))
     },
     nextActions: [
+      `Run easyar_write_config_integration_audit projectPath=${root} sampleId=${sample.id}.`,
       `Run easyar_write_code_plan projectPath=${root} sampleId=${sample.id} goal="${goal ?? "describe the requested script change"}".`,
       `Use ${easyarScripts.length > 0 ? "existing EasyAR-related scripts as edit candidates" : "the suggested MonoBehaviour template as the first edit candidate"}.`,
       "Do not hardcode EasyAR license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets.",
@@ -7491,6 +7556,172 @@ async function buildProgrammingContext(
     ],
     security: "Programming context reports script paths, counts, static findings, and recommended workflow only. It does not include EasyAR local config secret values."
   };
+}
+
+async function buildConfigIntegrationAudit(
+  root: string,
+  sample: SampleInfo,
+  maxFiles: number,
+  maxCandidates: number
+) {
+  const [localConfig, readiness, scriptPaths, assetPaths] = await Promise.all([
+    buildLocalConfigValidationReport(root),
+    buildSampleReadinessReport(root, sample),
+    findFiles(root, ["Assets"], /\.cs$/i, maxFiles),
+    findFiles(root, ["Assets"], /\.(unity|prefab|asset|controller|playable|mat|yaml|json)$/i, maxFiles)
+  ]);
+  const scriptCandidates = await scanConfigIntegrationFiles(root, scriptPaths, "script", maxCandidates);
+  const assetCandidates = await scanConfigIntegrationFiles(root, assetPaths, "asset", maxCandidates);
+  const consumerCandidates = [...scriptCandidates, ...assetCandidates]
+    .sort((left, right) => scoreConfigCandidate(right, sample) - scoreConfigCandidate(left, sample))
+    .slice(0, maxCandidates);
+  const generatedHelpers = scriptCandidates.filter((candidate) => /^Assets[\/\\]Editor[\/\\]EasyAR/i.test(candidate.path));
+  const localConfigValid = localConfig.valid;
+  const hasLocalConfigReader = consumerCandidates.some((candidate) => candidate.signals.includes("local-config-reader"));
+  const hasLicenseConsumer = consumerCandidates.some((candidate) => candidate.signals.includes("license-consumer"));
+  const hasCloudConsumer = consumerCandidates.some((candidate) => candidate.signals.includes("cloud-credential-consumer"));
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const blockers = [
+    ...(!localConfigValid
+      ? [{
+          id: "local-config-invalid",
+          detail: `Local config failing check(s): ${localConfig.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`,
+          action: "Fill ProjectSettings/EasyAR/easyar.local.json locally or use easyar_write_local_config_from_env, then rerun this audit."
+        }]
+      : []),
+    ...(!hasLicenseConsumer
+      ? [{
+          id: "license-consumer-not-found",
+          detail: "No script/scene/asset candidate clearly references an EasyAR license consumer.",
+          action: "Inspect the official sample scene and EasyAR settings asset; use CODE_PLAN.md before adding any script that reads license data."
+        }]
+      : []),
+    ...(needsCloudRecognition && !hasCloudConsumer
+      ? [{
+          id: "cloud-credential-consumer-not-found",
+          detail: "No Cloud Recognition appId/appKey/appSecret consumer was found in scripts, scenes, prefabs, or assets.",
+          action: "Inspect the official Cloud Recognition sample scripts and wire credentials through serialized fields or official APIs without hardcoding secrets."
+        }]
+      : []),
+    ...(!hasLocalConfigReader
+      ? [{
+          id: "local-config-reader-not-found",
+          detail: "No non-generated project script appears to read ProjectSettings/EasyAR/easyar.local.json.",
+          action: "Prefer official sample wiring first. If automation is needed, create a small Editor/runtime adapter from CODE_PLAN.md that reads local config without logging values."
+        }]
+      : [])
+  ];
+  const nextActions = Array.from(new Set([
+    ...blockers.map((blocker) => blocker.action),
+    consumerCandidates.length > 0
+      ? "Review the top consumer candidates before editing scripts or scene references."
+      : "Import the official EasyAR Unity Plugin and focused sample scene, then rerun this audit.",
+    `Run easyar_write_programming_context projectPath=${root} sampleId=${sample.id} goal="wire local EasyAR config into the focused sample".`,
+    `Run easyar_write_code_plan projectPath=${root} sampleId=${sample.id} goal="wire local EasyAR config without hardcoding secrets" targetFiles=[] before code edits.`
+  ]));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    readyForConfigIntegration: localConfigValid && blockers.length === 0,
+    localConfig: {
+      valid: localConfig.valid,
+      configPath: localConfig.configPath,
+      failedChecks: localConfig.checks.filter((check) => !check.ok).map((check) => check.id)
+    },
+    readinessSummary: {
+      ready: readiness.ready,
+      failingChecks: readiness.checks.filter((check) => !check.ok).map((check) => check.id)
+    },
+    scanSummary: {
+      scriptFilesScanned: scriptPaths.length,
+      assetFilesScanned: assetPaths.length,
+      consumerCandidateCount: consumerCandidates.length,
+      generatedHelperCount: generatedHelpers.length
+    },
+    detectedCapabilities: {
+      hasLocalConfigReader,
+      hasLicenseConsumer,
+      hasCloudConsumer,
+      needsCloudRecognition
+    },
+    consumerCandidates,
+    blockers: uniqueBlockers(blockers),
+    nextActions,
+    security: "This audit reports paths, signal names, and redacted snippets only. It never returns EasyAR license keys, account tokens, appKey, appSecret, or local config values."
+  };
+}
+
+async function scanConfigIntegrationFiles(
+  root: string,
+  relativePaths: string[],
+  kind: "script" | "asset",
+  maxCandidates: number
+) {
+  const candidates = [];
+  for (const relativePath of relativePaths) {
+    if (candidates.length >= maxCandidates) {
+      break;
+    }
+    const absolutePath = path.join(root, relativePath);
+    const text = await readFile(absolutePath, "utf8").catch(() => "");
+    if (!text) {
+      continue;
+    }
+    const signals = configIntegrationSignals(text);
+    if (signals.length === 0) {
+      continue;
+    }
+    candidates.push({
+      path: relativePath,
+      kind,
+      generated: /^Assets[\/\\](Editor[\/\\]EasyAR|EasyARGenerated[\/\\])/i.test(relativePath),
+      signals,
+      redactedSnippets: redactedConfigSnippets(text)
+    });
+  }
+  return candidates;
+}
+
+function configIntegrationSignals(text: string): string[] {
+  const checks = [
+    ["easyar-reference", /\bEasyAR\b|EasyAR\./i],
+    ["local-config-reader", /easyar\.local\.json|ProjectSettings[\/\\]EasyAR|File\.ReadAllText|JsonUtility|Newtonsoft|System\.Text\.Json/i],
+    ["license-consumer", /license(Key)?|SenseLicense|SDK\s*Authorization|EasyAR.*license/i],
+    ["cloud-credential-consumer", /cloudRecognition|CloudRecognizer|CloudRecognition|appId|appKey|appSecret|CRS|Cloud\s*Recognition/i],
+    ["serialized-field", /\[SerializeField\]|public\s+(string|TextAsset|GameObject|MonoBehaviour)\s+\w+/i],
+    ["scene-or-prefab-reference", /m_Script|MonoBehaviour|GameObject|PrefabInstance|SceneRoots/i]
+  ] as const;
+  return checks.filter(([, pattern]) => pattern.test(text)).map(([id]) => id);
+}
+
+function redactedConfigSnippets(text: string): string[] {
+  const lines = text.split(/\r?\n/);
+  const snippets: string[] = [];
+  const pattern = /easyar\.local\.json|license|cloudRecognition|CloudRecognizer|CloudRecognition|appId|appKey|appSecret|CRS/i;
+  for (let index = 0; index < lines.length && snippets.length < 5; index += 1) {
+    if (pattern.test(lines[index])) {
+      snippets.push(`L${index + 1}: ${(sanitizeIssueText(lines[index].trim()) ?? "").slice(0, 220)}`);
+    }
+  }
+  return snippets;
+}
+
+function scoreConfigCandidate(candidate: { generated: boolean; signals: string[] }, sample: SampleInfo): number {
+  const weights: Record<string, number> = {
+    "local-config-reader": 6,
+    "cloud-credential-consumer": sample.id === "cloud-recognition" ? 5 : 1,
+    "license-consumer": 4,
+    "easyar-reference": 3,
+    "serialized-field": 2,
+    "scene-or-prefab-reference": 1
+  };
+  return candidate.signals.reduce((score, signal) => score + (weights[signal] ?? 0), candidate.generated ? -2 : 0);
 }
 
 function buildCodeChangeNextActions(
@@ -9686,6 +9917,76 @@ function buildProgrammingContextMarkdown(context: Awaited<ReturnType<typeof buil
     context.security,
     ""
   ].join("\n");
+}
+
+function buildConfigIntegrationAuditMarkdown(audit: Awaited<ReturnType<typeof buildConfigIntegrationAudit>>): string {
+  return [
+    `# EasyAR Config Integration Audit - ${audit.sample.name}`,
+    "",
+    `Generated at: ${audit.generatedAt}`,
+    `Project: ${audit.projectPath}`,
+    `Sample id: ${audit.sample.id}`,
+    `Status: ${audit.sample.implementationStatus}`,
+    `Ready for config integration: ${audit.readyForConfigIntegration ? "yes" : "no"}`,
+    "",
+    "## Local Config",
+    "",
+    `Path: ${audit.localConfig.configPath}`,
+    `Valid: ${audit.localConfig.valid ? "yes" : "no"}`,
+    `Failed checks: ${audit.localConfig.failedChecks.length > 0 ? audit.localConfig.failedChecks.join(", ") : "none"}`,
+    "",
+    "## Readiness",
+    "",
+    `Ready: ${audit.readinessSummary.ready ? "yes" : "no"}`,
+    `Failing checks: ${audit.readinessSummary.failingChecks.length > 0 ? audit.readinessSummary.failingChecks.join(", ") : "none"}`,
+    "",
+    "## Detected Capabilities",
+    "",
+    `Needs Cloud Recognition: ${audit.detectedCapabilities.needsCloudRecognition ? "yes" : "no"}`,
+    `Local config reader found: ${audit.detectedCapabilities.hasLocalConfigReader ? "yes" : "no"}`,
+    `License consumer found: ${audit.detectedCapabilities.hasLicenseConsumer ? "yes" : "no"}`,
+    `Cloud credential consumer found: ${audit.detectedCapabilities.hasCloudConsumer ? "yes" : "no"}`,
+    "",
+    "## Scan Summary",
+    "",
+    `Script files scanned: ${audit.scanSummary.scriptFilesScanned}`,
+    `Asset files scanned: ${audit.scanSummary.assetFilesScanned}`,
+    `Consumer candidates: ${audit.scanSummary.consumerCandidateCount}`,
+    `Generated helpers: ${audit.scanSummary.generatedHelperCount}`,
+    "",
+    "## Consumer Candidates",
+    "",
+    ...markdownConfigConsumerCandidates(audit.consumerCandidates),
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(audit.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No config integration blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...audit.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    audit.security,
+    ""
+  ].join("\n");
+}
+
+function markdownConfigConsumerCandidates(candidates: Awaited<ReturnType<typeof buildConfigIntegrationAudit>>["consumerCandidates"]): string[] {
+  if (candidates.length === 0) {
+    return ["No config consumer candidates found."];
+  }
+  return candidates.flatMap((candidate) => [
+    `### ${candidate.path}`,
+    "",
+    `Kind: ${candidate.kind}`,
+    `Generated: ${candidate.generated ? "yes" : "no"}`,
+    `Signals: ${candidate.signals.join(", ")}`,
+    "Snippets:",
+    ...markdownIssueList(candidate.redactedSnippets, "No matching snippets captured."),
+    ""
+  ]);
 }
 
 function buildCodePlanMarkdown(plan: Awaited<ReturnType<typeof buildCodePlan>>): string {

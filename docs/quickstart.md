@@ -270,12 +270,13 @@ The validator ignores generated MCP helper files when checking for official Easy
 For common sample logic, call:
 
 ```text
+easyar_write_config_integration_audit projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_programming_context projectPath=/path/to/UnityProject sampleId=image-tracking goal="Show content when an image target is found"
 easyar_write_code_plan projectPath=/path/to/UnityProject sampleId=image-tracking goal="Show content when an image target is found"
 easyar_create_mono_behaviour projectPath=/path/to/UnityProject relativePath=Assets/Scripts/ImageTargetContentController.cs className=ImageTargetContentController kind=image-tracking
 ```
 
-Read `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md` when another AI tool or human developer is taking over script work.
+Read `CONFIG_INTEGRATION.md` and `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md` when another AI tool or human developer is taking over script work. The config audit points to likely license/cloud credential consumers by path and signal only; it does not print local secret values.
 
 `CODE_PLAN.md` includes structured verification calls. After script edits, run the listed `easyar_review_csharp_scripts` and `easyar_run_unity_compile_check` call, then use the compile tool's `suggestedRunResultCall` to update `RUN_RESULT.md`.
 

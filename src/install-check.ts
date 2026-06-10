@@ -8,6 +8,7 @@ const requiredTools = [
   "easyar_generate_client_config",
   "easyar_account_onboarding",
   "easyar_write_local_config_handoff",
+  "easyar_write_config_integration_audit",
   "easyar_write_focused_preflight",
   "easyar_write_completion_report",
   "easyar_write_focused_scope_status",
