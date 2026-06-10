@@ -247,6 +247,15 @@ For repeatable diagnostics, pass `logPath=Logs/mcp-easyar-ConfigureBuildSettings
 
 When `sampleId` is provided, `easyar_run_unity_compile_check` and `easyar_run_unity_method` return focused log diagnostics plus a `suggestedRunResultCall`. `easyar_generate_run_sequence` includes `sampleId`, `platform`, and project-local `logPath` arguments on Unity batch steps so the suggested `easyar_write_run_result` call can update `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md` after compile, Build Settings, sample validation, build, or device attempts.
 
+Before the real-device run, generate the fillable result form:
+
+```text
+easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=image-tracking platform=android device="Pixel 8 Android 15" buildOutputPath=Builds/image-tracking.apk
+easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android device="Pixel 8 Android 15" buildOutputPath=Builds/cloud-recognition.apk
+```
+
+`DEVICE_RUN_RESULT_FORM.md` contains required evidence prompts plus two `easyar_write_run_result` argument templates. Use the safe draft template for blocked or failed attempts. Use the passed template only after every required physical-device step passes, then replace placeholders with observed evidence.
+
 After `RUN_RESULT.md` is recorded, generate the final focused completion report:
 
 ```text

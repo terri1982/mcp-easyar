@@ -193,6 +193,14 @@ try {
     "easyar_write_device_validation_checklist should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_device_run_result_form"),
+    "easyar_generate_device_run_result_form should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_device_run_result_form"),
+    "easyar_write_device_run_result_form should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_run_result"),
     "easyar_generate_run_result should be listed"
   );
@@ -1415,6 +1423,44 @@ try {
   assert(deviceValidationMarkdown.includes("EasyAR Device Validation - Image Tracking"), "Device validation markdown should include title");
   assert(deviceValidationMarkdown.includes("image-target-detection"), "Device validation markdown should include image target test step");
   assert(deviceValidationMarkdown.includes("Pixel test device"), "Device validation markdown should include device label");
+
+  const deviceRunResultForm = await callTool("easyar_generate_device_run_result_form", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    device: "Pixel test device",
+    buildOutputPath: "Builds/image-tracking.apk",
+    notes: "Use appSecret=should-not-leak only as a redaction fixture."
+  });
+  assertTextIncludes(deviceRunResultForm, "\"readyForDeviceValidation\": true");
+  assertTextIncludes(deviceRunResultForm, "Real device validation");
+  assertTextIncludes(deviceRunResultForm, "safeDraftRunResultArguments");
+  assertTextIncludes(deviceRunResultForm, "passedRunResultTemplate");
+  assertTextIncludes(deviceRunResultForm, "A real image target is detected");
+  assertTextIncludes(deviceRunResultForm, "appSecret=<redacted>");
+  assert(!extractText(deviceRunResultForm).includes("env-test-account-token"), "Device run result form should not include account token values");
+  assert(!extractText(deviceRunResultForm).includes("env-test-license-key"), "Device run result form should not include license values");
+
+  const writtenDeviceRunResultForm = await callTool("easyar_write_device_run_result_form", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    device: "Pixel test device",
+    buildOutputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(writtenDeviceRunResultForm, "DEVICE_RUN_RESULT_FORM.md");
+  const deviceRunResultFormMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "DEVICE_RUN_RESULT_FORM.md"),
+    "utf8"
+  );
+  assert(deviceRunResultFormMarkdown.includes("EasyAR Device Run Result Form - Image Tracking"), "Device run result form markdown should include title");
+  assert(deviceRunResultFormMarkdown.includes("Completion Acceptance Rules"), "Device run result form should include acceptance rules");
+  assert(deviceRunResultFormMarkdown.includes("Safe Draft easyar_write_run_result Arguments"), "Device run result form should include safe draft arguments");
+  assert(deviceRunResultFormMarkdown.includes("Passed easyar_write_run_result Template"), "Device run result form should include passed template");
+  assert(deviceRunResultFormMarkdown.includes("Real device validation - Verify image target detection"), "Device run result form should include image target validation");
+  assert(deviceRunResultFormMarkdown.includes("overallStatus"), "Device run result form should include run result status field");
+  assert(!deviceRunResultFormMarkdown.includes("env-test-account-token"), "Device run result form markdown should not include account token values");
+  assert(!deviceRunResultFormMarkdown.includes("env-test-license-key"), "Device run result form markdown should not include license values");
 
   const notRunCompletionReport = await callTool("easyar_generate_completion_report", {
     projectPath,

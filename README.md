@@ -218,7 +218,8 @@ The first MCP screen is intentionally account-stage driven:
 6. `easyar_prepare_unity_project` creates the local `easyar.local.json.example` with field sources, env-variable alternatives, and a never-share list.
 7. `easyar_validate_local_config` checks only presence and placeholders.
 8. `easyar_write_focused_preflight` creates `PREFLIGHT.md`, the gate before Unity batch or device validation.
-9. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
+9. Before recording device evidence, `easyar_write_device_run_result_form` creates `DEVICE_RUN_RESULT_FORM.md`, a fillable real-device evidence form plus safe `easyar_write_run_result` argument templates.
+10. After compile/build/device attempts, `easyar_write_completion_report` creates `COMPLETION_REPORT.md`; `runThroughComplete=true` only when preflight, device validation, a passed `RUN_RESULT.md` with recorded real-device validation evidence, and latest log evidence all support a passed focused run-through.
 
 ## Tools
 
@@ -278,6 +279,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_support_bundle`: write the focused support bundle to `Assets/EasyARGenerated/<sampleId>/SUPPORT_BUNDLE.md`.
 - `easyar_generate_device_validation_checklist`: generate focused real-device validation steps, pass criteria, blockers, and evidence prompts.
 - `easyar_write_device_validation_checklist`: write the real-device validation checklist to `Assets/EasyARGenerated/<sampleId>/DEVICE_VALIDATION.md`.
+- `easyar_generate_device_run_result_form`: generate a fillable real-device run result form plus safe `easyar_write_run_result` templates.
+- `easyar_write_device_run_result_form`: write the real-device run result form to `Assets/EasyARGenerated/<sampleId>/DEVICE_RUN_RESULT_FORM.md`.
 - `easyar_generate_run_result`: generate a focused sample run result summary for compile, build, or device validation attempts.
 - `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
 - `easyar_generate_completion_report`: summarize final focused sample completion status across preflight, device validation, `RUN_RESULT.md`, and latest Unity log evidence.

@@ -133,6 +133,8 @@ const toolCatalog = [
   "easyar_write_support_bundle",
   "easyar_generate_device_validation_checklist",
   "easyar_write_device_validation_checklist",
+  "easyar_generate_device_run_result_form",
+  "easyar_write_device_run_result_form",
   "easyar_generate_run_result",
   "easyar_write_run_result",
   "easyar_generate_completion_report",
@@ -2234,6 +2236,63 @@ server.tool(
       blockerCount: checklist.blockers.length,
       nextActions: checklist.nextActions,
       note: "The device validation checklist contains test criteria and evidence prompts, not secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_device_run_result_form",
+  "Generate a fillable real-device run result form and safe easyar_write_run_result templates for Image Tracking or Cloud Recognition.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    device: z.string().optional().describe("Optional tested device model or test-device label."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    notes: z.string().optional().describe("Optional short context for the form. Do not include secrets.")
+  },
+  async ({ projectPath, sampleId, platform, device, buildOutputPath, notes }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildDeviceRunResultForm(root, sample, platform, device, buildOutputPath, notes));
+  }
+);
+
+server.tool(
+  "easyar_write_device_run_result_form",
+  "Write a fillable real-device run result form to Assets/EasyARGenerated/<sampleId>/DEVICE_RUN_RESULT_FORM.md.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    device: z.string().optional().describe("Optional tested device model or test-device label."),
+    buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
+    notes: z.string().optional().describe("Optional short context for the form. Do not include secrets."),
+    relativePath: z.string().optional().describe("Optional form path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/DEVICE_RUN_RESULT_FORM.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing device run result form.")
+  },
+  async ({ projectPath, sampleId, platform, device, buildOutputPath, notes, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const form = await buildDeviceRunResultForm(root, sample, platform, device, buildOutputPath, notes);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "DEVICE_RUN_RESULT_FORM.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildDeviceRunResultFormMarkdown(form), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      platform,
+      readyForDeviceValidation: form.readyForDeviceValidation,
+      requiredFormStepCount: form.formSteps.filter((step) => step.requiredForCompletion).length,
+      nextActions: form.nextActions,
+      note: "The form contains placeholders and command templates only. Replace placeholders with observed evidence and never paste secret values."
     });
   }
 );
@@ -7664,6 +7723,125 @@ async function buildSupportBundle(input: {
   };
 }
 
+async function buildDeviceRunResultForm(
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  device?: string,
+  buildOutputPath?: string,
+  notes?: string
+) {
+  const checklist = await buildDeviceValidationChecklist(root, sample, platform, device, buildOutputPath);
+  const recordedDevice = hasRecordedDevice(device ?? null) ? device : "<physical device model and OS>";
+  const recordedBuildOutput = isNonPlaceholderString(buildOutputPath) ? buildOutputPath : platform === "android"
+    ? "Builds/<sample-id>.apk"
+    : "Builds/iOS/<sample-id>";
+  const formSteps = [
+    {
+      name: "Unity compile",
+      status: "not-run" as const,
+      evidencePrompt: "Project-local Unity compile log path and whether the Editor exited successfully.",
+      nextActionPrompt: "Resolve compile/import errors before building for device.",
+      requiredForCompletion: true
+    },
+    {
+      name: "Device build",
+      status: "not-run" as const,
+      evidencePrompt: `Build artifact path, signing/provisioning result, and install result for ${platform}.`,
+      nextActionPrompt: "Resolve build, signing, Gradle, Xcode, or install failures before real-device validation.",
+      requiredForCompletion: true
+    },
+    ...checklist.steps
+      .filter((step) => step.id !== "record-result")
+      .map((step) => ({
+        name: step.title === "Verify camera startup"
+          ? "Real device validation - camera startup"
+          : `Real device validation - ${step.title}`,
+        status: "not-run" as const,
+        evidencePrompt: `${step.expected} Evidence to record: ${step.action}`,
+        nextActionPrompt: "Record the observed behavior, log path, and next fix if this step does not pass.",
+        requiredForCompletion: true
+      })),
+    {
+      name: "Real device validation - sample pass criteria",
+      status: "not-run" as const,
+      evidencePrompt: sampleDevicePassCriteria(sample).join(" "),
+      nextActionPrompt: "Only mark passed after every sample-specific criterion is observed on a physical device.",
+      requiredForCompletion: true
+    }
+  ];
+  const safeDraftRunResultArguments = {
+    projectPath: root,
+    sampleId: sample.id,
+    platform,
+    overallStatus: "blocked",
+    device: recordedDevice,
+    buildOutputPath: recordedBuildOutput,
+    notes: sanitizeRunResultNotes(notes) ?? "Draft device run result. Replace placeholders with observed evidence before writing RUN_RESULT.md.",
+    steps: formSteps.map((step) => ({
+      name: step.name,
+      status: step.status,
+      evidence: `<${step.evidencePrompt}>`,
+      nextAction: step.nextActionPrompt
+    }))
+  };
+  const passedRunResultTemplate = {
+    ...safeDraftRunResultArguments,
+    overallStatus: "passed",
+    notes: "Use this passed template only after all required real-device validation steps pass with observed evidence.",
+    steps: formSteps.map((step) => ({
+      name: step.name,
+      status: "passed",
+      evidence: step.name.includes("sample pass criteria")
+        ? `<${sample.name} passed on ${recordedDevice}; record target/recognition outcome without secrets.>`
+        : `<Observed on ${recordedDevice}: ${step.evidencePrompt}>`
+    }))
+  };
+  const completionAcceptanceRules = [
+    "Write RUN_RESULT.md with overallStatus=passed only after a physical Android or iOS device run passes.",
+    "Record a non-placeholder device model or device label.",
+    "Include at least one passed step whose name includes Real device validation or Device validation.",
+    "Keep compile-only and build-only outcomes as blocked until real-device validation evidence exists.",
+    sample.id === "cloud-recognition"
+      ? "Record recognition status and target/library identifiers without appKey, appSecret, license keys, tokens, passwords, or raw secret-bearing logs."
+      : "Record target image, detection, anchored content, and tracking stability evidence without license keys, tokens, passwords, or raw secret-bearing logs."
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    device: device ?? null,
+    buildOutputPath: buildOutputPath ?? null,
+    readyForDeviceValidation: checklist.readyForDeviceValidation,
+    blockerCount: checklist.blockers.length,
+    blockers: checklist.blockers,
+    formSteps,
+    passCriteria: checklist.passCriteria,
+    evidencePrompts: checklist.evidencePrompts,
+    completionAcceptanceRules,
+    safeDraftRunResultArguments,
+    passedRunResultTemplate,
+    nextActions: checklist.readyForDeviceValidation
+      ? [
+          "Run the focused sample on a physical Android or iOS device.",
+          "Fill this form with observed evidence.",
+          "Call easyar_write_run_result using the safe draft for blocked/failed attempts or the passed template only after every required step passes.",
+          `Regenerate completion evidence with easyar_write_completion_report projectPath=${root} sampleId=${sample.id} platform=${platform}.`
+        ]
+      : [
+          ...checklist.nextActions,
+          `Regenerate this form after blockers are resolved with easyar_write_device_run_result_form projectPath=${root} sampleId=${sample.id} platform=${platform}.`
+        ],
+    security: "This form is designed for evidence collection only. Do not paste EasyAR license keys, account tokens, Cloud Recognition appKey/appSecret, signing keys, provisioning profiles, passwords, private device identifiers, or raw secret-bearing logs."
+  };
+}
+
 async function buildRunResult(input: {
   root: string;
   sample: SampleInfo;
@@ -10909,6 +11087,73 @@ function buildDeviceValidationChecklistMarkdown(checklist: Awaited<ReturnType<ty
     "## Security",
     "",
     checklist.security,
+    ""
+  ].join("\n");
+}
+
+function buildDeviceRunResultFormMarkdown(form: Awaited<ReturnType<typeof buildDeviceRunResultForm>>): string {
+  return [
+    `# EasyAR Device Run Result Form - ${form.sample.name}`,
+    "",
+    `Generated at: ${form.generatedAt}`,
+    `Project: ${form.projectPath}`,
+    `Sample id: ${form.sample.id}`,
+    `Status: ${form.sample.implementationStatus}`,
+    `Platform: ${form.platform}`,
+    `Device: ${form.device ?? "not recorded"}`,
+    `Build output: ${form.buildOutputPath ?? "not recorded"}`,
+    `Ready for device validation: ${form.readyForDeviceValidation ? "yes" : "no"}`,
+    `Blocker count: ${form.blockerCount}`,
+    "",
+    "## Completion Acceptance Rules",
+    "",
+    ...form.completionAcceptanceRules.map((rule) => `- ${rule}`),
+    "",
+    "## Fillable Step Evidence",
+    "",
+    ...form.formSteps.flatMap((step, index) => [
+      `${index + 1}. ${step.name}`,
+      `   - Required for completion: ${step.requiredForCompletion ? "yes" : "no"}`,
+      `   - Status: ${step.status}`,
+      `   - Evidence: ${step.evidencePrompt}`,
+      `   - Next action if not passed: ${step.nextActionPrompt}`
+    ]),
+    "",
+    "## Pass Criteria",
+    "",
+    ...form.passCriteria.map((criterion) => `- ${criterion}`),
+    "",
+    "## Evidence To Capture",
+    "",
+    ...form.evidencePrompts.map((prompt) => `- ${prompt}`),
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(form.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No device validation blockers."),
+    "",
+    "## Safe Draft easyar_write_run_result Arguments",
+    "",
+    "Use this for blocked, failed, or incomplete attempts. Replace placeholders with observed evidence.",
+    "",
+    "```json",
+    JSON.stringify(form.safeDraftRunResultArguments, null, 2),
+    "```",
+    "",
+    "## Passed easyar_write_run_result Template",
+    "",
+    "Use this only after all required steps pass on a physical device.",
+    "",
+    "```json",
+    JSON.stringify(form.passedRunResultTemplate, null, 2),
+    "```",
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(form.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    form.security,
     ""
   ].join("\n");
 }
