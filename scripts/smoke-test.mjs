@@ -613,6 +613,8 @@ try {
   assertTextIncludes(imageRunSequence, "easyar_run_unity_compile_check");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
   assertTextIncludes(imageRunSequence, "\"logPath\"");
+  assertTextIncludes(imageRunSequence, "\"platform\": \"android\"");
+  assertTextIncludes(imageRunSequence, "suggestedRunResultCall");
   assertTextIncludes(imageRunSequence, "easyar_analyze_latest_unity_log");
   assertTextIncludes(imageRunSequence, "image-target-assets");
 
@@ -638,6 +640,8 @@ try {
   assert(runSequenceMarkdown.includes("EasyAR Focused Run Sequence - Image Tracking"), "Run sequence markdown should include title");
   assert(runSequenceMarkdown.includes("EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings"), "Run sequence markdown should include Unity build settings method");
   assert(runSequenceMarkdown.includes("mcp-easyar-CompileCheck.log"), "Run sequence markdown should include compile log path");
+  assert(runSequenceMarkdown.includes("\"sampleId\":\"image-tracking\""), "Run sequence markdown should include sampleId on Unity batch calls");
+  assert(runSequenceMarkdown.includes("suggestedRunResultCall"), "Run sequence markdown should mention run result handoff");
 
   const writtenCloudRunSequence = await callTool("easyar_write_run_sequence", {
     projectPath,

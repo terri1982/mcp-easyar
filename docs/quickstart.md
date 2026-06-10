@@ -194,7 +194,7 @@ easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.E
 
 For repeatable diagnostics, pass `logPath=Logs/mcp-easyar-ConfigureBuildSettings.log` or follow the `easyar_generate_run_sequence` output, which includes project-local log paths for Unity batch calls.
 
-When `sampleId` is provided, `easyar_run_unity_compile_check` and `easyar_run_unity_method` return focused log diagnostics plus a `suggestedRunResultCall`. Use that suggested `easyar_write_run_result` call to update `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md` after compile, Build Settings, sample validation, build, or device attempts.
+When `sampleId` is provided, `easyar_run_unity_compile_check` and `easyar_run_unity_method` return focused log diagnostics plus a `suggestedRunResultCall`. `easyar_generate_run_sequence` includes `sampleId`, `platform`, and project-local `logPath` arguments on Unity batch steps so the suggested `easyar_write_run_result` call can update `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md` after compile, Build Settings, sample validation, build, or device attempts.
 
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 

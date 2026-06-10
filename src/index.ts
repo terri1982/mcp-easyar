@@ -3951,9 +3951,10 @@ function buildFocusedRunSequence(input: {
             arguments: {
               projectPath,
               sampleId: sample.id,
+              platform,
               logPath: path.join("Logs", "mcp-easyar-CompileCheck.log")
             },
-            expected: "Unity opens the project in batch mode, imports scripts, and exits without compile errors."
+            expected: "Unity opens the project in batch mode, imports scripts, exits without compile errors, and returns suggestedRunResultCall for RUN_RESULT.md handoff."
           },
           {
             step: "Generate mobile player settings helper",
@@ -3967,9 +3968,11 @@ function buildFocusedRunSequence(input: {
             arguments: {
               projectPath,
               executeMethod: "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings",
+              sampleId: sample.id,
+              platform,
               logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings")
             },
-            expected: "Unity exits successfully after applying package/bundle identifier and camera/network-related settings."
+            expected: "Unity exits successfully after applying package/bundle identifier and camera/network-related settings, then returns suggestedRunResultCall for RUN_RESULT.md handoff."
           },
           {
             step: "Generate Build Settings helper",
@@ -3983,9 +3986,11 @@ function buildFocusedRunSequence(input: {
             arguments: {
               projectPath,
               executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings",
+              sampleId: sample.id,
+              platform,
               logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings")
             },
-            expected: "Matching official sample scene is enabled in Build Settings."
+            expected: "Matching official sample scene is enabled in Build Settings, then suggestedRunResultCall can record the step outcome."
           },
           {
             step: "Validate focused sample inside Unity",
@@ -3993,9 +3998,11 @@ function buildFocusedRunSequence(input: {
             arguments: {
               projectPath,
               executeMethod: "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample",
+              sampleId: sample.id,
+              platform,
               logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample")
             },
-            expected: "Unity confirms EasyAR import signals, matching sample scene, Build Settings, and focused sample requirements."
+            expected: "Unity confirms EasyAR import signals, matching sample scene, Build Settings, and focused sample requirements, then suggestedRunResultCall can record the validation outcome."
           }
         ]
       },
@@ -4020,10 +4027,12 @@ function buildFocusedRunSequence(input: {
             arguments: {
               projectPath,
               executeMethod: "EasyAR.EditorTools.EasyARDeviceBuildHelper.Build",
+              sampleId: sample.id,
+              platform,
               logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARDeviceBuildHelper.Build"),
               timeoutSeconds: 1800
             },
-            expected: "Android APK or iOS Xcode project is produced."
+            expected: "Android APK or iOS Xcode project is produced, then suggestedRunResultCall can record the build outcome before real-device validation."
           },
           {
             step: "Analyze Unity logs if any step fails",
