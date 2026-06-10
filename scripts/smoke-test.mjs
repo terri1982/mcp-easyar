@@ -77,6 +77,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_run_sequence"),
     "easyar_write_run_sequence should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_audit_sample_scene"),
+    "easyar_audit_sample_scene should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_scene_audit"),
+    "easyar_write_scene_audit should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -212,6 +220,18 @@ try {
   assert(runReportMarkdown.includes("EasyAR Focused Run Report - Image Tracking"), "Run report markdown should include title");
   assert(runReportMarkdown.includes("Next Recommended Phase"), "Run report markdown should include next phase");
 
+  const initialSceneAudit = await callTool("easyar_write_scene_audit", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(initialSceneAudit, "SCENE_AUDIT.md");
+  const initialSceneAuditMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "SCENE_AUDIT.md"),
+    "utf8"
+  );
+  assert(initialSceneAuditMarkdown.includes("EasyAR Focused Scene Audit - Image Tracking"), "Scene audit markdown should include title");
+  assert(initialSceneAuditMarkdown.includes("Ignored Generated Signals"), "Scene audit markdown should list ignored generated signals");
+
   const initialReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,
     sampleId: "image-tracking"
@@ -287,6 +307,32 @@ try {
 
   await mkdir(path.join(projectPath, "Assets", "Targets"), { recursive: true });
   await writeFile(path.join(projectPath, "Assets", "Targets", "ImageTarget.jpg"), "fake-image-target", "utf8");
+  await mkdir(path.join(projectPath, "Assets", "EasyAR"), { recursive: true });
+  await writeFile(path.join(projectPath, "Assets", "EasyAR", "EasyARSense.asset"), "fake-easyar-signal", "utf8");
+  await mkdir(path.join(projectPath, "Assets", "Scenes"), { recursive: true });
+  await writeFile(path.join(projectPath, "Assets", "Scenes", "ImageTracking.unity"), "%YAML 1.1\n", "utf8");
+  await writeFile(
+    path.join(projectPath, "ProjectSettings", "EditorBuildSettings.asset"),
+    [
+      "%YAML 1.1",
+      "--- !u!1045 &1",
+      "EditorBuildSettings:",
+      "  m_Scenes:",
+      "  - enabled: 1",
+      "    path: Assets/Scenes/ImageTracking.unity",
+      "    guid: 00000000000000000000000000000000"
+    ].join("\n"),
+    "utf8"
+  );
+
+  const readySceneAudit = await callTool("easyar_audit_sample_scene", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(readySceneAudit, "\"readyForUnityValidation\": true");
+  assertTextIncludes(readySceneAudit, "Assets/Scenes/ImageTracking.unity");
+  assertTextIncludes(readySceneAudit, "Assets/EasyAR/EasyARSense.asset");
+  assertTextIncludes(readySceneAudit, "Assets/Targets/ImageTarget.jpg");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),
@@ -485,7 +531,7 @@ try {
     maxScriptIssues: 10
   });
   assertTextIncludes(riskyRunReport, "scriptReview");
-  assertTextIncludes(riskyRunReport, "Fix readiness gaps before Unity batch automation");
+  assertTextIncludes(riskyRunReport, "Fix static C# review issues before compiling in Unity");
 
   const logAnalysis = await callTool("easyar_analyze_unity_log", {
     logText: [

@@ -40,6 +40,8 @@ const toolCatalog = [
   "easyar_write_run_sequence",
   "easyar_generate_run_report",
   "easyar_write_run_report",
+  "easyar_audit_sample_scene",
+  "easyar_write_scene_audit",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -150,7 +152,7 @@ const quickstartWorkflow = [
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_generate_run_report` for current project status.",
+  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_generate_run_report` and `easyar_audit_sample_scene` for current project status.",
   "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
@@ -668,6 +670,56 @@ server.tool(
       overallReady: report.overallReady,
       nextRecommendedPhase: report.nextRecommendedPhase,
       note: "The report does not include secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_audit_sample_scene",
+  "Audit focused sample scene candidates, EasyAR import signals, Build Settings hints, and sample-specific run blockers.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    maxCandidates: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, maxCandidates }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildSampleSceneAudit(root, sample, maxCandidates));
+  }
+);
+
+server.tool(
+  "easyar_write_scene_audit",
+  "Write the focused sample scene audit as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    relativePath: z.string().optional().describe("Optional audit path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/SCENE_AUDIT.md."),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing scene audit artifact.")
+  },
+  async ({ projectPath, sampleId, relativePath, maxCandidates, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const audit = await buildSampleSceneAudit(root, sample, maxCandidates);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "SCENE_AUDIT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildSceneAuditMarkdown(audit), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      readyForUnityValidation: audit.readyForUnityValidation,
+      blockerCount: audit.blockers.length,
+      nextActions: audit.nextActions,
+      note: "The scene audit does not include secret values."
     });
   }
 );
@@ -1646,6 +1698,65 @@ async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScript
   };
 }
 
+async function buildSampleSceneAudit(root: string, sample: SampleInfo, maxCandidates: number) {
+  const allEasyARSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, maxCandidates * 3);
+  const easyarSignals = filterOfficialEasyARSignals(allEasyARSignals).slice(0, maxCandidates);
+  const ignoredGeneratedSignals = allEasyARSignals
+    .filter((candidatePath) => !filterOfficialEasyARSignals([candidatePath]).includes(candidatePath))
+    .slice(0, maxCandidates);
+  const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, maxCandidates * 3);
+  const matchingScenes = matchSampleScenes(sample, sampleScenes).slice(0, maxCandidates);
+  const buildSettingsHints = await readBuildSettingsSceneHints(root, sample);
+  const sampleSpecific = await buildSampleSceneAuditSpecifics(root, sample, maxCandidates);
+  const readiness = await buildSampleReadinessReport(root, sample);
+  const blockers = uniqueBlockers([
+    ...readiness.checks.filter((check) => !check.ok).map((check) => ({
+      id: check.id,
+      detail: check.detail,
+      action: readinessAction(check.id, sample)
+    })),
+    ...sampleSpecific.blockers
+  ]);
+
+  return {
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus,
+      sceneHints: sample.unityScenes
+    },
+    unityVersion: await readUnityVersion(root),
+    readyForUnityValidation: blockers.length === 0 && buildSettingsHints.matchingEnabledScenes.length > 0 && buildSettingsHints.firstEnabledSceneMatches,
+    easyarSignals,
+    ignoredGeneratedSignals,
+    sceneCandidates: sampleScenes.slice(0, maxCandidates),
+    matchingScenes,
+    buildSettingsHints,
+    sampleSpecific,
+    blockers,
+    nextActions: blockers.length > 0
+      ? Array.from(new Set(blockers.map((blocker) => blocker.action)))
+      : buildSettingsHints.matchingEnabledScenes.length === 0
+        ? ["Run easyar_create_build_settings_helper and easyar_run_unity_method with EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings."]
+        : buildSettingsHints.firstEnabledSceneMatches
+          ? ["Run easyar_run_unity_method with EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample."]
+          : ["Run EasyARBuildSettingsHelper.ConfigureBuildSettings again so the focused sample scene is first in Build Settings."],
+    security: "Secret values are not returned. Cloud Recognition audit only reports credential presence and placeholder status."
+  };
+}
+
+function uniqueBlockers<T extends { id: string }>(blockers: T[]): T[] {
+  const seen = new Set<string>();
+  return blockers.filter((blocker) => {
+    if (seen.has(blocker.id)) {
+      return false;
+    }
+    seen.add(blocker.id);
+    return true;
+  });
+}
+
 function filterOfficialEasyARSignals(paths: string[]): string[] {
   return paths.filter((candidatePath) =>
     !/^Assets[\/\\]EasyARGenerated[\/\\]/i.test(candidatePath) &&
@@ -1729,6 +1840,114 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
   }
 
   return [];
+}
+
+async function readBuildSettingsSceneHints(root: string, sample: SampleInfo) {
+  const target = path.join(root, "ProjectSettings", "EditorBuildSettings.asset");
+  if (!await exists(target)) {
+    return {
+      fileExists: false,
+      scenes: [],
+      enabledScenes: [],
+      matchingEnabledScenes: [],
+      firstEnabledScene: null,
+      firstEnabledSceneMatches: false
+    };
+  }
+
+  const text = await readFile(target, "utf8");
+  const scenes: Array<{ path: string; enabled: boolean }> = [];
+  let currentEnabled = true;
+  for (const line of text.split(/\r?\n/)) {
+    const enabledMatch = /^\s*enabled:\s*(\d+)/.exec(line);
+    if (enabledMatch) {
+      currentEnabled = enabledMatch[1] !== "0";
+      continue;
+    }
+
+    const pathMatch = /^\s*path:\s*(.+?)\s*$/.exec(line);
+    if (pathMatch) {
+      scenes.push({
+        path: pathMatch[1].replace(/^"|"$/g, ""),
+        enabled: currentEnabled
+      });
+      currentEnabled = true;
+    }
+  }
+
+  const enabledScenes = scenes.filter((scene) => scene.enabled).map((scene) => scene.path);
+  const matchingEnabledScenes = enabledScenes.filter((scenePath) => matchSampleScenes(sample, [scenePath]).length > 0);
+  const firstEnabledScene = enabledScenes[0] ?? null;
+  return {
+    fileExists: true,
+    scenes,
+    enabledScenes,
+    matchingEnabledScenes,
+    firstEnabledScene,
+    firstEnabledSceneMatches: firstEnabledScene ? matchingEnabledScenes.includes(firstEnabledScene) : false
+  };
+}
+
+async function buildSampleSceneAuditSpecifics(root: string, sample: SampleInfo, maxCandidates: number) {
+  if (sample.id === "image-tracking") {
+    const targetAssets = await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, maxCandidates);
+    return {
+      kind: "image-tracking",
+      targetAssets,
+      cloudConfig: null,
+      blockers: targetAssets.length > 0
+        ? []
+        : [
+            {
+              id: "image-target-assets",
+              detail: "No Image Tracking target asset candidates were found.",
+              action: readinessAction("image-target-assets", sample)
+            }
+          ]
+    };
+  }
+
+  if (sample.id === "cloud-recognition") {
+    const configReport = await buildLocalConfigValidationReport(root);
+    const cloudCheck = configReport.checks.find((check) => check.id === "cloud-recognition");
+    const config = await readCloudRecognitionConfig(root);
+    const presence = {
+      appId: isNonPlaceholderString(config.appId),
+      appKey: isNonPlaceholderString(config.appKey),
+      appSecret: isNonPlaceholderString(config.appSecret)
+    };
+    return {
+      kind: "cloud-recognition",
+      targetAssets: [],
+      cloudConfig: {
+        valid: Boolean(cloudCheck?.ok),
+        presence,
+        detail: cloudCheck?.detail ?? "Cloud Recognition config was not found."
+      },
+      blockers: cloudCheck?.ok
+        ? []
+        : [
+            {
+              id: "cloud-recognition-credentials",
+              detail: cloudCheck?.detail ?? "Cloud recognition credentials are incomplete or missing.",
+              action: readinessAction("cloud-recognition-credentials", sample)
+            }
+          ]
+    };
+  }
+
+  return {
+    kind: "deferred",
+    targetAssets: [],
+    cloudConfig: null,
+    blockers: [
+      {
+        id: "sample-deferred",
+        detail: `${sample.name} is outside the current focused sample run-through scope.`,
+        action: readinessAction("sample-focus", sample)
+      }
+    ]
+  };
 }
 
 async function readCloudRecognitionConfig(root: string): Promise<Record<string, unknown>> {
@@ -2454,6 +2673,72 @@ function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRu
     "## Security",
     "",
     report.security,
+    ""
+  ].join("\n");
+}
+
+function buildSceneAuditMarkdown(audit: Awaited<ReturnType<typeof buildSampleSceneAudit>>): string {
+  return [
+    `# EasyAR Focused Scene Audit - ${audit.sample.name}`,
+    "",
+    `Project: ${audit.projectPath}`,
+    `Sample id: ${audit.sample.id}`,
+    `Status: ${audit.sample.implementationStatus}`,
+    `Unity version: ${audit.unityVersion ?? "unknown"}`,
+    `Ready for Unity validation: ${audit.readyForUnityValidation ? "yes" : "no"}`,
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(audit.blockers.map((blocker) => `${blocker.id}: ${blocker.detail}`), "No blockers detected."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(audit.nextActions, "Run the focused sample Unity validator."),
+    "",
+    "## EasyAR Import Signals",
+    "",
+    ...markdownIssueList(audit.easyarSignals, "No official EasyAR import signals found."),
+    "",
+    "## Ignored Generated Signals",
+    "",
+    ...markdownIssueList(audit.ignoredGeneratedSignals, "No generated MCP helper signals were ignored."),
+    "",
+    "## Scene Candidates",
+    "",
+    `Scene hints: ${audit.sample.sceneHints.join(", ")}`,
+    "",
+    ...markdownIssueList(audit.sceneCandidates, "No Unity scene candidates found under Assets."),
+    "",
+    "## Matching Scenes",
+    "",
+    ...markdownIssueList(audit.matchingScenes, "No matching focused sample scenes found."),
+    "",
+    "## Build Settings",
+    "",
+    `EditorBuildSettings.asset exists: ${audit.buildSettingsHints.fileExists ? "yes" : "no"}`,
+    `First enabled scene: ${audit.buildSettingsHints.firstEnabledScene ?? "none"}`,
+    `First enabled scene matches sample: ${audit.buildSettingsHints.firstEnabledSceneMatches ? "yes" : "no"}`,
+    "",
+    ...markdownIssueList(audit.buildSettingsHints.enabledScenes, "No enabled Build Settings scenes found."),
+    "",
+    "## Sample Specific",
+    "",
+    `Kind: ${audit.sampleSpecific.kind}`,
+    ...markdownIssueList(audit.sampleSpecific.targetAssets, "No sample-specific target assets listed."),
+    ...(audit.sampleSpecific.cloudConfig
+      ? [
+          "",
+          `Cloud config valid: ${audit.sampleSpecific.cloudConfig.valid ? "yes" : "no"}`,
+          `Cloud appId present: ${audit.sampleSpecific.cloudConfig.presence.appId ? "yes" : "no"}`,
+          `Cloud appKey present: ${audit.sampleSpecific.cloudConfig.presence.appKey ? "yes" : "no"}`,
+          `Cloud appSecret present: ${audit.sampleSpecific.cloudConfig.presence.appSecret ? "yes" : "no"}`,
+          audit.sampleSpecific.cloudConfig.detail
+        ]
+      : []),
+    "",
+    "## Security",
+    "",
+    audit.security,
     ""
   ].join("\n");
 }
