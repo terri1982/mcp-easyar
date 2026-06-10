@@ -425,6 +425,7 @@ try {
     }
   });
   assertPromptIncludes(programmingPrompt, "easyar_write_programming_context");
+  assertPromptIncludes(programmingPrompt, "easyar://workflow/programming");
   assertPromptIncludes(programmingPrompt, "PROGRAMMING_CONTEXT.md");
 
   const officialEndpointPrompt = await request("prompts/get", {
@@ -490,6 +491,14 @@ try {
   assertResourceIncludes(focusedScopeResource, "EasyAR Focused Scope Workflow");
   assertResourceIncludes(focusedScopeResource, "easyar_write_focused_scope_status");
   assertResourceIncludes(focusedScopeResource, "allFocusedSamplesComplete=true");
+
+  const programmingWorkflowResource = await request("resources/read", {
+    uri: "easyar://workflow/programming"
+  });
+  assertResourceIncludes(programmingWorkflowResource, "EasyAR Unity Programming Workflow");
+  assertResourceIncludes(programmingWorkflowResource, "easyar_write_config_integration_audit");
+  assertResourceIncludes(programmingWorkflowResource, "CODE_CHANGE.md");
+  assertResourceIncludes(programmingWorkflowResource, "Never hardcode EasyAR license keys");
 
   const authStatus = await callTool("easyar_auth_status", {});
   assertTextIncludes(authStatus, "\"hasToken\": false");

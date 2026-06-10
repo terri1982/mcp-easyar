@@ -193,7 +193,8 @@ const resourceCatalog = [
   "easyar://official/openapi",
   "easyar://unity/checklist",
   "easyar://workflow/quickstart",
-  "easyar://workflow/focused-scope"
+  "easyar://workflow/focused-scope",
+  "easyar://workflow/programming"
 ] as const;
 
 const samples: SampleInfo[] = [
@@ -436,6 +437,58 @@ server.resource(
   })
 );
 
+server.resource(
+  "easyar-programming-workflow",
+  "easyar://workflow/programming",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: [
+          "# EasyAR Unity Programming Workflow",
+          "",
+          "Use this workflow when Codex, Claude, or another AI tool is asked to change Unity C# code inside an EasyAR project.",
+          "",
+          "## Before Editing",
+          "",
+          "1. Run `easyar_write_focused_preflight` for the active focused sample.",
+          "2. Run `easyar_write_config_integration_audit` before wiring license, local config, or Cloud Recognition values.",
+          "3. Run `easyar_write_programming_context` and read `PROGRAMMING_CONTEXT.md` before planning edits.",
+          "4. Run `easyar_write_code_plan` with the requested code goal and read `CODE_PLAN.md` before changing scripts.",
+          "",
+          "## Editing Rules",
+          "",
+          "- Keep changes scoped to the files named in `CODE_PLAN.md` or explicitly requested by the user.",
+          "- Prefer `easyar_create_mono_behaviour` for a new focused adapter script, then patch that script only.",
+          "- Use serialized fields, UnityEvents, or official sample wiring instead of broad scene searches.",
+          "- Never hardcode EasyAR license keys, account tokens, API Key, API Secret, legacy appKey/appSecret, signing keys, or provisioning data.",
+          "- Do not log secret-bearing local config values.",
+          "",
+          "## After Editing",
+          "",
+          "1. Run `easyar_review_csharp_scripts` for changed scripts.",
+          "2. Run `easyar_write_code_change_summary` to write `CODE_CHANGE.md`.",
+          "3. Run `easyar_run_unity_compile_check` with `sampleId`, `platform`, and a project-local `logPath`.",
+          "4. If compile/build/device validation is attempted, record the result with `easyar_write_run_result`.",
+          "5. Regenerate support or completion artifacts only after real evidence exists.",
+          "",
+          "## Handoff Order",
+          "",
+          "Read artifacts in this order when taking over a programming task:",
+          "",
+          "1. `PREFLIGHT.md`",
+          "2. `CONFIG_INTEGRATION.md`",
+          "3. `PROGRAMMING_CONTEXT.md`",
+          "4. `CODE_PLAN.md`",
+          "5. `CODE_CHANGE.md`",
+          "6. Latest Unity compile log summary or `SUPPORT_BUNDLE.md`"
+        ].join("\n")
+      }
+    ]
+  })
+);
+
 server.prompt(
   "easyar-run-image-tracking",
   "Guide Codex or Claude through the focused Image Tracking run-through.",
@@ -554,7 +607,8 @@ server.prompt(
     [
       `Act as the Unity programming assistant for ${sampleId} in project: ${projectPath}`,
       "",
-      "Start by calling easyar_write_focused_preflight, then easyar_write_programming_context to understand current readiness and script context.",
+      "Start by reading `easyar://workflow/programming`.",
+      "Then call easyar_write_focused_preflight, easyar_write_config_integration_audit, and easyar_write_programming_context to understand current readiness and script context.",
       "Read PROGRAMMING_CONTEXT.md before CODE_PLAN.md when taking over script work.",
       "When creating or editing C# files, prefer easyar_create_mono_behaviour for common templates and easyar_write_csharp_file for focused patches.",
       "After code changes, call easyar_review_csharp_scripts before asking Unity to compile.",

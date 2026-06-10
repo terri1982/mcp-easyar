@@ -37,6 +37,7 @@ const requiredResources = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://workflow/focused-scope",
+  "easyar://workflow/programming",
   "easyar://workflow/quickstart"
 ];
 
@@ -136,6 +137,11 @@ try {
       "focused-scope-workflow",
       resourceTexts.get("easyar://workflow/focused-scope")?.includes("easyar_write_focused_scope_status") ?? false,
       "Focused scope workflow resource is readable."
+    ),
+    check(
+      "programming-workflow",
+      resourceTexts.get("easyar://workflow/programming")?.includes("easyar_write_code_plan") ?? false,
+      "Programming workflow resource is readable."
     )
   ];
   const failed = checks.filter((item) => !item.ok);

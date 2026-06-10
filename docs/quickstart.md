@@ -346,6 +346,8 @@ easyar_create_mono_behaviour projectPath=/path/to/UnityProject relativePath=Asse
 
 Read `CONFIG_INTEGRATION.md` and `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md` when another AI tool or human developer is taking over script work. The config audit points to likely license/cloud credential consumers by path and signal only; it does not print local secret values.
 
+MCP clients can also read `easyar://workflow/programming` before editing Unity C# scripts. It summarizes the required pre-edit artifacts, scoped editing rules, post-edit checks, and handoff order for Codex, Claude, or a human developer.
+
 `CODE_PLAN.md` includes structured verification calls. After script edits, run the listed `easyar_review_csharp_scripts` and `easyar_run_unity_compile_check` call, then use the compile tool's `suggestedRunResultCall` to update `RUN_RESULT.md`.
 
 For custom code, use:

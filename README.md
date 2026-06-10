@@ -346,6 +346,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar://unity/checklist`
 - `easyar://workflow/quickstart`
 - `easyar://workflow/focused-scope`
+- `easyar://workflow/programming`
 
 ## Prompts
 
