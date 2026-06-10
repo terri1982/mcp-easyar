@@ -7,6 +7,7 @@ const requiredTools = [
   "easyar_server_status",
   "easyar_generate_client_config",
   "easyar_first_run_guide",
+  "easyar_write_official_api_handoff",
   "easyar_account_onboarding",
   "easyar_write_first_run_guide",
   "easyar_write_project_handoff",

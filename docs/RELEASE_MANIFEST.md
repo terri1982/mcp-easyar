@@ -1,31 +1,22 @@
 # mcp-easyar Release Manifest
 
-Package: `mcp-easyar` 0.1.0  
-Bins: `easyar-mcp`, `easyar-mcp-check`
-Node: `>=20`  
-Repository: `https://github.com/terri1982/mcp-easyar`
-
-This manifest is safe to commit. It lists install and workflow metadata for registered EasyAR users and AI coding tools; it does not include tokens, license keys, Cloud Recognition credentials, signing keys, or provisioning secrets.
+Generated at: 2026-06-10T14:25:03.710Z
+Package: mcp-easyar 0.1.0
+Bin: easyar-mcp
+Node: >=20
+Repository: https://github.com/terri1982/mcp-easyar.git
+Ready for install docs: yes
 
 ## Focused Scope
 
-Focused samples:
-
-- `image-tracking`
-- `cloud-recognition`
-
-Deferred samples:
-
-- `hello-ar`
-- `surface-tracking`
+Focused samples: image-tracking, cloud-recognition
+Deferred samples: hello-ar, surface-tracking
 
 ## Install Commands
 
-```bash
-npm install
-npm run build
-npm start
-```
+- `npm install`
+- `npm run build`
+- `npm start`
 
 ## Install Profiles
 
@@ -53,21 +44,19 @@ Entrypoint mode: `npx`
 
 ## MCP Entrypoints
 
-- Built entrypoint: `node /absolute/path/to/mcp-easyar/dist/index.js`
+- Built dist entrypoint: `node /Users/tuyi/Documents/EasyAR 官方 MCP 服务/dist/index.js`
 - Package bin: `easyar-mcp`
 - Install check: `easyar-mcp-check`
 - npx package: `npx -y mcp-easyar`
 
 ## Verification Commands
 
-```bash
-npm run typecheck
-npm test
-npm run bin:smoke
-npm run install:check
-npm run package:smoke
-npm run pack:check
-```
+- `npm run typecheck`
+- `npm test`
+- `npm run bin:smoke`
+- `npm run install:check`
+- `npm run package:smoke`
+- `npm run pack:check`
 
 ## First MCP Calls
 
@@ -75,13 +64,11 @@ npm run pack:check
 - `easyar_release_manifest`
 - `easyar_account_onboarding`
 - `easyar_account_materials`
-- `easyar_generate_official_api_contract`
 - `easyar_check_client_setup`
 - `easyar_auth_status`
 - `easyar_check_official_access`
 - `easyar_next_workflow_step`
 - `easyar_write_production_validation`
-- `easyar_write_completion_report`
 - `easyar_write_issue_report`
 
 ## Client Setup Tools
@@ -100,57 +87,54 @@ npm run pack:check
 - `EASYAR_CLOUD_CREDENTIALS_ENDPOINT`
 - `EASYAR_UNITY_PATH`
 
-## Official API Contract
+## Required Files
 
-- `docs/OFFICIAL_API_CONTRACT.md`
-- `easyar_generate_official_api_contract`
-- `easyar_write_official_api_contract`
-
-## Required Release Files
-
-- `README.md`
-- `.env.example`
-- `CHANGELOG.md`
-- `LICENSE`
-- `SECURITY.md`
-- `docs/quickstart.md`
-- `docs/OFFICIAL_API_CONTRACT.md`
-- `docs/RELEASE_MANIFEST.md`
-- `docs/troubleshooting.md`
-- `assets/easyar-icon.png`
-- `dist/index.js`
-- `dist/easyar-api.js`
-- `.github/ISSUE_TEMPLATE/focused-sample-run.yml`
-- `.github/workflows/ci.yml`
+- OK README.md
+- OK .env.example
+- OK CHANGELOG.md
+- OK LICENSE
+- OK SECURITY.md
+- OK docs/quickstart.md
+- OK docs/OFFICIAL_API_CONTRACT.md
+- OK docs/OFFICIAL_API_HANDOFF.md
+- OK docs/RELEASE_MANIFEST.md
+- OK docs/troubleshooting.md
+- OK assets/easyar-icon.png
+- OK dist/index.js
+- OK dist/easyar-api.js
+- OK .github/ISSUE_TEMPLATE/focused-sample-run.yml
+- OK .github/workflows/ci.yml
 
 ## Package Files
 
-- `dist`
-- `docs`
-- `assets/easyar-icon.png`
-- `.env.example`
-- `README.md`
-- `CHANGELOG.md`
-- `LICENSE`
-- `SECURITY.md`
+- dist
+- docs
+- assets/easyar-icon.png
+- .env.example
+- README.md
+- CHANGELOG.md
+- LICENSE
+- SECURITY.md
 
-## Release Checks
+## Scripts
 
-Before publishing or tagging a release:
+- `bin:smoke`: `npm run build && MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs`
+- `build`: `tsc`
+- `dev`: `tsx src/index.ts`
+- `install:check`: `npm run build && node dist/install-check.js`
+- `package:smoke`: `npm run build && node scripts/package-install-smoke.mjs`
+- `pack:check`: `npm run build && npm pack --dry-run`
+- `postbuild`: `chmod +x dist/index.js dist/install-check.js`
+- `start`: `node dist/index.js`
+- `test`: `npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs`
+- `typecheck`: `tsc --noEmit`
 
-```bash
-npm run typecheck
-npm test
-npm run bin:smoke
-npm run install:check
-npm run package:smoke
-npm run pack:check
-```
+## Next Actions
 
-Then verify GitHub Actions passes on `main`.
+- Run verification commands before publishing or tagging a release.
+- Use easyar_check_client_setup to validate the MCP client config path or selected package/npx entrypoint before giving it to Codex or Claude.
+- Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files.
 
 ## Security
 
-- Use only official EasyAR account, license, downloads, and Cloud Recognition endpoints.
-- Do not bypass EasyAR login, license checks, download authorization, enterprise gates, or rate limits.
-- Do not commit account tokens, license keys, Cloud Recognition credentials, mobile signing keys, or provisioning secrets.
+The release manifest is safe to commit. It lists required environment variable names and placeholder commands, not secret values.

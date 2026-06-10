@@ -133,6 +133,14 @@ try {
     "easyar_write_official_api_contract should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_official_api_handoff"),
+    "easyar_official_api_handoff should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_official_api_handoff"),
+    "easyar_write_official_api_handoff should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_check_official_access"),
     "easyar_check_official_access should be listed"
   );
@@ -562,6 +570,36 @@ try {
   assert(officialApiContractMarkdown.includes("cloud-credentials-discovery"), "Official API contract markdown should include cloud endpoint");
   assert(officialApiContractMarkdown.includes("Responses must not include raw license keys"), "Official API contract markdown should include response policy");
 
+  const officialApiHandoff = await callTool("easyar_official_api_handoff", {
+    baseUrl: "https://www.easyar.cn",
+    deploymentTarget: "staging"
+  });
+  assertTextIncludes(officialApiHandoff, "\"deploymentTarget\": \"staging\"");
+  assertTextIncludes(officialApiHandoff, "account-status");
+  assertTextIncludes(officialApiHandoff, "license-validation");
+  assertTextIncludes(officialApiHandoff, "downloads-discovery");
+  assertTextIncludes(officialApiHandoff, "cloud-credentials-discovery");
+  assertTextIncludes(officialApiHandoff, "curl -fsS");
+  assertTextIncludes(officialApiHandoff, "Response never includes appKey or appSecret raw values");
+  assert(!extractText(officialApiHandoff).includes("fixture-token"), "Official API handoff should not include fixture token values");
+
+  const writtenOfficialApiHandoff = await callTool("easyar_write_official_api_handoff", {
+    workspacePath: officialAccessProjectPath,
+    relativePath: "EasyARGenerated/OFFICIAL_API_HANDOFF.md",
+    baseUrl: "https://www.easyar.cn",
+    deploymentTarget: "staging"
+  });
+  assertTextIncludes(writtenOfficialApiHandoff, "OFFICIAL_API_HANDOFF.md");
+  const officialApiHandoffMarkdown = await readFile(
+    path.join(officialAccessProjectPath, "EasyARGenerated", "OFFICIAL_API_HANDOFF.md"),
+    "utf8"
+  );
+  assert(officialApiHandoffMarkdown.includes("mcp-easyar Official API Handoff"), "Official API handoff markdown should include title");
+  assert(officialApiHandoffMarkdown.includes("Endpoint Mapping"), "Official API handoff markdown should include endpoint mapping");
+  assert(officialApiHandoffMarkdown.includes("Acceptance Gates"), "Official API handoff markdown should include acceptance gates");
+  assert(officialApiHandoffMarkdown.includes("Do not fall back to scraping EasyAR website sessions"), "Official API handoff markdown should include no-bypass policy");
+  assert(!officialApiHandoffMarkdown.includes("fixture-token"), "Official API handoff markdown should not include fixture token values");
+
   const officialAccessNoProject = await callTool("easyar_check_official_access", {
     projectPath: officialAccessProjectPath,
     sampleId: "cloud-recognition",
@@ -675,6 +713,7 @@ try {
   assertTextIncludes(releaseManifest, "docs/RELEASE_MANIFEST.md");
   assertTextIncludes(releaseManifest, ".env.example");
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_CONTRACT.md");
+  assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_HANDOFF.md");
 
   const committedReleaseManifest = await readFile(
     path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
@@ -688,6 +727,7 @@ try {
   assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
   assert(committedReleaseManifest.includes("npm run package:smoke"), "Committed release manifest should include package install smoke");
   assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
+  assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {

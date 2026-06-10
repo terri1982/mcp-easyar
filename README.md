@@ -232,6 +232,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_discover_cloud_credentials`: call a configured official Cloud Recognition endpoint for account-scoped credential metadata without returning secrets.
 - `easyar_generate_official_api_contract`: generate the official EasyAR account API contract needed for production endpoint integration.
 - `easyar_write_official_api_contract`: write the official API contract to `docs/OFFICIAL_API_CONTRACT.md` or a selected workspace path.
+- `easyar_official_api_handoff`: generate a backend/operations handoff for wiring real EasyAR official account APIs into mcp-easyar.
+- `easyar_write_official_api_handoff`: write the official API rollout handoff to `docs/OFFICIAL_API_HANDOFF.md` or a selected workspace path.
 - `easyar_check_official_access`: run a focused official account, license, downloads, and sample-specific access check without exposing secrets.
 - `easyar_write_official_access_report`: write the official access check to `Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md`.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.

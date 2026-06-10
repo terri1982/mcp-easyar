@@ -83,9 +83,11 @@ The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md
 ```text
 easyar_generate_official_api_contract
 easyar_write_official_api_contract workspacePath=/path/to/workspace
+easyar_official_api_handoff deploymentTarget=staging
+easyar_write_official_api_handoff workspacePath=/path/to/workspace deploymentTarget=staging
 ```
 
-MCP clients can also read `easyar://official/api-contract` or use the `easyar-validate-official-endpoints` prompt before validating registered-user endpoint access.
+MCP clients can also read `easyar://official/api-contract` or use the `easyar-validate-official-endpoints` prompt before validating registered-user endpoint access. `OFFICIAL_API_HANDOFF.md` is the backend/operations rollout checklist for mapping the contract to real EasyAR account services, setting endpoint env vars, running canaries, and recording official access evidence.
 
 You can inspect local Unity path discovery with:
 

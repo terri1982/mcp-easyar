@@ -81,6 +81,8 @@ const toolCatalog = [
   "easyar_official_info",
   "easyar_generate_official_api_contract",
   "easyar_write_official_api_contract",
+  "easyar_official_api_handoff",
+  "easyar_write_official_api_handoff",
   "easyar_auth_status",
   "easyar_account_onboarding",
   "easyar_write_account_onboarding",
@@ -925,6 +927,52 @@ server.tool(
       configuredEnv: contract.environment.configured,
       readyForProductionOfficialAccess: contract.readyForProductionOfficialAccess,
       note: "The official API contract contains endpoint schemas and security requirements only; it does not contain tokens, license keys, appKey, or appSecret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_official_api_handoff",
+  "Generate a backend and operations handoff for connecting mcp-easyar to authorized EasyAR account, license, downloads, and Cloud Recognition APIs.",
+  {
+    baseUrl: z.string().optional().describe("Official API base URL. Defaults to EASYAR_API_BASE_URL or https://www.easyar.cn."),
+    includeCurl: z.boolean().default(true).describe("Whether to include non-secret curl canary command templates."),
+    deploymentTarget: z.string().optional().describe("Optional deployment environment name, for example staging, production, or internal.")
+  },
+  async ({ baseUrl, includeCurl, deploymentTarget }) => {
+    return jsonText(buildOfficialApiHandoff(baseUrl, includeCurl, deploymentTarget));
+  }
+);
+
+server.tool(
+  "easyar_write_official_api_handoff",
+  "Write OFFICIAL_API_HANDOFF.md for backend and operations teams wiring real EasyAR official APIs into mcp-easyar.",
+  {
+    workspacePath: z.string().optional().describe("Workspace or repository path. Defaults to the current working directory."),
+    relativePath: z.string().default(path.join("docs", "OFFICIAL_API_HANDOFF.md")).describe("Handoff path inside the workspace."),
+    baseUrl: z.string().optional().describe("Official API base URL. Defaults to EASYAR_API_BASE_URL or https://www.easyar.cn."),
+    includeCurl: z.boolean().default(true).describe("Whether to include non-secret curl canary command templates."),
+    deploymentTarget: z.string().optional().describe("Optional deployment environment name, for example staging, production, or internal."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing handoff file.")
+  },
+  async ({ workspacePath, relativePath, baseUrl, includeCurl, deploymentTarget, overwrite }) => {
+    const root = resolveProjectPath(workspacePath ?? process.cwd());
+    await ensureDirectory(root);
+    const handoff = buildOfficialApiHandoff(baseUrl, includeCurl, deploymentTarget);
+    const target = path.resolve(root, relativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildOfficialApiHandoffMarkdown(handoff), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      deploymentTarget: handoff.deploymentTarget,
+      endpointCount: handoff.endpointMapping.length,
+      envRequired: handoff.environment.required,
+      acceptanceGateCount: handoff.acceptanceGates.length,
+      nextActions: handoff.nextActions,
+      security: handoff.security
     });
   }
 );
@@ -4580,6 +4628,136 @@ function officialApiEndpointContract(input: {
   };
 }
 
+function buildOfficialApiHandoff(baseUrl: string | undefined, includeCurl: boolean, deploymentTarget: string | undefined) {
+  const contract = buildOfficialApiContract(baseUrl, true);
+  const endpointMapping = contract.endpoints.map((endpoint) => ({
+    id: endpoint.id,
+    envName: endpoint.envName,
+    method: endpoint.method,
+    expectedUrl: endpoint.expectedUrl,
+    purpose: endpoint.purpose,
+    backendOwnerTodo: officialApiBackendTodo(endpoint.id),
+    requestFields: endpoint.requestFields,
+    requiredResponseFields: endpoint.requiredResponseFields,
+    usedByTools: endpoint.usedByTools,
+    canaryCommand: includeCurl ? officialApiCanaryCommand(endpoint) : null,
+    acceptance: officialApiEndpointAcceptance(endpoint.id)
+  }));
+  const acceptanceGates = [
+    "All required endpoint environment variables are set in the MCP runtime environment.",
+    "Every endpoint requires Authorization: Bearer ${EASYAR_API_TOKEN} and rejects missing, expired, or unauthorized tokens.",
+    "easyar_check_account returns configured=true and ok=true for a registered EasyAR test account.",
+    "easyar_validate_license validates the local EasyAR Sense license for the Unity bundle/package identifier without echoing the license key.",
+    "easyar_discover_downloads returns only account-authorized package metadata and never bypasses EasyAR download gates.",
+    "easyar_discover_cloud_credentials returns appId and presence flags, never appKey or appSecret.",
+    "easyar_check_official_access passes for image-tracking and cloud-recognition using the same deployment environment.",
+    "easyar_write_deployment_readiness has no official endpoint blockers.",
+    "Fixture smoke remains green, then a real staging/prod canary run is recorded in OFFICIAL_ACCESS.md."
+  ];
+  return {
+    generatedAt: new Date().toISOString(),
+    deploymentTarget: deploymentTarget ?? "unspecified",
+    server: {
+      name: serverName,
+      version: serverVersion,
+      repository: "https://github.com/terri1982/mcp-easyar"
+    },
+    environment: contract.environment,
+    endpointMapping,
+    rollout: [
+      "Confirm the EasyAR account system can issue or validate a registered-user bearer token for MCP clients.",
+      "Map existing EasyAR account/license/download/cloud services to the four MCP endpoint contracts.",
+      "Deploy endpoints first to staging or an internal environment and set the matching MCP env vars there.",
+      "Run canary commands with a registered test account, a valid EasyAR Sense license, and a Cloud Recognition test app.",
+      "Run easyar_check_official_access for image-tracking and cloud-recognition.",
+      "Only after staging passes, configure production env vars for the published MCP deployment."
+    ],
+    acceptanceGates,
+    failurePolicy: [
+      "Return 401/403 for invalid, expired, unregistered, unlicensed, or entitlement-missing accounts.",
+      "Return redacted JSON errors with stable error codes; do not return raw secrets or private account data.",
+      "Rate-limit repeated failed validation attempts by account/token and endpoint.",
+      "If an endpoint is unavailable, MCP must report configured=false or ok=false and stop before private downloads or Cloud Recognition setup.",
+      "Do not fall back to scraping EasyAR website sessions or bypassing login/download gates."
+    ],
+    artifactsToRegenerate: [
+      "docs/OFFICIAL_API_CONTRACT.md",
+      "docs/OFFICIAL_API_HANDOFF.md",
+      "Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md",
+      "Assets/EasyARGenerated/DEPLOYMENT_READINESS.md",
+      "Assets/EasyARGenerated/PRODUCTION_VALIDATION.md",
+      "Assets/EasyARGenerated/REMAINING_WORK.md"
+    ],
+    nextActions: [
+      "Assign backend owners for account-status, license-validation, downloads-discovery, and cloud-credentials-discovery.",
+      "Populate EASYAR_ACCOUNT_STATUS_ENDPOINT, EASYAR_LICENSE_VALIDATE_ENDPOINT, EASYAR_DOWNLOADS_ENDPOINT, and EASYAR_CLOUD_CREDENTIALS_ENDPOINT in a staging MCP environment.",
+      "Run node scripts/official-api-fixture-smoke.mjs, then run real endpoint canaries with a registered EasyAR test account.",
+      "Run easyar_write_official_access_report for image-tracking and cloud-recognition after endpoints are configured."
+    ],
+    security: "This handoff contains endpoint names, request/response schemas, and non-secret canary templates only. It must not contain EasyAR passwords, verification codes, account tokens, license keys, appKey, appSecret, signing keys, or private user data."
+  };
+}
+
+function officialApiBackendTodo(endpointId: string): string {
+  if (endpointId === "account-status") {
+    return "Bind token validation to the official EasyAR registered-user account system and return non-secret account/entitlement metadata.";
+  }
+  if (endpointId === "license-validation") {
+    return "Validate a supplied local EasyAR Sense license against account entitlement, product, platform, and Unity bundle/package identifier.";
+  }
+  if (endpointId === "downloads-discovery") {
+    return "Return only authorized SDK/plugin/sample package metadata for the registered account without granting unauthorized downloads.";
+  }
+  if (endpointId === "cloud-credentials-discovery") {
+    return "Return Cloud Recognition app metadata and secret presence flags without returning appKey or appSecret values.";
+  }
+  return "Map this endpoint to an authorized official EasyAR backend service.";
+}
+
+function officialApiEndpointAcceptance(endpointId: string): string[] {
+  if (endpointId === "account-status") {
+    return [
+      "Valid registered-user token returns ok=true and account.registered=true.",
+      "Unregistered or expired token returns 401/403 with a redacted error body."
+    ];
+  }
+  if (endpointId === "license-validation") {
+    return [
+      "Valid license/bundle/platform returns license.valid=true and bundleIdentifierMatches=true.",
+      "Invalid license, wrong bundle id, or disallowed platform returns ok=false or 403 without echoing the license key."
+    ];
+  }
+  if (endpointId === "downloads-discovery") {
+    return [
+      "Authorized account returns EasyAR Unity Plugin/sample metadata needed by focused workflows.",
+      "Unauthorized package requests return 403 and no private download URL."
+    ];
+  }
+  if (endpointId === "cloud-credentials-discovery") {
+    return [
+      "Configured Cloud Recognition app returns appId plus appKeyPresent/appSecretPresent flags.",
+      "Response never includes appKey or appSecret raw values."
+    ];
+  }
+  return ["Endpoint passes its required response fields and redaction policy."];
+}
+
+function officialApiCanaryCommand(endpoint: ReturnType<typeof officialApiEndpointContract>): string {
+  const url = `\${${endpoint.envName}}`;
+  const tokenRef = "$" + "{EASYAR_API_TOKEN}";
+  if (endpoint.method === "GET") {
+    return `curl -fsS -H "Authorization: Bearer ${tokenRef}" "${url}"`;
+  }
+  const body = endpoint.id === "license-validation"
+    ? "{\"licenseKey\":\"${EASYAR_TEST_LICENSE_KEY}\",\"bundleIdentifier\":\"com.easyar.testsample\",\"platform\":\"android\"}"
+    : endpoint.id === "downloads-discovery"
+      ? "{\"sampleId\":\"image-tracking\",\"packageKind\":\"unity-samples\",\"unityVersion\":\"6000.4.7f1\"}"
+      : endpoint.id === "cloud-credentials-discovery"
+        ? "{\"sampleId\":\"cloud-recognition\",\"bundleIdentifier\":\"com.easyar.testsample\",\"platform\":\"android\"}"
+        : "{}";
+  return `curl -fsS -X POST -H "Authorization: Bearer ${tokenRef}" -H "Content-Type: application/json" -d '${body}' "${url}"`;
+}
+
 function buildOfficialApiContractExamples(baseUrl: string) {
   return [
     {
@@ -4903,6 +5081,7 @@ async function buildReleaseManifest() {
     "SECURITY.md",
     "docs/quickstart.md",
     "docs/OFFICIAL_API_CONTRACT.md",
+    "docs/OFFICIAL_API_HANDOFF.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
     "assets/easyar-icon.png",
@@ -11600,6 +11779,93 @@ function buildOfficialApiContractMarkdown(contract: ReturnType<typeof buildOffic
     "## Security",
     "",
     contract.security,
+    ""
+  ].join("\n");
+}
+
+function buildOfficialApiHandoffMarkdown(handoff: ReturnType<typeof buildOfficialApiHandoff>): string {
+  return [
+    "# mcp-easyar Official API Handoff",
+    "",
+    `Generated at: ${handoff.generatedAt}`,
+    `Deployment target: ${handoff.deploymentTarget}`,
+    `Server: ${handoff.server.name} ${handoff.server.version}`,
+    `Repository: ${handoff.server.repository}`,
+    "",
+    "## Purpose",
+    "",
+    "This handoff is for EasyAR backend and operations teams connecting mcp-easyar to authorized registered-user account, license, downloads, and Cloud Recognition services.",
+    "",
+    "## Environment",
+    "",
+    `Base URL: ${handoff.environment.baseUrl}`,
+    `Token env: ${handoff.environment.tokenEnvName}`,
+    `Token configured now: ${handoff.environment.tokenConfigured ? "yes" : "no"}`,
+    "",
+    "Required variables:",
+    ...handoff.environment.required.map((name) => `- ${name}`),
+    "",
+    "Current configuration:",
+    ...Object.entries(handoff.environment.configured).map(([name, configured]) => `- ${name}: ${configured ? "yes" : "no"}`),
+    "",
+    "## Endpoint Mapping",
+    "",
+    ...handoff.endpointMapping.flatMap((endpoint) => [
+      `### ${endpoint.id}`,
+      "",
+      `Env: ${endpoint.envName}`,
+      `Method: ${endpoint.method}`,
+      `Expected URL: ${endpoint.expectedUrl}`,
+      "",
+      endpoint.purpose,
+      "",
+      `Backend owner todo: ${endpoint.backendOwnerTodo}`,
+      "",
+      "Request fields:",
+      ...markdownIssueList(endpoint.requestFields, "No request body fields."),
+      "",
+      "Required response fields:",
+      ...endpoint.requiredResponseFields.map((field) => `- ${field}`),
+      "",
+      "Used by MCP tools:",
+      ...endpoint.usedByTools.map((tool) => `- ${tool}`),
+      "",
+      "Acceptance:",
+      ...endpoint.acceptance.map((item) => `- ${item}`),
+      "",
+      ...(endpoint.canaryCommand
+        ? [
+            "Canary command template:",
+            "```bash",
+            endpoint.canaryCommand,
+            "```",
+            ""
+          ]
+        : [])
+    ]),
+    "## Rollout",
+    "",
+    ...handoff.rollout.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "## Acceptance Gates",
+    "",
+    ...handoff.acceptanceGates.map((item) => `- ${item}`),
+    "",
+    "## Failure Policy",
+    "",
+    ...handoff.failurePolicy.map((item) => `- ${item}`),
+    "",
+    "## Artifacts To Regenerate",
+    "",
+    ...handoff.artifactsToRegenerate.map((item) => `- ${item}`),
+    "",
+    "## Next Actions",
+    "",
+    ...handoff.nextActions.map((item) => `- ${item}`),
+    "",
+    "## Security",
+    "",
+    handoff.security,
     ""
   ].join("\n");
 }
