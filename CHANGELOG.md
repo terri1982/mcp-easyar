@@ -41,6 +41,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused official access aggregation and `OFFICIAL_ACCESS.md` artifact generation across account, license, downloads, and Cloud Recognition endpoints.
 - Deployment readiness report generation and `DEPLOYMENT_READINESS.md` artifact writing for release files, official endpoints, Unity path, focused scope, and security checks.
 - Official EasyAR Unity Plugin and focused sample import checklist generation with `IMPORT_CHECKLIST.md` artifacts.
+- Unity Package Manager focused sample import guide generation with `SAMPLE_IMPORT_GUIDE.md` artifacts.
 - Unity project inspection and sample readiness diagnostics.
 - Sample-specific readiness checks for Image Tracking target assets and Cloud Recognition credentials.
 - Image Tracking scene detection by Unity scene content markers such as `ImageTarget`, `ImageTracker`, and `TargetDataFileSource`, so custom scene names can still be validated.

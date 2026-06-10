@@ -99,6 +99,8 @@ const toolCatalog = [
   "easyar_write_workflow_state",
   "easyar_generate_import_checklist",
   "easyar_write_import_checklist",
+  "easyar_generate_sample_import_guide",
+  "easyar_write_sample_import_guide",
   "easyar_generate_run_sequence",
   "easyar_write_run_sequence",
   "easyar_generate_artifact_index",
@@ -1146,6 +1148,54 @@ server.tool(
       missingRequiredCount: checklist.items.filter((item) => item.required && !item.ok).length,
       nextActions: checklist.nextActions,
       note: "The import checklist records package/sample import evidence only and does not include secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_sample_import_guide",
+  "Generate a Unity Package Manager oriented guide for importing the focused official EasyAR sample into Assets/Samples.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition.")
+  },
+  async ({ projectPath, sampleId }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildSampleImportGuide(root, sample));
+  }
+);
+
+server.tool(
+  "easyar_write_sample_import_guide",
+  "Write the focused official EasyAR sample import guide as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    relativePath: z.string().optional().describe("Optional guide path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/SAMPLE_IMPORT_GUIDE.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing sample import guide.")
+  },
+  async ({ projectPath, sampleId, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const guide = await buildSampleImportGuide(root, sample);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "SAMPLE_IMPORT_GUIDE.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildSampleImportGuideMarkdown(guide), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      importComplete: guide.importComplete,
+      importAvailableFromPackageCache: guide.importAvailableFromPackageCache,
+      nextActions: guide.nextActions,
+      note: "The sample import guide contains local package/sample paths and manual Unity steps only; it does not include secret values."
     });
   }
 );
@@ -3982,6 +4032,9 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
       name: sample.name,
       implementationStatus: sample.implementationStatus
     },
+    unityVersion: await readUnityVersion(root),
+    matchingScenes,
+    packageCacheSamples,
     officialReferences: officialInfo.docs,
     packageVersions: officialInfo.packageVersions,
     readyForFocusedPreparation: items.filter((item) => item.required).every((item) => item.ok),
@@ -3990,6 +4043,90 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
       ? Array.from(new Set(nextActions))
       : ["Official plugin, focused sample scene, and sample-specific import requirements are present. Continue with easyar_prepare_unity_project and easyar_generate_run_sequence."],
     security: "This checklist does not download private packages or expose secrets. It records local import evidence after authorized official EasyAR access."
+  };
+}
+
+async function buildSampleImportGuide(root: string, sample: SampleInfo) {
+  const checklist = await buildImportChecklist(root, sample);
+  const sceneItem = checklist.items.find((item) => item.id === "focused-sample-scene-imported");
+  const packageCacheItem = checklist.items.find((item) => item.id === "package-cache-sample-available");
+  const matchingScenes = checklist.matchingScenes ?? [];
+  const packageCacheSamples = checklist.packageCacheSamples ?? [];
+  const importedScenes = matchingScenes.filter((scenePath) => scenePath.startsWith("Assets" + path.sep) || scenePath.startsWith("Assets/"));
+  const unityPackageSampleName = sample.id === "cloud-recognition"
+    ? "ImageTracking_CloudRecognition"
+    : sample.unityScenes[0] ?? sample.name;
+  const steps = [
+    {
+      order: 1,
+      title: "Open the Unity project",
+      action: `Open ${root} in Unity and wait until package import/compilation finishes.`,
+      doneWhen: "The Project window and Package Manager are usable."
+    },
+    {
+      order: 2,
+      title: "Open Package Manager",
+      action: "In Unity, open Window > Package Manager.",
+      doneWhen: "Package Manager is visible."
+    },
+    {
+      order: 3,
+      title: "Select EasyAR Sense Unity Plugin",
+      action: "Select the official EasyAR Sense Unity Plugin package from the project/package list.",
+      doneWhen: "The EasyAR package detail panel is selected."
+    },
+    {
+      order: 4,
+      title: `Import ${unityPackageSampleName}`,
+      action: `Open the Samples section and import ${unityPackageSampleName} into Assets/Samples.`,
+      doneWhen: `A matching scene for ${sample.name} exists under Assets/Samples or another Assets folder.`
+    },
+    {
+      order: 5,
+      title: "Return to MCP validation",
+      action: `Run easyar_generate_import_checklist projectPath=${root} sampleId=${sample.id}, then easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}.`,
+      doneWhen: "The focused sample scene import check is OK."
+    }
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: checklist.sample,
+    unityVersion: checklist.unityVersion,
+    importComplete: matchingScenes.length > 0,
+    importAvailableFromPackageCache: packageCacheSamples.length > 0,
+    expectedUnityPackageSampleName: unityPackageSampleName,
+    importedScenes,
+    packageCacheSamples,
+    evidence: {
+      focusedSampleScene: sceneItem?.evidence ?? "No focused sample scene evidence found.",
+      packageCacheSample: packageCacheItem?.evidence ?? "No PackageCache sample evidence found."
+    },
+    steps,
+    mcpAfterImport: [
+      { tool: "easyar_generate_import_checklist", arguments: { projectPath: root, sampleId: sample.id } },
+      { tool: "easyar_write_import_checklist", arguments: { projectPath: root, sampleId: sample.id } },
+      { tool: "easyar_check_sample_readiness", arguments: { projectPath: root, sampleId: sample.id } },
+      { tool: "easyar_next_workflow_step", arguments: { projectPath: root, sampleId: sample.id, platform: "android" } }
+    ],
+    nextActions: matchingScenes.length > 0
+      ? [
+          "Focused sample scene is already imported. Continue with easyar_prepare_unity_project and easyar_next_workflow_step.",
+          `Optionally write this guide with easyar_write_sample_import_guide projectPath=${root} sampleId=${sample.id} for handoff history.`
+        ]
+      : packageCacheSamples.length > 0
+        ? [
+            `Open Unity Package Manager, select EasyAR Sense Unity Plugin, and import Samples > ${unityPackageSampleName}.`,
+            `After import, rerun easyar_generate_import_checklist projectPath=${root} sampleId=${sample.id}.`,
+            `Write the guide with easyar_write_sample_import_guide projectPath=${root} sampleId=${sample.id} if another AI tool will continue the project.`
+          ]
+        : [
+            "Download/import the official EasyAR Sense Unity Plugin through an authorized EasyAR account, then open Unity Package Manager Samples.",
+            `Import the official ${sample.name} sample into Assets/Samples.`,
+            `Rerun easyar_generate_sample_import_guide projectPath=${root} sampleId=${sample.id}.`
+          ],
+    security: "This guide does not download private packages, bypass official account access, or include license/API/cloud secret values. It only reports local Unity package/sample evidence and manual import steps."
   };
 }
 
@@ -4468,6 +4605,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "IMPORT_CHECKLIST.md"),
       purpose: "Official EasyAR Unity Plugin and focused sample import evidence.",
       generateWith: `easyar_write_import_checklist sampleId=${sample.id}`
+    },
+    {
+      name: "Sample Import Guide",
+      relativePath: path.join(base, "SAMPLE_IMPORT_GUIDE.md"),
+      purpose: "Unity Package Manager steps for importing the focused official sample from Samples~ into Assets/Samples.",
+      generateWith: `easyar_write_sample_import_guide sampleId=${sample.id}`
     },
     {
       name: "Run Sequence",
@@ -6313,6 +6456,55 @@ function buildImportChecklistMarkdown(checklist: Awaited<ReturnType<typeof build
     "## Security",
     "",
     checklist.security,
+    ""
+  ].join("\n");
+}
+
+function buildSampleImportGuideMarkdown(guide: Awaited<ReturnType<typeof buildSampleImportGuide>>): string {
+  return [
+    `# EasyAR Sample Import Guide - ${guide.sample.name}`,
+    "",
+    `Generated at: ${guide.generatedAt}`,
+    `Project: ${guide.projectPath}`,
+    `Sample id: ${guide.sample.id}`,
+    `Status: ${guide.sample.implementationStatus}`,
+    `Unity version: ${guide.unityVersion ?? "unknown"}`,
+    `Import complete: ${guide.importComplete ? "yes" : "no"}`,
+    `PackageCache sample available: ${guide.importAvailableFromPackageCache ? "yes" : "no"}`,
+    `Expected Unity Package Manager sample: ${guide.expectedUnityPackageSampleName}`,
+    "",
+    "## Evidence",
+    "",
+    `Focused sample scene: ${guide.evidence.focusedSampleScene}`,
+    `PackageCache sample: ${guide.evidence.packageCacheSample}`,
+    "",
+    "## Imported Scenes",
+    "",
+    ...markdownIssueList(guide.importedScenes, "No matching focused sample scenes are imported under Assets yet."),
+    "",
+    "## PackageCache Candidates",
+    "",
+    ...markdownIssueList(guide.packageCacheSamples, "No matching PackageCache Samples~ candidates were found."),
+    "",
+    "## Unity Steps",
+    "",
+    ...guide.steps.flatMap((step) => [
+      `${step.order}. ${step.title}`,
+      `   Action: ${step.action}`,
+      `   Done when: ${step.doneWhen}`
+    ]),
+    "",
+    "## MCP After Import",
+    "",
+    ...guide.mcpAfterImport.map((call) => `- ${call.tool}: ${JSON.stringify(call.arguments)}`),
+    "",
+    "## Next Actions",
+    "",
+    ...guide.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    guide.security,
     ""
   ].join("\n");
 }

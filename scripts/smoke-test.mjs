@@ -223,6 +223,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_import_checklist"),
     "easyar_write_import_checklist should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_sample_import_guide"),
+    "easyar_generate_sample_import_guide should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_sample_import_guide"),
+    "easyar_write_sample_import_guide should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -879,6 +887,29 @@ try {
   assertTextIncludes(missingCloudImportChecklist, "ImageTracking_CloudRecognition");
   assertTextIncludes(missingCloudImportChecklist, "Unity Package Manager Samples");
 
+  const cloudImportGuide = await callTool("easyar_generate_sample_import_guide", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(cloudImportGuide, "\"importComplete\": false");
+  assertTextIncludes(cloudImportGuide, "\"importAvailableFromPackageCache\": true");
+  assertTextIncludes(cloudImportGuide, "ImageTracking_CloudRecognition");
+  assertTextIncludes(cloudImportGuide, "Window > Package Manager");
+  assertTextIncludes(cloudImportGuide, "Assets/Samples");
+
+  const writtenCloudImportGuide = await callTool("easyar_write_sample_import_guide", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(writtenCloudImportGuide, "SAMPLE_IMPORT_GUIDE.md");
+  const cloudImportGuideMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "SAMPLE_IMPORT_GUIDE.md"),
+    "utf8"
+  );
+  assert(cloudImportGuideMarkdown.includes("EasyAR Sample Import Guide - Cloud Recognition"), "Cloud import guide markdown should include title");
+  assert(cloudImportGuideMarkdown.includes("Unity Steps"), "Cloud import guide markdown should include Unity steps");
+  assert(cloudImportGuideMarkdown.includes("ImageTracking_CloudRecognition"), "Cloud import guide markdown should include UPM sample name");
+
   const preparedCloud = await callTool("easyar_prepare_unity_project", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -1211,6 +1242,7 @@ try {
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
+  assertTextIncludes(artifactIndex, "SAMPLE_IMPORT_GUIDE.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
   assertTextIncludes(artifactIndex, "ISSUE_REPORT.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");
@@ -1230,6 +1262,7 @@ try {
   assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
   assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
   assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
+  assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
 
   await rm(projectPath, { recursive: true, force: true });

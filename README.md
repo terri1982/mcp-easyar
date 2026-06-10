@@ -23,6 +23,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - audit focused sample scenes, Build Settings hints, EasyAR import signals, and sample-specific blockers
 - recognize Image Tracking scenes by scene content markers as well as official sample naming hints
 - report EasyAR PackageCache `Samples~` candidates when focused sample scenes have not been imported into `Assets/Samples`
+- generate Unity Package Manager sample import guides for moving focused samples from `Samples~` into `Assets/Samples`
 - generate focused support bundles that summarize project state, scene audit, run report, and latest Unity log diagnostics
 - generate real-device validation checklists for focused Image Tracking and Cloud Recognition tests
 - write device validation checklists into Unity projects as Markdown artifacts
@@ -203,6 +204,8 @@ After registration/login, the user creates or locates the EasyAR Sense license a
 - `easyar_write_workflow_state`: write current workflow phase, blockers, and next call to `Assets/EasyARGenerated/<sampleId>/WORKFLOW_STATE.md`.
 - `easyar_generate_import_checklist`: generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.
 - `easyar_write_import_checklist`: write the official import checklist to `Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md`.
+- `easyar_generate_sample_import_guide`: generate Unity Package Manager steps for importing the focused official sample from PackageCache `Samples~` into `Assets/Samples`.
+- `easyar_write_sample_import_guide`: write the focused sample import guide to `Assets/EasyARGenerated/<sampleId>/SAMPLE_IMPORT_GUIDE.md`.
 - `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.
 - `easyar_write_run_sequence`: write the focused run sequence to `Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md`.
 - `easyar_generate_artifact_index`: generate an index of focused handoff artifacts, including account onboarding/materials, and recommended reading order.
