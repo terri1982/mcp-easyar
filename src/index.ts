@@ -162,6 +162,21 @@ const server = new McpServer({
   version: serverVersion
 });
 
+function promptText(description: string, text: string) {
+  return {
+    description,
+    messages: [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text
+        }
+      }
+    ]
+  };
+}
+
 server.resource(
   "easyar-samples-catalog",
   "easyar://samples/catalog",
@@ -225,6 +240,72 @@ server.resource(
       }
     ]
   })
+);
+
+server.prompt(
+  "easyar-run-image-tracking",
+  "Guide Codex or Claude through the focused Image Tracking run-through.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android")
+  },
+  ({ projectPath, platform }) => promptText(
+    "Focused Image Tracking run-through",
+    [
+      `Use the mcp-easyar tools to run the Image Tracking sample for project: ${projectPath}`,
+      `Target platform: ${platform}`,
+      "",
+      "Start by calling:",
+      `1. easyar_generate_run_report projectPath=${projectPath} sampleId=image-tracking`,
+      `2. easyar_generate_run_sequence projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,
+      "",
+      "Then follow the sequence. Do not skip readiness failures. Image Tracking must have real target image/database assets before device validation.",
+      "If Unity batch fails, call easyar_analyze_latest_unity_log with sampleId=image-tracking."
+    ].join("\n")
+  )
+);
+
+server.prompt(
+  "easyar-run-cloud-recognition",
+  "Guide Codex or Claude through the focused Cloud Recognition run-through.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(["android", "ios"]).default("android")
+  },
+  ({ projectPath, platform }) => promptText(
+    "Focused Cloud Recognition run-through",
+    [
+      `Use the mcp-easyar tools to run the Cloud Recognition sample for project: ${projectPath}`,
+      `Target platform: ${platform}`,
+      "",
+      "Start by calling:",
+      `1. easyar_generate_run_report projectPath=${projectPath} sampleId=cloud-recognition`,
+      `2. easyar_generate_run_sequence projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
+      "",
+      "Do not continue to device validation until easyar.cloudRecognition.appId, appKey, and appSecret are configured locally.",
+      "If Unity batch or device validation fails, call easyar_analyze_latest_unity_log with sampleId=cloud-recognition."
+    ].join("\n")
+  )
+);
+
+server.prompt(
+  "easyar-unity-programming-assistant",
+  "Guide Codex or Claude through Unity C# implementation and diagnostics for an EasyAR project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.enum(["image-tracking", "cloud-recognition"]).default("image-tracking")
+  },
+  ({ projectPath, sampleId }) => promptText(
+    "EasyAR Unity programming assistant",
+    [
+      `Act as the Unity programming assistant for ${sampleId} in project: ${projectPath}`,
+      "",
+      "Start by calling easyar_generate_run_report to understand current readiness, local config, and script review state.",
+      "When creating or editing C# files, prefer easyar_create_mono_behaviour for common templates and easyar_write_csharp_file for focused patches.",
+      "After code changes, call easyar_review_csharp_scripts before asking Unity to compile.",
+      "If Unity reports errors, call easyar_analyze_latest_unity_log or easyar_analyze_unity_log with the focused sampleId."
+    ].join("\n")
+  )
 );
 
 server.tool(

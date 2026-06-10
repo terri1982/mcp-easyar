@@ -31,6 +31,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - analyze Unity Editor/build logs for common EasyAR issues plus Image Tracking and Cloud Recognition specifics
 - find and analyze the latest Unity log after a failed batch run
 - expose EasyAR workflow guidance as MCP resources
+- expose MCP prompts for Image Tracking, Cloud Recognition, and Unity programming assistance
 - check EasyAR account environment configuration without exposing secrets
 - call configured official EasyAR account/license validation endpoints without exposing secrets
 - generate MCP client configuration snippets for Codex and Claude
@@ -165,3 +166,9 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar://official/info`
 - `easyar://unity/checklist`
 - `easyar://workflow/quickstart`
+
+## Prompts
+
+- `easyar-run-image-tracking`
+- `easyar-run-cloud-recognition`
+- `easyar-unity-programming-assistant`

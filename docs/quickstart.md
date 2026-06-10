@@ -45,6 +45,8 @@ easyar_validate_license projectPath=/path/to/UnityProject platform=android
 
 ## 3. Choose A Sample
 
+If your MCP client supports prompts, start from `easyar-run-image-tracking` or `easyar-run-cloud-recognition`.
+
 For now, use one of the focused sample workflows:
 
 - `image-tracking`

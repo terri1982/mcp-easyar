@@ -70,6 +70,26 @@ try {
     "easyar_review_csharp_scripts should be listed"
   );
 
+  const prompts = await request("prompts/list", {});
+  assert(
+    prompts.result.prompts.some((prompt) => prompt.name === "easyar-run-image-tracking"),
+    "easyar-run-image-tracking prompt should be listed"
+  );
+  assert(
+    prompts.result.prompts.some((prompt) => prompt.name === "easyar-run-cloud-recognition"),
+    "easyar-run-cloud-recognition prompt should be listed"
+  );
+
+  const imageTrackingPrompt = await request("prompts/get", {
+    name: "easyar-run-image-tracking",
+    arguments: {
+      projectPath: "/tmp/EasyARProject",
+      platform: "android"
+    }
+  });
+  assertPromptIncludes(imageTrackingPrompt, "easyar_generate_run_report");
+  assertPromptIncludes(imageTrackingPrompt, "sampleId=image-tracking");
+
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "easyar_check_sample_readiness");
@@ -453,6 +473,11 @@ function assertTextIncludes(response, expected) {
 function assertResourceIncludes(response, expected) {
   const text = response.result.contents.map((item) => item.text ?? "").join("\n");
   assert(text.includes(expected), `Expected resource text to include ${expected}`);
+}
+
+function assertPromptIncludes(response, expected) {
+  const text = response.result.messages.map((message) => message.content.text ?? "").join("\n");
+  assert(text.includes(expected), `Expected prompt text to include ${expected}`);
 }
 
 function assert(condition, message) {
