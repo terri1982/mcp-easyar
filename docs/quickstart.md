@@ -311,6 +311,7 @@ easyar_write_production_validation projectPath=/path/to/UnityProject platform=an
 For repository/package verification, run:
 
 ```bash
+npm run security:check
 npm run release:check
 ```
 

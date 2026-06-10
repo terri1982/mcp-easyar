@@ -1,6 +1,6 @@
 # mcp-easyar Release Manifest
 
-Generated at: 2026-06-10T16:29:21.761Z
+Generated at: 2026-06-10T16:34:00.247Z
 Package: mcp-easyar 0.1.0
 Bin: easyar-mcp
 Node: >=20
@@ -57,6 +57,7 @@ Entrypoint mode: `npx`
 - `npm run install:check`
 - `npm run package:smoke`
 - `npm run pack:check`
+- `npm run security:check`
 - `npm run release:check`
 - `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check`
 
@@ -133,6 +134,7 @@ Entrypoint mode: `npx`
 - `pack:check`: `npm run build && npm pack --dry-run`
 - `postbuild`: `chmod +x dist/index.js dist/install-check.js`
 - `release:check`: `node scripts/release-check.mjs`
+- `security:check`: `node scripts/security-check.mjs`
 - `start`: `node dist/index.js`
 - `test`: `npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs`
 - `typecheck`: `tsc --noEmit`

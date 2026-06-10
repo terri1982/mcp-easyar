@@ -741,6 +741,7 @@ try {
   assertTextIncludes(releaseManifest, "npm run install:check");
   assertTextIncludes(releaseManifest, "npm run package:smoke");
   assertTextIncludes(releaseManifest, "npm run release:check");
+  assertTextIncludes(releaseManifest, "npm run security:check");
   assertTextIncludes(releaseManifest, "easyar-mcp-check");
   assertTextIncludes(releaseManifest, "\"command\": \"npx\"");
   assertTextIncludes(releaseManifest, "easyar_check_client_setup");
@@ -763,6 +764,7 @@ try {
   assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
   assert(committedReleaseManifest.includes("npm run package:smoke"), "Committed release manifest should include package install smoke");
   assert(committedReleaseManifest.includes("npm run release:check"), "Committed release manifest should include release check");
+  assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
   assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
   assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");

@@ -30,6 +30,7 @@
     "pack:check": "npm run build && npm pack --dry-run",
     "postbuild": "chmod +x dist/index.js dist/install-check.js",
     "release:check": "node scripts/release-check.mjs",
+    "security:check": "node scripts/security-check.mjs",
     "start": "node dist/index.js",
     "test": "npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs",
     "typecheck": "tsc --noEmit"

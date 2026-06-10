@@ -4185,7 +4185,7 @@ function deploymentNextActions(
     actions.add(`Review warning ${warning.id}: ${warning.detail}`);
   }
   if (actions.size === 0) {
-    actions.add("Run npm run typecheck, npm test, npm run bin:smoke, and npm run pack:check before tagging or publishing.");
+    actions.add("Run npm run release:check before tagging or publishing.");
   } else {
     actions.add("After fixing blockers, rerun easyar_deployment_readiness and CI before release.");
   }
@@ -5601,6 +5601,7 @@ async function buildReleaseManifest() {
     "npm run install:check",
     "npm run package:smoke",
     "npm run pack:check",
+    "npm run security:check",
     "npm run release:check",
     "EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check"
   ];

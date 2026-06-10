@@ -43,3 +43,6 @@ jobs:
 
       - name: Package dry run
         run: npm run pack:check
+
+      - name: Security check
+        run: npm run security:check

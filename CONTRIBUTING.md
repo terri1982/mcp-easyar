@@ -35,6 +35,7 @@ npm run bin:smoke
 npm run install:check
 npm run package:smoke
 npm run pack:check
+npm run security:check
 npm run release:check
 ```
 
