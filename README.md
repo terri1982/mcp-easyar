@@ -106,16 +106,18 @@ npm run pack:check
 
 See [docs/quickstart.md](docs/quickstart.md) for the recommended Codex/Claude to Unity workflow.
 
-## Publish To GitHub
+## Release Checks
 
-After authenticating GitHub CLI with your account:
+Before publishing a release or npm package:
 
 ```bash
-gh auth login
-gh repo create mcp-easyar --public --source=. --remote=origin --push
+npm run typecheck
+npm test
+npm run bin:smoke
+npm run pack:check
 ```
 
-Use `--private` instead of `--public` if this repository should not be public yet.
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Tools
 
