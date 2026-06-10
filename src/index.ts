@@ -107,6 +107,8 @@ const toolCatalog = [
   "easyar_write_onboarding_report",
   "easyar_generate_project_handoff",
   "easyar_write_project_handoff",
+  "easyar_remaining_work_report",
+  "easyar_write_remaining_work_report",
   "easyar_generate_sample_plan",
   "easyar_generate_focused_preflight",
   "easyar_write_focused_preflight",
@@ -1437,6 +1439,80 @@ server.tool(
       blockerCount: handoff.blockers.length,
       nextActions: handoff.nextActions,
       security: handoff.security
+    });
+  }
+);
+
+server.tool(
+  "easyar_remaining_work_report",
+  "Generate an evidence-weighted remaining-work report for making mcp-easyar production-ready and running the focused EasyAR samples on real devices.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to inspect local config, Unity environment, and focused sample completion evidence."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    verificationEvidence: z.enum(["not-provided", "passed"]).default("not-provided").describe("Set to passed only after local verification commands or CI evidence has passed for the current commit."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, platform, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    return jsonText(await buildRemainingWorkReport({
+      root,
+      platform,
+      verificationEvidence,
+      maxScriptIssues,
+      maxLogBytes,
+      maxLogIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_remaining_work_report",
+  "Write REMAINING_WORK.md, an evidence-weighted gap report for the remaining mcp-easyar production and focused sample run-through work.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, writes to Assets/EasyARGenerated/REMAINING_WORK.md by default."),
+    outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    verificationEvidence: z.enum(["not-provided", "passed"]).default("not-provided").describe("Set to passed only after local verification commands or CI evidence has passed for the current commit."),
+    relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/REMAINING_WORK.md for Unity projects or EasyARGenerated/REMAINING_WORK.md for outputRoot."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing remaining-work report.")
+  },
+  async ({ projectPath, outputRoot, platform, verificationEvidence, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
+    await ensureDirectory(root);
+    const report = await buildRemainingWorkReport({
+      root: projectPath ? root : null,
+      platform,
+      verificationEvidence,
+      maxScriptIssues,
+      maxLogBytes,
+      maxLogIssues
+    });
+    const defaultRelativePath = projectPath
+      ? path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md")
+      : path.join("EasyARGenerated", "REMAINING_WORK.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildRemainingWorkMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      overallPercent: report.overall.percent,
+      remainingPercent: report.overall.remainingPercent,
+      productionReady: report.productionReady,
+      focusedSamplesComplete: report.focusedScope.allFocusedSamplesComplete,
+      topRemainingAreas: report.topRemainingAreas,
+      nextActions: report.nextActions,
+      security: report.security
     });
   }
 );
@@ -5384,6 +5460,210 @@ async function buildProjectHandoff(input: {
     blockers: uniqueBlockers(blockers),
     nextActions,
     security: "Project handoff reports status, paths, tool calls, and field presence only. It does not include EasyAR passwords, tokens, license keys, appKey, appSecret, signing keys, provisioning profiles, or raw private logs."
+  };
+}
+
+async function buildRemainingWorkReport(input: {
+  root: string | null;
+  platform: typeof mobilePlatforms[number];
+  verificationEvidence: "not-provided" | "passed";
+  maxScriptIssues: number;
+  maxLogBytes: number;
+  maxLogIssues: number;
+}) {
+  const focused = focusedSamples();
+  const production = await buildProductionValidationReport(
+    input.root,
+    input.platform,
+    undefined,
+    input.verificationEvidence,
+    input.maxScriptIssues,
+    input.maxLogBytes,
+    input.maxLogIssues
+  );
+  const releaseGate = production.gates.find((gate) => gate.id === "release-manifest");
+  const deploymentGate = production.gates.find((gate) => gate.id === "deployment-readiness");
+  const officialApiGate = production.gates.find((gate) => gate.id === "official-api-contract");
+  const verificationGate = production.gates.find((gate) => gate.id === "verification-commands");
+  const officialAccessGates = focused.map((sample) => production.gates.find((gate) => gate.id === `official-access/${sample.id}`));
+  const focusedScope = input.root
+    ? await buildFocusedScopeStatus(input.root, input.platform, input.maxScriptIssues, input.maxLogBytes, input.maxLogIssues)
+    : null;
+  const localConfig = input.root ? await buildLocalConfigValidationReport(input.root) : null;
+  const unityEnvironment = input.root ? await buildUnityEnvironmentReport(input.root, null) : null;
+  const runtimeBridgeFiles = input.root
+    ? {
+        editor: await exists(path.join(input.root, "Assets", "Editor", "EasyARLocalConfigBridge.cs")),
+        runtime: await exists(path.join(input.root, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs")),
+        ignored: await fileContains(path.join(input.root, ".gitignore"), "Assets/StreamingAssets/EasyAR/easyar.runtime.json")
+      }
+    : { editor: false, runtime: false, ignored: false };
+  const completionReports = input.root
+    ? await Promise.all(focused.map((sample) => {
+        const outputPath = input.platform === "android"
+          ? `Builds/${sample.id}.apk`
+          : `Builds/iOS/${sample.id}`;
+        return buildCompletionReport(input.root!, sample, input.platform, outputPath, input.maxScriptIssues, input.maxLogBytes, input.maxLogIssues);
+      }))
+    : [];
+  const completionBySample = new Map(completionReports.map((report) => [report.sample.id, report]));
+  const categories = [
+    remainingCategory({
+      id: "repository-release-surface",
+      title: "Repository, package, install surface, and verification",
+      weight: 20,
+      checks: [
+        remainingCheck("release-manifest", Boolean(releaseGate?.ok), releaseGate?.currentEvidence ?? "Release manifest was not checked.", releaseGate?.nextAction ?? "Run easyar_release_manifest."),
+        remainingCheck("deployment-readiness", Boolean(deploymentGate?.ok), deploymentGate?.currentEvidence ?? "Deployment readiness was not checked.", deploymentGate?.nextAction ?? "Run easyar_deployment_readiness."),
+        remainingCheck("verification-evidence", input.verificationEvidence === "passed", verificationGate?.currentEvidence ?? "Verification evidence was not provided.", verificationGate?.nextAction ?? "Run local verification commands and record evidence.")
+      ]
+    }),
+    remainingCategory({
+      id: "mcp-onboarding-and-handoff",
+      title: "MCP onboarding, account handoff, project handoff, and programming assistance",
+      weight: 15,
+      checks: [
+        remainingCheck("first-run-guide-tools", toolCatalog.includes("easyar_first_run_guide") && toolCatalog.includes("easyar_write_first_run_guide"), "FIRST_RUN.md tools are available.", "Keep FIRST_RUN.md as the first artifact for new users."),
+        remainingCheck("project-handoff-tools", toolCatalog.includes("easyar_write_project_handoff"), "PROJECT_HANDOFF.md tool is available.", "Regenerate project handoff after major changes."),
+        remainingCheck("programming-tools", toolCatalog.includes("easyar_write_programming_context") && toolCatalog.includes("easyar_write_code_plan") && toolCatalog.includes("easyar_review_csharp_scripts"), "Programming context, code plan, and script review tools are available.", "Use them before editing Unity scripts."),
+        remainingCheck("runtime-config-bridge", toolCatalog.includes("easyar_create_local_config_bridge"), "Runtime config bridge tool is available.", "Create/export the bridge before mobile builds.")
+      ]
+    }),
+    remainingCategory({
+      id: "official-easyar-account-api",
+      title: "Official EasyAR account, license, download, and Cloud Recognition API integration",
+      weight: 20,
+      checks: [
+        remainingCheck("official-api-contract", Boolean(officialApiGate?.ok), officialApiGate?.currentEvidence ?? "Official API contract was not checked.", officialApiGate?.nextAction ?? "Configure official endpoint env vars."),
+        ...focused.map((sample, index) => remainingCheck(
+          `official-access-${sample.id}`,
+          Boolean(officialAccessGates[index]?.ok),
+          officialAccessGates[index]?.currentEvidence ?? `${sample.name} official access was not checked.`,
+          officialAccessGates[index]?.nextAction ?? `Run easyar_write_official_access_report for ${sample.id}.`
+        ))
+      ]
+    }),
+    remainingCategory({
+      id: "unity-project-config-and-runtime",
+      title: "Unity project local config, Unity executable, imports, and runtime config bridge",
+      weight: 15,
+      checks: [
+        remainingCheck("project-path", Boolean(input.root), input.root ? `Project path: ${input.root}.` : "No projectPath was provided.", "Provide projectPath for the validation Unity project."),
+        remainingCheck("local-config-valid", Boolean(localConfig?.valid), localConfig?.valid ? "ProjectSettings/EasyAR/easyar.local.json is valid." : `Local config failed: ${localConfig?.checks.filter((check) => !check.ok).map((check) => check.id).join(", ") || "not checked"}.`, "Fill and validate ProjectSettings/EasyAR/easyar.local.json."),
+        remainingCheck("unity-batch-ready", Boolean(unityEnvironment?.readyForUnityBatch), unityEnvironment?.readyForUnityBatch ? "Unity batch executable is ready." : "Unity batch executable is not ready or not checked.", "Set EASYAR_UNITY_PATH to a matching Unity executable."),
+        remainingCheck("runtime-config-bridge-files", runtimeBridgeFiles.editor && runtimeBridgeFiles.runtime && runtimeBridgeFiles.ignored, `Bridge editor=${runtimeBridgeFiles.editor}, runtime=${runtimeBridgeFiles.runtime}, ignored=${runtimeBridgeFiles.ignored}.`, "Run easyar_create_local_config_bridge and keep runtime config ignored.")
+      ]
+    }),
+    ...focused.map((sample) => {
+      const report = completionBySample.get(sample.id);
+      const requiredChecks = report?.requiredEvidence.filter((item) => item.required) ?? [];
+      return remainingCategory({
+        id: `focused-sample-${sample.id}`,
+        title: `${sample.name} focused real-device run-through`,
+        weight: 15,
+        checks: report
+          ? requiredChecks.map((item) => remainingCheck(item.id, item.passed, item.detail, report.nextActions[0] ?? `Run easyar_write_completion_report for ${sample.id}.`))
+          : [
+              remainingCheck("completion-report", false, "No projectPath was provided, so completion evidence was not checked.", `Provide projectPath and run easyar_write_completion_report sampleId=${sample.id}.`)
+            ]
+      });
+    })
+  ];
+  const earned = categories.reduce((total, category) => total + category.earnedWeight, 0);
+  const totalWeight = categories.reduce((total, category) => total + category.weight, 0);
+  const percent = totalWeight > 0 ? Math.round((earned / totalWeight) * 100) : 0;
+  const incomplete = categories.filter((category) => !category.done);
+  const topRemainingAreas = incomplete
+    .sort((left, right) => right.remainingWeight - left.remainingWeight)
+    .slice(0, 4)
+    .map((category) => ({
+      id: category.id,
+      title: category.title,
+      remainingWeight: category.remainingWeight,
+      firstNextAction: category.nextActions[0] ?? "Review this category."
+    }));
+  const nextActions = Array.from(new Set([
+    ...topRemainingAreas.map((area) => area.firstNextAction),
+    ...(production.nextActions ?? []),
+    input.root
+      ? `Regenerate this report with easyar_write_remaining_work_report projectPath=${input.root} platform=${input.platform} after each major setup or real-device run.`
+      : "Provide a Unity project path and regenerate this report for stronger evidence."
+  ])).slice(0, 12);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    platform: input.platform,
+    productionReady: production.productionReady,
+    verificationEvidence: input.verificationEvidence,
+    overall: {
+      percent,
+      remainingPercent: Math.max(0, 100 - percent),
+      earnedWeight: earned,
+      totalWeight,
+      note: "This is an evidence-weighted estimate, not a claim of completion. True completion still requires every required production and focused sample gate to pass."
+    },
+    focusedScope: focusedScope
+      ? {
+          allFocusedSamplesComplete: focusedScope.allFocusedSamplesComplete,
+          completedCount: focusedScope.completedCount,
+          blockedCount: focusedScope.blockedCount,
+          failedCount: focusedScope.failedCount,
+          notRunCount: focusedScope.notRunCount
+        }
+      : {
+          allFocusedSamplesComplete: false,
+          completedCount: 0,
+          blockedCount: 0,
+          failedCount: 0,
+          notRunCount: focused.length
+        },
+    categories,
+    productionBlockers: production.blockers.map((blocker) => ({
+      id: blocker.id,
+      title: blocker.title,
+      currentEvidence: blocker.currentEvidence,
+      nextAction: blocker.nextAction
+    })),
+    topRemainingAreas,
+    nextActions,
+    security: "Remaining-work reports use evidence status, paths, and redacted metadata only. They do not include EasyAR passwords, verification codes, account tokens, license keys, appKey, appSecret, signing keys, provisioning secrets, or raw private logs."
+  };
+}
+
+function remainingCheck(id: string, ok: boolean, evidence: string, nextAction: string) {
+  return {
+    id,
+    ok,
+    evidence,
+    nextAction
+  };
+}
+
+function remainingCategory(input: {
+  id: string;
+  title: string;
+  weight: number;
+  checks: ReturnType<typeof remainingCheck>[];
+}) {
+  const passedCount = input.checks.filter((check) => check.ok).length;
+  const checkCount = input.checks.length;
+  const ratio = checkCount > 0 ? passedCount / checkCount : 0;
+  const earnedWeight = Math.round(input.weight * ratio);
+  const remainingWeight = Math.max(0, input.weight - earnedWeight);
+  const nextActions = Array.from(new Set(input.checks.filter((check) => !check.ok).map((check) => check.nextAction)));
+  return {
+    id: input.id,
+    title: input.title,
+    weight: input.weight,
+    earnedWeight,
+    remainingWeight,
+    percent: Math.round(ratio * 100),
+    done: passedCount === checkCount,
+    passedCount,
+    checkCount,
+    checks: input.checks,
+    nextActions
   };
 }
 
@@ -11598,6 +11878,74 @@ function buildProjectHandoffMarkdown(handoff: Awaited<ReturnType<typeof buildPro
     "## Security",
     "",
     handoff.security,
+    ""
+  ].join("\n");
+}
+
+function buildRemainingWorkMarkdown(report: Awaited<ReturnType<typeof buildRemainingWorkReport>>): string {
+  return [
+    "# EasyAR Remaining Work",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath ?? "not provided"}`,
+    `Platform: ${report.platform}`,
+    `Production ready: ${report.productionReady ? "yes" : "no"}`,
+    `Verification evidence: ${report.verificationEvidence}`,
+    "",
+    "## Overall",
+    "",
+    `Evidence-weighted completion: ${report.overall.percent}%`,
+    `Remaining estimate: ${report.overall.remainingPercent}%`,
+    `Earned weight: ${report.overall.earnedWeight}/${report.overall.totalWeight}`,
+    report.overall.note,
+    "",
+    "## Focused Scope",
+    "",
+    `All focused samples complete: ${report.focusedScope.allFocusedSamplesComplete ? "yes" : "no"}`,
+    `Completed: ${report.focusedScope.completedCount}`,
+    `Blocked: ${report.focusedScope.blockedCount}`,
+    `Failed: ${report.focusedScope.failedCount}`,
+    `Not run: ${report.focusedScope.notRunCount}`,
+    "",
+    "## Categories",
+    "",
+    ...report.categories.flatMap((category) => [
+      `### ${category.title}`,
+      "",
+      `Category id: ${category.id}`,
+      `Percent: ${category.percent}%`,
+      `Weight: ${category.earnedWeight}/${category.weight}`,
+      `Done: ${category.done ? "yes" : "no"}`,
+      `Checks: ${category.passedCount}/${category.checkCount}`,
+      "",
+      "Checks:",
+      ...category.checks.map((check) => `- ${check.ok ? "OK" : "BLOCKED"} ${check.id}: ${check.evidence}`),
+      "",
+      "Next actions:",
+      ...markdownIssueList(category.nextActions, "No category-specific next actions."),
+      ""
+    ]),
+    "## Top Remaining Areas",
+    "",
+    ...markdownIssueList(
+      report.topRemainingAreas.map((area) => `${area.title} (${area.remainingWeight} weight remaining): ${area.firstNextAction}`),
+      "No remaining weighted areas."
+    ),
+    "",
+    "## Production Blockers",
+    "",
+    ...markdownIssueList(
+      report.productionBlockers.map((blocker) => `${blocker.id}: ${blocker.currentEvidence} Action: ${blocker.nextAction}`),
+      "No production blockers."
+    ),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    report.security,
     ""
   ].join("\n");
 }

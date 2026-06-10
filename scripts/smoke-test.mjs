@@ -265,6 +265,14 @@ try {
     "easyar_write_project_handoff should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_remaining_work_report"),
+    "easyar_remaining_work_report should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_remaining_work_report"),
+    "easyar_write_remaining_work_report should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_focused_preflight"),
     "easyar_generate_focused_preflight should be listed"
   );
@@ -884,6 +892,38 @@ try {
   assert(projectHandoffMarkdown.includes("Cloud Recognition"), "Project handoff markdown should include Cloud Recognition");
   assert(!projectHandoffMarkdown.includes("env-test-account-token"), "Project handoff markdown should not include account token values");
   assert(!projectHandoffMarkdown.includes("env-test-license-key"), "Project handoff markdown should not include license values");
+
+  const remainingWork = await callTool("easyar_remaining_work_report", {
+    projectPath,
+    platform: "android",
+    verificationEvidence: "passed"
+  });
+  assertTextIncludes(remainingWork, "\"remainingPercent\"");
+  assertTextIncludes(remainingWork, "\"productionReady\": false");
+  assertTextIncludes(remainingWork, "official-easyar-account-api");
+  assertTextIncludes(remainingWork, "focused-sample-image-tracking");
+  assertTextIncludes(remainingWork, "focused-sample-cloud-recognition");
+  assertTextIncludes(remainingWork, "This is an evidence-weighted estimate");
+  assert(!extractText(remainingWork).includes("env-test-account-token"), "Remaining work report should not include account token values");
+  assert(!extractText(remainingWork).includes("env-test-license-key"), "Remaining work report should not include license values");
+
+  const writtenRemainingWork = await callTool("easyar_write_remaining_work_report", {
+    projectPath,
+    platform: "android",
+    verificationEvidence: "passed"
+  });
+  assertTextIncludes(writtenRemainingWork, "REMAINING_WORK.md");
+  const remainingWorkMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "REMAINING_WORK.md"),
+    "utf8"
+  );
+  assert(remainingWorkMarkdown.includes("EasyAR Remaining Work"), "Remaining work markdown should include title");
+  assert(remainingWorkMarkdown.includes("Evidence-weighted completion"), "Remaining work markdown should include weighted completion");
+  assert(remainingWorkMarkdown.includes("Official EasyAR account"), "Remaining work markdown should include official API category");
+  assert(remainingWorkMarkdown.includes("Image Tracking focused real-device run-through"), "Remaining work markdown should include Image Tracking category");
+  assert(remainingWorkMarkdown.includes("Cloud Recognition focused real-device run-through"), "Remaining work markdown should include Cloud Recognition category");
+  assert(!remainingWorkMarkdown.includes("env-test-account-token"), "Remaining work markdown should not include account token values");
+  assert(!remainingWorkMarkdown.includes("env-test-license-key"), "Remaining work markdown should not include license values");
 
   const writtenOfficialAccess = await callTool("easyar_write_official_access_report", {
     projectPath,

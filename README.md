@@ -253,6 +253,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_onboarding_report`: write the onboarding report to `Assets/EasyARGenerated/<sampleId>/ONBOARDING.md`.
 - `easyar_generate_project_handoff`: generate a project-level continuation dashboard across client setup, account materials, local config, Unity environment, focused sample state, and next calls.
 - `easyar_write_project_handoff`: write the project continuation dashboard to `Assets/EasyARGenerated/PROJECT_HANDOFF.md`.
+- `easyar_remaining_work_report`: generate an evidence-weighted remaining-work report across repository release surface, official EasyAR APIs, Unity config, and focused sample run-through evidence.
+- `easyar_write_remaining_work_report`: write the remaining-work gap report to `Assets/EasyARGenerated/REMAINING_WORK.md` or `EasyARGenerated/REMAINING_WORK.md`.
 - `easyar_generate_focused_preflight`: generate a single focused preflight gate across account materials, local config, Unity executable setup, sample imports, scene readiness, and script review.
 - `easyar_write_focused_preflight`: write the focused preflight gate to `Assets/EasyARGenerated/<sampleId>/PREFLIGHT.md`.
 - `easyar_next_workflow_step`: inspect current focused project state and recommend the next MCP/Unity action.

@@ -151,9 +151,10 @@ easyar_write_run_result projectPath=/path/to/UnityProject sampleId=image-trackin
 easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=image-tracking overallStatus=blocked
 easyar_write_first_run_guide projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_write_project_handoff projectPath=/path/to/UnityProject platform=android
+easyar_write_remaining_work_report projectPath=/path/to/UnityProject platform=android verificationEvidence=passed
 ```
 
-After writing artifacts, read `FIRST_RUN.md` first for new users or new MCP clients, then `PROJECT_HANDOFF.md` when resuming the whole Unity project, then `PREFLIGHT.md` for the active sample. The project handoff gives a single top next call plus per-sample workflow state; `PREFLIGHT.md` is the focused gate that tells Codex, Claude, or a human operator which blocker must be cleared before Unity batch automation or device builds.
+After writing artifacts, read `FIRST_RUN.md` first for new users or new MCP clients, then `PROJECT_HANDOFF.md` when resuming the whole Unity project, then `REMAINING_WORK.md` for the evidence-weighted gap estimate, then `PREFLIGHT.md` for the active sample. The project handoff gives a single top next call plus per-sample workflow state; `PREFLIGHT.md` is the focused gate that tells Codex, Claude, or a human operator which blocker must be cleared before Unity batch automation or device builds.
 
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.
 
