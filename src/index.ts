@@ -4496,15 +4496,70 @@ async function buildClientSetupReport(
       cloudCredentialsEndpointConfigured: auth.cloudCredentialsEndpointConfigured
     },
     config,
+    configDestination: clientConfigDestination(client),
+    acceptanceChecklist: buildClientAcceptanceChecklist(client, entrypointMode),
+    firstSmokeCalls: buildClientFirstSmokeCalls(),
+    troubleshooting: buildClientTroubleshooting(client, entrypointMode),
     nextActions: blockers.length > 0
       ? Array.from(new Set(blockers.map((blocker) => clientSetupAction(blocker.id))))
       : [
           "Paste the generated config into the selected MCP client.",
           "Replace placeholder token and endpoint values with local official EasyAR credentials.",
-          "Restart the MCP client and call easyar_server_status."
+          "Restart the MCP client and call easyar_server_status.",
+          "Run the first smoke calls listed in CLIENT_SETUP.md before trying Unity automation."
         ],
     security: "Do not commit MCP client config files containing EASYAR_API_TOKEN, license keys, Cloud Recognition credentials, signing keys, or provisioning secrets."
   };
+}
+
+function clientConfigDestination(client: typeof clientKinds[number]): string {
+  if (client === "claude-desktop") {
+    return "Claude Desktop MCP settings JSON, usually claude_desktop_config.json.";
+  }
+  if (client === "codex") {
+    return "Codex MCP configuration for this workspace or user profile.";
+  }
+  return "Any stdio MCP client configuration that accepts command, args, and env fields.";
+}
+
+function buildClientAcceptanceChecklist(client: typeof clientKinds[number], entrypointMode: typeof clientEntrypointModes[number]) {
+  return [
+    "The generated config is pasted into the selected client config location.",
+    "Real EasyAR endpoint and token values are stored in client environment/secret storage, not committed files.",
+    entrypointMode === "local-dist"
+      ? "The local repository has run npm install and npm run build; dist/index.js exists at the configured absolute path."
+      : entrypointMode === "package-bin"
+        ? "The easyar-mcp binary is available on the PATH used by the MCP client."
+        : "The client machine can run npx -y mcp-easyar with network access to the npm registry.",
+    `${client} has been restarted after editing MCP configuration.`,
+    "easyar_server_status returns server name mcp-easyar and lists focused samples.",
+    "easyar_auth_status reports only presence/redacted endpoint state and does not print secret values.",
+    "easyar_account_onboarding or easyar_write_local_config_handoff is the first user-facing EasyAR workflow call."
+  ];
+}
+
+function buildClientFirstSmokeCalls() {
+  return [
+    "easyar_server_status",
+    "easyar_auth_status",
+    "easyar_list_samples",
+    "easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition",
+    "easyar_check_client_setup"
+  ];
+}
+
+function buildClientTroubleshooting(client: typeof clientKinds[number], entrypointMode: typeof clientEntrypointModes[number]) {
+  return [
+    "If the client cannot start the server, copy the Command and Args from this report and run them in a terminal.",
+    entrypointMode === "local-dist"
+      ? "If local-dist fails, rerun npm install && npm run build and confirm the serverPath is absolute."
+      : entrypointMode === "package-bin"
+        ? "If package-bin fails, run easyar-mcp-check from the same shell environment used to launch the MCP client."
+        : "If npx fails, check npm registry access and try npx -y mcp-easyar in a terminal.",
+    "If tools/list is empty, restart the MCP client and verify the JSON nesting under mcpServers/easyar.",
+    "If account calls fail, check EASYAR_API_TOKEN and official endpoint env vars in the MCP client environment.",
+    `${client} logs should be inspected only for startup errors; remove any copied private token or license values before sharing logs.`
+  ];
 }
 
 function clientSetupCheck(id: string, ok: boolean, required: boolean, detail: string) {
@@ -10736,6 +10791,7 @@ function buildClientSetupMarkdown(report: Awaited<ReturnType<typeof buildClientS
     `Command: ${report.command}`,
     `Args: ${JSON.stringify(report.args)}`,
     `Server path: ${report.serverPath ?? "not required for this mode"}`,
+    `Config destination: ${report.configDestination}`,
     "",
     "## Package",
     "",
@@ -10762,6 +10818,18 @@ function buildClientSetupMarkdown(report: Awaited<ReturnType<typeof buildClientS
     `License endpoint configured in current env: ${report.env.licenseValidationEndpointConfigured ? "yes" : "no"}`,
     `Downloads endpoint configured in current env: ${report.env.downloadsEndpointConfigured ? "yes" : "no"}`,
     `Cloud credentials endpoint configured in current env: ${report.env.cloudCredentialsEndpointConfigured ? "yes" : "no"}`,
+    "",
+    "## Acceptance Checklist",
+    "",
+    ...report.acceptanceChecklist.map((item) => `- ${item}`),
+    "",
+    "## First Smoke Calls",
+    "",
+    ...report.firstSmokeCalls.map((call) => `- \`${call}\``),
+    "",
+    "## Troubleshooting",
+    "",
+    ...report.troubleshooting.map((item) => `- ${item}`),
     "",
     "## Next Actions",
     "",

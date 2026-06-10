@@ -235,7 +235,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_official_access_report`: write the official access check to `Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md`.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
 - `easyar_check_client_setup`: validate Node.js, package/bin metadata, built entrypoint, server path, and generated MCP client config.
-- `easyar_write_client_setup`: write client setup status and config snippet to `EasyARGenerated/CLIENT_SETUP.md` or `Assets/EasyARGenerated/CLIENT_SETUP.md`.
+- `easyar_write_client_setup`: write client setup status, config snippet, acceptance checklist, first smoke calls, and troubleshooting steps to `EasyARGenerated/CLIENT_SETUP.md` or `Assets/EasyARGenerated/CLIENT_SETUP.md`.
 - `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
 - `easyar_production_validation`: generate the final production evidence matrix across release manifest, deployment readiness, official EasyAR endpoints, verification commands, and focused sample completion.

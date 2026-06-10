@@ -530,6 +530,9 @@ try {
   assertTextIncludes(clientSetup, "\"readyForClientConnection\": true");
   assertTextIncludes(clientSetup, "\"client\": \"claude-desktop\"");
   assertTextIncludes(clientSetup, "\"mcpServers\"");
+  assertTextIncludes(clientSetup, "\"acceptanceChecklist\"");
+  assertTextIncludes(clientSetup, "easyar_server_status");
+  assertTextIncludes(clientSetup, "\"configDestination\"");
 
   const packageBinClientSetup = await callTool("easyar_check_client_setup", {
     client: "generic-json",
@@ -553,6 +556,10 @@ try {
   assert(clientSetupMarkdown.includes("mcp-easyar Client Setup"), "Client setup markdown should include title");
   assert(clientSetupMarkdown.includes("\"mcpServers\""), "Client setup markdown should include MCP config");
   assert(clientSetupMarkdown.includes("Entrypoint mode: local-dist"), "Client setup markdown should include entrypoint mode");
+  assert(clientSetupMarkdown.includes("Acceptance Checklist"), "Client setup markdown should include acceptance checklist");
+  assert(clientSetupMarkdown.includes("First Smoke Calls"), "Client setup markdown should include first smoke calls");
+  assert(clientSetupMarkdown.includes("easyar_server_status"), "Client setup markdown should include first status call");
+  assert(clientSetupMarkdown.includes("Troubleshooting"), "Client setup markdown should include troubleshooting");
   await rm(clientSetupRoot, { recursive: true, force: true });
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
