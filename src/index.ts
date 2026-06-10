@@ -20,6 +20,7 @@ type SampleInfo = {
 const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "lifecycle"] as const;
 const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
 const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
+const mobilePlatforms = ["android", "ios"] as const;
 const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
@@ -37,6 +38,7 @@ const toolCatalog = [
   "easyar_validate_local_config",
   "easyar_analyze_unity_log",
   "easyar_prepare_unity_project",
+  "easyar_create_mobile_settings_helper",
   "easyar_create_build_settings_helper",
   "easyar_create_device_build_helper",
   "easyar_create_sample_runner",
@@ -133,9 +135,10 @@ const quickstartWorkflow = [
   "5. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
   "6. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
   "7. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
-  "8. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "9. Use `easyar_create_mono_behaviour` or `easyar_write_csharp_file` for project code.",
-  "10. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
+  "8. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
+  "9. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "10. Use `easyar_create_mono_behaviour` or `easyar_write_csharp_file` for project code.",
+  "11. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -234,6 +237,7 @@ server.tool(
         unityAutomation: [
           "inspect project",
           "prepare sample helpers",
+          "configure mobile player settings",
           "configure Build Settings",
           "generate player build helper",
           "run Unity batch methods",
@@ -439,6 +443,11 @@ server.tool(
         id: "build-settings-helper",
         ok: await exists(path.join(root, "Assets", "Editor", "EasyARBuildSettingsHelper.cs")),
         detail: "Assets/Editor/EasyARBuildSettingsHelper.cs exists."
+      },
+      {
+        id: "mobile-settings-helper",
+        ok: await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
+        detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
       }
     ];
 
@@ -554,6 +563,7 @@ server.tool(
 
     const runnerPath = path.join(editorDir, "EasyARSampleRunner.cs");
     const buildSettingsPath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
+    const mobileSettingsPath = path.join(editorDir, "EasyARMobileSettingsHelper.cs");
     const configExamplePath = path.join(configDir, "easyar.local.json.example");
     const localConfigPath = path.join(configDir, "easyar.local.json");
     const gitignorePath = path.join(root, ".gitignore");
@@ -561,6 +571,7 @@ server.tool(
     const written: string[] = [];
     await writeGeneratedFile(runnerPath, buildSampleRunner(sample), overwrite, written);
     await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
+    await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, null), overwrite, written);
     await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
     await ensureGitignoreEntries(gitignorePath, [
       "ProjectSettings/EasyAR/easyar.local.json",
@@ -577,8 +588,48 @@ server.tool(
         "Fill the local file with the EasyAR license key and official account-scoped credentials.",
         "Do not commit the local config file; .gitignore has been updated to protect it.",
         "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner.",
+        "Call EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings in Unity batch mode before device builds.",
         "Call EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the matching sample scene to Build Settings."
       ]
+    });
+  }
+);
+
+server.tool(
+  "easyar_create_mobile_settings_helper",
+  "Create a Unity Editor script that applies Android/iOS player settings commonly required by EasyAR camera samples.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    platform: z.enum(mobilePlatforms).describe("Target mobile platform."),
+    sampleId: z.string().optional().describe("Optional sample id used to generate a stable default bundle identifier."),
+    bundleIdentifier: z.string().optional().describe("Application bundle/package identifier. Defaults to a sample-specific com.easyar.generated.* id."),
+    cameraUsageDescription: z.string().optional().describe("iOS camera usage description. Defaults to an EasyAR AR camera message."),
+    minSdkVersion: z.number().int().min(23).max(35).optional().describe("Android minimum SDK API level. Defaults to 23."),
+    overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
+  },
+  async ({ projectPath, platform, sampleId, bundleIdentifier, cameraUsageDescription, minSdkVersion, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = sampleId ? findSample(sampleId) : null;
+    const editorDir = path.join(root, "Assets", "Editor");
+    const filePath = path.join(editorDir, "EasyARMobileSettingsHelper.cs");
+    const appId = bundleIdentifier ?? defaultBundleIdentifier(sample);
+
+    const written: string[] = [];
+    await writeGeneratedFile(
+      filePath,
+      buildMobileSettingsHelper(platform, appId, cameraUsageDescription ?? null, minSdkVersion ?? null),
+      overwrite,
+      written
+    );
+
+    return jsonText({
+      created: written.includes(filePath) ? filePath : null,
+      skipped: written.includes(filePath) ? null : filePath,
+      platform,
+      bundleIdentifier: appId,
+      executeMethod: "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings",
+      nextStep: "Run easyar_run_unity_method with the returned executeMethod before configuring Build Settings or building to device."
     });
   }
 );
@@ -932,7 +983,7 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
   if (checkId === "sample-scene") {
     return `Import the official ${sample.name} sample scene, then rerun easyar_check_sample_readiness.`;
   }
-  if (checkId === "local-config-template" || checkId === "sample-runner" || checkId === "build-settings-helper") {
+  if (checkId === "local-config-template" || checkId === "sample-runner" || checkId === "build-settings-helper" || checkId === "mobile-settings-helper") {
     return `Run easyar_prepare_unity_project with sampleId "${sample.id}".`;
   }
   if (checkId === "local-config") {
@@ -1312,6 +1363,47 @@ namespace EasyAR.EditorTools
 `;
 }
 
+function buildMobileSettingsHelper(
+  platform: typeof mobilePlatforms[number],
+  bundleIdentifier: string,
+  cameraUsageDescription: string | null,
+  minSdkVersion: number | null
+): string {
+  const iosCameraText = cameraUsageDescription ?? "EasyAR uses the camera to provide augmented reality tracking.";
+  const androidMinSdk = minSdkVersion ?? 23;
+  const body = platform === "android"
+    ? `            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, BundleIdentifier);
+            PlayerSettings.Android.minSdkVersion = (AndroidSdkVersions)${androidMinSdk};
+            PlayerSettings.Android.forceInternetPermission = true;
+            PlayerSettings.Android.forceSDCardPermission = false;
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+`
+    : `            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, BundleIdentifier);
+            PlayerSettings.iOS.cameraUsageDescription = CameraUsageDescription;
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);
+`;
+
+  return `using UnityEditor;
+
+namespace EasyAR.EditorTools
+{
+    public static class EasyARMobileSettingsHelper
+    {
+        private const string BundleIdentifier = "${escapeCsharp(bundleIdentifier)}";
+        private const string CameraUsageDescription = "${escapeCsharp(iosCameraText)}";
+
+        [MenuItem("Tools/EasyAR/Configure Mobile Settings")]
+        public static void ConfigureMobileSettings()
+        {
+${body}
+            PlayerSettings.use32BitDisplayBuffer = false;
+            UnityEngine.Debug.Log("Configured EasyAR mobile player settings for ${escapeCsharp(platform)} with bundle identifier: " + BundleIdentifier);
+        }
+    }
+}
+`;
+}
+
 function deviceBuildTarget(platform: typeof deviceBuildPlatforms[number]) {
   if (platform === "android") {
     return {
@@ -1375,6 +1467,11 @@ function buildLocalConfigExample(sample: SampleInfo): string {
     null,
     2
   )}\n`;
+}
+
+function defaultBundleIdentifier(sample: SampleInfo | null): string {
+  const suffix = sample?.id.replace(/[^a-z0-9]+/gi, "").toLowerCase() || "sample";
+  return `com.easyar.generated.${suffix}`;
 }
 
 function buildMonoBehaviourTemplate(className: string, kind: typeof monoBehaviourKinds[number]): string {

@@ -59,6 +59,10 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_create_mono_behaviour"),
     "easyar_create_mono_behaviour should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_create_mobile_settings_helper"),
+    "easyar_create_mobile_settings_helper should be listed"
+  );
 
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
@@ -101,6 +105,7 @@ try {
   });
   assertTextIncludes(prepared, "easyar.local.json");
   assertTextIncludes(prepared, "EasyARBuildSettingsHelper.cs");
+  assertTextIncludes(prepared, "EasyARMobileSettingsHelper.cs");
 
   await copyFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json.example"),
@@ -145,6 +150,30 @@ try {
     buildSettingsHelper.includes("ConfigureBuildSettings"),
     "Build settings helper should include ConfigureBuildSettings"
   );
+  const mobileSettingsHelper = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARMobileSettingsHelper.cs"),
+    "utf8"
+  );
+  assert(
+    mobileSettingsHelper.includes("ConfigureMobileSettings"),
+    "Mobile settings helper should include ConfigureMobileSettings"
+  );
+
+  const iosMobileSettings = await callTool("easyar_create_mobile_settings_helper", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "ios",
+    bundleIdentifier: "com.easyar.testsample",
+    cameraUsageDescription: "Camera access is required for EasyAR sample tracking.",
+    overwrite: true
+  });
+  assertTextIncludes(iosMobileSettings, "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings");
+
+  const iosMobileSettingsScript = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARMobileSettingsHelper.cs"),
+    "utf8"
+  );
+  assert(iosMobileSettingsScript.includes("cameraUsageDescription"), "iOS helper should set camera usage description");
 
   const standaloneBuildSettings = await callTool("easyar_create_build_settings_helper", {
     projectPath,

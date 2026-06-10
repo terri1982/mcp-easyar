@@ -65,6 +65,13 @@ easyar_validate_local_config projectPath=/path/to/UnityProject
 
 ## 5. Configure Build Settings
 
+First apply mobile player settings for camera-capable samples:
+
+```text
+easyar_create_mobile_settings_helper projectPath=/path/to/UnityProject sampleId=image-tracking platform=android bundleIdentifier=com.company.easyarsample overwrite=true
+easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings
+```
+
 After importing the official sample scene, call:
 
 ```text
