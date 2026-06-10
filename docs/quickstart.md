@@ -23,12 +23,13 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 easyar_account_materials sampleId=cloud-recognition
 easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition
 easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition
+easyar_write_portal_evidence projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
 easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_write_local_config_form projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_write_focused_handoff_pack projectPath=/path/to/UnityProject sampleId=all platform=android accountStage=not-registered
 ```
 
-The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. `easyar_write_focused_handoff_pack` writes the safe per-sample diagnostics, forms, run sequence, programming context, `HANDOFF_PACK.md`, `ARTIFACT_INDEX.md`, and project dashboards in one call. MCP does not ask for EasyAR website passwords and does not store account credentials.
+The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `PORTAL_EVIDENCE.md` records only non-secret development-center observations such as app record ids, service flags, Sense License presence, and Cloud Recognition library/target status. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. `easyar_write_focused_handoff_pack` writes the safe per-sample diagnostics, forms, run sequence, programming context, `HANDOFF_PACK.md`, `ARTIFACT_INDEX.md`, and project dashboards in one call. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 For a user who has not registered yet, the MCP flow is:
 
@@ -37,17 +38,18 @@ For a user who has not registered yet, the MCP flow is:
 3. After the user returns, ask only which stage is now true: `registered-not-logged-in`, `logged-in`, `has-license`, or `has-cloud-credentials`.
 4. Write `FIRST_RUN.md`; it records the first safe MCP call, focused scope, blockers, artifact order, and whether Unity automation is allowed yet.
 5. Write `ACCOUNT_ONBOARDING.md`; it records the browser handoff, stage model, return prompts, and secret-handling rules for the next operator or AI tool.
-6. Write `LOCAL_CONFIG_HANDOFF.md`; it gives the user both manual-file and env-backed ways to fill the local config without pasting secrets into chat.
-7. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
-8. For Cloud Recognition, guide them to create or locate the CRS/Cloud Recognition AppId plus API KEY. Sense 4.1+ uses `appId` + `apiKey`; legacy `appKey`/`appSecret` fields remain accepted for compatibility.
-9. For Cloud Recognition real-device validation, also guide them to create a cloud recognition image library, upload at least one test target image, and keep only a non-secret library name, target count, or dashboard URL for evidence.
-10. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
-11. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
-12. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`; compile/build success alone is not enough.
+6. After the user returns from the logged-in portal, write `PORTAL_EVIDENCE.md` with only non-secret observations; use presence flags for API KEY/API Secret/license values.
+7. Write `LOCAL_CONFIG_HANDOFF.md`; it gives the user both manual-file and env-backed ways to fill the local config without pasting secrets into chat.
+8. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
+9. For Cloud Recognition, guide them to create or locate the CRS/Cloud Recognition AppId plus API KEY. Sense 4.1+ uses `appId` + `apiKey`; legacy `appKey`/`appSecret` fields remain accepted for compatibility.
+10. For Cloud Recognition real-device validation, also guide them to create a cloud recognition image library, upload at least one test target image, and keep only a non-secret library name, target count, or dashboard URL for evidence.
+11. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
+12. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
+13. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`; compile/build success alone is not enough.
 
 The MCP should never turn registration into a chat form. Login, email activation, password reset, and verification codes stay in the official browser session. MCP only records account stage and local evidence.
 
-`easyar_write_artifact_index` includes `ACCOUNT_ONBOARDING.md` and `ACCOUNT_MATERIALS.md` in the handoff reading order so another AI tool can see account prerequisites before trying Unity validation.
+`easyar_write_artifact_index` includes `ACCOUNT_ONBOARDING.md`, `ACCOUNT_MATERIALS.md`, and `PORTAL_EVIDENCE.md` in the handoff reading order so another AI tool can see account prerequisites and logged-in portal evidence before trying Unity validation.
 
 Ask the MCP server for a client snippet:
 

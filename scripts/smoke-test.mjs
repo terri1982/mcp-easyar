@@ -567,6 +567,7 @@ try {
   assert(firstRunGuideMarkdown.includes("Tool: `easyar_write_account_onboarding`"), "First-run markdown should include top next onboarding call");
   assert(firstRunGuideMarkdown.includes("Active samples: image-tracking, cloud-recognition"), "First-run markdown should include focused sample scope");
   assert(firstRunGuideMarkdown.includes("Artifact Reading Order"), "First-run markdown should include artifact reading order");
+  assert(firstRunGuideMarkdown.includes("PORTAL_EVIDENCE.md"), "First-run markdown should include portal evidence in artifact reading order");
   assert(firstRunGuideMarkdown.includes("https://www.easyar.cn/"), "First-run markdown should include official website");
   assert(!firstRunGuideMarkdown.includes("env-test-account-token"), "First-run markdown should not include account token");
   assert(!firstRunGuideMarkdown.includes("env-test-license-key"), "First-run markdown should not include license key");
@@ -2441,6 +2442,22 @@ exit 0
   assertTextIncludes(cloudDeviceValidation, "cloud-target-library-ready");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
 
+  const preexistingPortalEvidence = await callTool("easyar_write_portal_evidence", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountName: "armall",
+    apiKeyRecordId: "19639",
+    apiKeyAppName: "ARMallTest",
+    cloudServicesEnabled: ["cloud-recognition"],
+    apiKeyPresent: true,
+    apiSecretPresent: true,
+    senseLicenseStatus: "missing",
+    cloudLibraryStatus: "missing",
+    cloudTargetCount: 0
+  });
+  assertTextIncludes(preexistingPortalEvidence, "PORTAL_EVIDENCE.md");
+
   const focusedHandoffPackPlan = await callTool("easyar_generate_focused_handoff_pack", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -2448,6 +2465,7 @@ exit 0
     accountStage: "logged-in"
   });
   assertTextIncludes(focusedHandoffPackPlan, "HANDOFF_PACK.md");
+  assertTextIncludes(focusedHandoffPackPlan, "PORTAL_EVIDENCE.md");
   assertTextIncludes(focusedHandoffPackPlan, "DEVICE_RUN_RESULT_FORM.md");
   assertTextIncludes(focusedHandoffPackPlan, "CODE_PLAN.md");
   assert(!extractText(focusedHandoffPackPlan).includes("env-test-account-token"), "Focused handoff pack plan should not include account token value");
@@ -2461,6 +2479,7 @@ exit 0
   });
   assertTextIncludes(writtenFocusedHandoffPack, "\"writtenCount\"");
   assertTextIncludes(writtenFocusedHandoffPack, "HANDOFF_PACK.md");
+  assertTextIncludes(writtenFocusedHandoffPack, "PORTAL_EVIDENCE.md");
   assertTextIncludes(writtenFocusedHandoffPack, "\"focusedSamplesComplete\": false");
   const handoffPackMarkdown = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "HANDOFF_PACK.md"),
@@ -2468,9 +2487,16 @@ exit 0
   );
   assert(handoffPackMarkdown.includes("EasyAR Focused Handoff Pack - Cloud Recognition"), "Focused handoff pack markdown should include title");
   assert(handoffPackMarkdown.includes("Evidence Rules"), "Focused handoff pack should state evidence rules");
+  assert(handoffPackMarkdown.includes("PORTAL_EVIDENCE.md"), "Focused handoff pack should reference portal evidence");
   assert(handoffPackMarkdown.includes("does not mark RUN_RESULT.md as passed"), "Focused handoff pack should not claim a passed run result");
   assert(!handoffPackMarkdown.includes("env-test-account-token"), "Focused handoff pack markdown should not include account token value");
   assert(!handoffPackMarkdown.includes("env-test-license-key"), "Focused handoff pack markdown should not include license value");
+  const preservedPortalEvidenceMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md"),
+    "utf8"
+  );
+  assert(preservedPortalEvidenceMarkdown.includes("API KEY record id: 19639"), "Focused handoff pack should preserve existing portal evidence");
+  assert(!preservedPortalEvidenceMarkdown.includes("safe placeholder"), "Focused handoff pack should not overwrite portal evidence with placeholder text");
 
   const artifactIndex = await callTool("easyar_generate_artifact_index", {
     projectPath,
@@ -2480,6 +2506,7 @@ exit 0
   assertTextIncludes(artifactIndex, "ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_MATERIALS.md");
+  assertTextIncludes(artifactIndex, "PORTAL_EVIDENCE.md");
   assertTextIncludes(artifactIndex, "LOCAL_CONFIG_FORM.md");
   assertTextIncludes(artifactIndex, "UNITY_ENVIRONMENT.md");
   assertTextIncludes(artifactIndex, "FOCUSED_SCOPE_STATUS.md");
@@ -2511,6 +2538,7 @@ exit 0
   assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
   assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
   assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
+  assert(artifactIndexMarkdown.includes("PORTAL_EVIDENCE.md"), "Artifact index markdown should list portal evidence");
   assert(artifactIndexMarkdown.includes("LOCAL_CONFIG_FORM.md"), "Artifact index markdown should list local config form");
   assert(artifactIndexMarkdown.includes("UNITY_ENVIRONMENT.md"), "Artifact index markdown should list Unity environment");
   assert(artifactIndexMarkdown.includes("FOCUSED_SCOPE_STATUS.md"), "Artifact index markdown should list focused scope status");
@@ -2528,6 +2556,10 @@ exit 0
   assert(
     artifactIndexMarkdown.indexOf("FOCUSED_SCOPE_STATUS.md") < artifactIndexMarkdown.indexOf("PREFLIGHT.md"),
     "Artifact read order should place focused scope status before per-sample preflight"
+  );
+  assert(
+    artifactIndexMarkdown.indexOf("PORTAL_EVIDENCE.md") < artifactIndexMarkdown.indexOf("LOCAL_CONFIG_FORM.md"),
+    "Artifact read order should place portal evidence before local config form"
   );
   assert(
     artifactIndexMarkdown.indexOf("PREFLIGHT.md") < artifactIndexMarkdown.indexOf("SUPPORT_BUNDLE.md"),

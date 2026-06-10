@@ -6260,6 +6260,7 @@ async function buildFirstRunGuide(input: {
     path.join("Assets", "EasyARGenerated", "FIRST_RUN.md"),
     path.join("Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md"),
     path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
+    path.join("Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md"),
     path.join("Assets", "EasyARGenerated", "LOCAL_CONFIG_HANDOFF.md"),
     path.join("Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"),
     path.join("Assets", "EasyARGenerated", input.sample.id, "PREFLIGHT.md")
@@ -6268,6 +6269,7 @@ async function buildFirstRunGuide(input: {
     `easyar_write_first_run_guide projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_write_account_onboarding projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_write_account_materials projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id} platform=${input.platform}`,
+    `easyar_write_portal_evidence projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_write_local_config_handoff projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_prepare_unity_project projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id}`,
     `easyar_validate_local_config projectPath=${input.root ?? "/path/to/UnityProject"}`,
@@ -8336,7 +8338,8 @@ async function buildFocusedHandoffPackPlan(input: FocusedHandoffPackInput) {
     projectArtifacts: [
       path.join("Assets", "EasyARGenerated", "PROJECT_HANDOFF.md"),
       path.join("Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md"),
-      path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md")
+      path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md"),
+      path.join("Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md")
     ],
     nextActions: [
       `Run easyar_write_focused_handoff_pack projectPath=${input.root} sampleId=${input.sampleId} platform=${input.platform}.`,
@@ -8381,6 +8384,26 @@ async function writeFocusedHandoffPack(input: FocusedHandoffPackInput & { overwr
     maxLogIssues: input.maxLogIssues
   });
   await writePackFile(input.root, path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md"), buildRemainingWorkMarkdown(remainingWork), input.overwrite, written, skipped);
+  const portalEvidenceRelativePath = path.join("Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md");
+  const portalEvidencePath = path.resolve(input.root, portalEvidenceRelativePath);
+  assertInside(input.root, portalEvidencePath);
+  if (await exists(portalEvidencePath)) {
+    skipped.push(portalEvidencePath);
+  } else {
+    const portalEvidence = await buildPortalEvidenceReport({
+      root: input.root,
+      sample: samples.find((sample) => sample.id === "cloud-recognition") ?? samples[0] ?? findSample("cloud-recognition"),
+      platform: input.platform,
+      cloudServicesEnabled: [],
+      tokenStatus: "not-checked",
+      senseLicenseStatus: "not-checked",
+      cloudLibraryStatus: "not-checked",
+      notes: [
+        "This default portal evidence artifact is a safe placeholder. Rerun easyar_write_portal_evidence with non-secret observations from the logged-in EasyAR development center page."
+      ]
+    });
+    await writePackFile(input.root, portalEvidenceRelativePath, buildPortalEvidenceMarkdown(portalEvidence), input.overwrite, written, skipped);
+  }
 
   return {
     generatedAt: new Date().toISOString(),
@@ -8588,6 +8611,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
   const priority = [
     "ACCOUNT_ONBOARDING.md",
     "ACCOUNT_MATERIALS.md",
+    "PORTAL_EVIDENCE.md",
     "LOCAL_CONFIG_FORM.md",
     "UNITY_ENVIRONMENT.md",
     "FOCUSED_SCOPE_STATUS.md",
@@ -8649,6 +8673,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
       purpose: "Field-by-field EasyAR account material source, storage, and sharing policy checklist.",
       generateWith: `easyar_write_account_materials sampleId=${sample.id}`
+    },
+    {
+      name: "Portal Evidence",
+      relativePath: path.join("Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md"),
+      purpose: "Safe non-secret EasyAR development center observations: app record ids, service flags, Sense License presence, and Cloud Recognition library/target status.",
+      generateWith: `easyar_write_portal_evidence sampleId=${sample.id}`
     },
     {
       name: "Local Config Form",
@@ -12145,6 +12175,7 @@ function buildFocusedHandoffPackMarkdown(pack: {
     "- This pack does not mark RUN_RESULT.md as passed.",
     "- CODE_CHANGE.md is intentionally generated only after real C# edits.",
     "- Real-device completion still requires a passed RUN_RESULT.md with recorded device validation evidence.",
+    "- PORTAL_EVIDENCE.md stores only non-secret portal ids, names, presence flags, and Cloud Recognition library/target status.",
     "",
     "## Security",
     "",
