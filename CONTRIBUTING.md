@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for improving the EasyAR Official MCP Server.
+Thanks for improving `mcp-easyar`.
 
 ## Development
 
