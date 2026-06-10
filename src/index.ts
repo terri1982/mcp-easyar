@@ -90,6 +90,23 @@ const officialInfo = {
   ]
 };
 
+const quickstartWorkflow = [
+  "# mcp-easyar Quickstart",
+  "",
+  "1. Build the server with `npm install && npm run build`.",
+  "2. Use `easyar_generate_client_config` to create a Codex or Claude Desktop MCP config snippet.",
+  "3. Configure `EASYAR_API_BASE_URL`, `EASYAR_API_TOKEN`, and optionally `EASYAR_UNITY_PATH` locally.",
+  "4. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
+  "5. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
+  "6. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
+  "7. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
+  "8. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "9. Use `easyar_create_mono_behaviour` or `easyar_write_csharp_file` for project code.",
+  "10. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
+  "",
+  "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
+].join("\n");
+
 const server = new McpServer({
   name: "mcp-easyar",
   version: "0.1.0"
@@ -141,6 +158,20 @@ server.resource(
           "5. Validate tracking samples on a real device.",
           "6. Keep account tokens, license keys, and cloud credentials out of source control."
         ].join("\n")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-quickstart-workflow",
+  "easyar://workflow/quickstart",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: quickstartWorkflow
       }
     ]
   })

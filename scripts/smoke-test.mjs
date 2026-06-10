@@ -60,6 +60,11 @@ try {
   const officialInfo = await callTool("easyar_official_info", {});
   assertTextIncludes(officialInfo, "easyarSenseUnityPlugin");
 
+  const quickstart = await request("resources/read", {
+    uri: "easyar://workflow/quickstart"
+  });
+  assertResourceIncludes(quickstart, "easyar_check_sample_readiness");
+
   const authStatus = await callTool("easyar_auth_status", {});
   assertTextIncludes(authStatus, "\"hasToken\": false");
   assertTextIncludes(authStatus, "Secret values are never returned");
@@ -166,6 +171,11 @@ function callTool(name, args) {
 function assertTextIncludes(response, expected) {
   const text = response.result.content.map((item) => item.text ?? "").join("\n");
   assert(text.includes(expected), `Expected response text to include ${expected}`);
+}
+
+function assertResourceIncludes(response, expected) {
+  const text = response.result.contents.map((item) => item.text ?? "").join("\n");
+  assert(text.includes(expected), `Expected resource text to include ${expected}`);
 }
 
 function assert(condition, message) {

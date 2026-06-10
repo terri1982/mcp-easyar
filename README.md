@@ -96,6 +96,10 @@ npm run typecheck
 npm test
 ```
 
+## Quickstart
+
+See [docs/quickstart.md](docs/quickstart.md) for the recommended Codex/Claude to Unity workflow.
+
 ## Publish To GitHub
 
 After authenticating GitHub CLI with your account:
@@ -128,3 +132,4 @@ Use `--private` instead of `--public` if this repository should not be public ye
 - `easyar://samples/catalog`
 - `easyar://official/info`
 - `easyar://unity/checklist`
+- `easyar://workflow/quickstart`
