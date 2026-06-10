@@ -461,7 +461,7 @@ server.prompt(
       `4. easyar_prepare_unity_project projectPath=${projectPath} sampleId=cloud-recognition`,
       `5. easyar_write_focused_preflight projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
       "",
-      "Read PREFLIGHT.md and follow its nextCall before running Unity batch commands. Do not continue to device validation until easyar.cloudRecognition.appId, appKey, and appSecret are configured locally.",
+      "Read PREFLIGHT.md and follow its nextCall before running Unity batch commands. Do not continue to device validation until easyar.cloudRecognition.appId and apiKey are configured locally.",
       `After preflight blockers are clear, call easyar_write_run_sequence projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}.`,
       "If Unity batch or device validation fails, call easyar_analyze_latest_unity_log with sampleId=cloud-recognition."
     ].join("\n")
@@ -620,7 +620,7 @@ server.tool(
           "easyar_write_account_onboarding projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition",
           "easyar_write_account_materials projectPath=/path/to/UnityProject sampleId=cloud-recognition",
           "easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=cloud-recognition",
-          "Fill easyar.cloudRecognition.appId, appKey, and appSecret locally in ProjectSettings/EasyAR/easyar.local.json",
+          "Fill easyar.cloudRecognition.appId and apiKey locally in ProjectSettings/EasyAR/easyar.local.json",
           "easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android",
           "Read Assets/EasyARGenerated/cloud-recognition/PREFLIGHT.md"
         ]
@@ -4216,7 +4216,7 @@ async function buildAccountOnboardingReport(
       "MCP does not ask for or store EasyAR website passwords.",
       "Register and log in only through official EasyAR pages.",
       "Put tokens in local MCP client environment or a secret store, not in source control.",
-      "Put licenseKey and Cloud Recognition appId/appKey/appSecret only in ProjectSettings/EasyAR/easyar.local.json or another local secret source.",
+      "Put licenseKey and Cloud Recognition appId/apiKey only in ProjectSettings/EasyAR/easyar.local.json or another local secret source. Legacy appKey/appSecret aliases are still accepted.",
       "MCP reports only presence, status, paths, and redacted metadata."
     ]
   };
@@ -4255,7 +4255,7 @@ function buildFirstRunAccountGuide(
         stage: "has-license",
         userSituation: "The user has an EasyAR Sense license for the target package/bundle identifier.",
         mcpBehavior: needsCloudRecognition
-          ? "Guide Cloud Recognition appId/appKey/appSecret creation and local-only storage."
+          ? "Guide Cloud Recognition AppId/API KEY creation and local-only storage."
           : "Move to local config validation and focused sample preflight."
       },
       {
@@ -4307,7 +4307,7 @@ function buildFirstRunAccountGuide(
         active: stage === "logged-in" || stage === "has-license" || stage === "has-cloud-credentials",
         answer: "Yes, and I can access the development center.",
         guide:
-          "Create or locate the EasyAR Sense license, then prepare local project credentials. Cloud Recognition also requires appId, appKey, and appSecret from the account service configuration.",
+          "Create or locate the EasyAR Sense license, then prepare local project credentials. Cloud Recognition also requires CRS AppId plus API KEY from the account service configuration.",
         mcpAfterUserReturns: [
           `easyar_prepare_unity_project projectPath=${projectPath} sampleId=${sample.id}`,
           `easyar_validate_local_config projectPath=${projectPath}`,
@@ -4317,7 +4317,7 @@ function buildFirstRunAccountGuide(
           "Create or locate the EasyAR Sense license in the development center.",
           `Confirm the license bundle/package identifier is ${bundleIdentifier} or the real application identifier.`,
           ...(needsCloudRecognition
-            ? ["Create or locate the Cloud Recognition/CRS service configuration and copy appId, appKey, and appSecret into the local config file only."]
+            ? ["Create or locate the Cloud Recognition/CRS service configuration and copy CRS AppId plus API KEY into the local config file only."]
             : ["Cloud Recognition credentials are not required for this focused sample."]),
           "Download/import only official EasyAR Unity Plugin and sample packages available to the account."
         ],
@@ -4424,8 +4424,8 @@ function buildAccountHumanSteps(
             id: "create-cloud-credentials",
             requiredWhen: ["not-registered", "registered-not-logged-in", "logged-in", "has-license"],
             title: "Create or locate Cloud Recognition credentials",
-            action: "In the EasyAR development center, create or open the Cloud Recognition/CRS service configuration and copy appId, appKey, and appSecret into the local config file only.",
-            doneWhen: "easyar_validate_local_config reports cloudRecognition appId, appKey, and appSecret are present and not placeholders."
+            action: "In the EasyAR development center, create or open the Cloud Recognition/CRS service configuration and copy CRS AppId plus API KEY into the local config file only.",
+            doneWhen: "easyar_validate_local_config reports cloudRecognition appId and apiKey are present and not placeholders."
           }
         ]
       : [])
@@ -4515,8 +4515,8 @@ function buildAccountOnboardingBlockers(
   if (needsCloudRecognition && !hasCompleteCloudRecognitionConfig(cloudConfig)) {
     blockers.push({
       id: "cloud-recognition-credentials",
-      detail: "Cloud Recognition appId/appKey/appSecret are missing or incomplete.",
-      action: "Create or locate Cloud Recognition credentials in the EasyAR development center and fill appId, appKey, and appSecret locally."
+      detail: "Cloud Recognition appId/apiKey are missing or incomplete.",
+      action: "Create or locate Cloud Recognition credentials in the EasyAR development center and fill appId and apiKey locally."
     });
   }
   return blockers;
@@ -4539,7 +4539,7 @@ function buildAccountOnboardingNextActions(
   }
   actions.push("Create or locate an EasyAR Sense license key for the app bundle/package identifier.");
   if (needsCloudRecognition) {
-    actions.push("Create or locate Cloud Recognition credentials and keep appKey/appSecret out of chat and source control.");
+    actions.push("Create or locate Cloud Recognition credentials and keep API KEY/API Secret, appKey, and appSecret out of chat and source control.");
   }
   if (root) {
     actions.push(`Run easyar_prepare_unity_project projectPath=${root} sampleId=${sample.id}.`);
@@ -4620,21 +4620,41 @@ async function buildAccountMaterialsReport(
             mcpCheck: "easyar_validate_local_config"
           },
           {
-            id: "cloud-app-key",
-            label: "easyar.cloudRecognition.appKey",
+            id: "cloud-api-key",
+            label: "easyar.cloudRecognition.apiKey",
             required: true,
-            present: isNonPlaceholderString(cloudConfig.appKey),
-            source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+            present: isNonPlaceholderString(cloudConfig.apiKey) || isNonPlaceholderString(cloudConfig.appKey),
+            source: "EasyAR development center Cloud Recognition/CRS API KEY. Sense 4.1+ uses APPID + API KEY.",
             storeIn: localConfigPath,
             sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
             mcpCheck: "easyar_validate_local_config"
           },
           {
-            id: "cloud-app-secret",
+            id: "cloud-api-secret",
+            label: "easyar.cloudRecognition.apiSecret",
+            required: false,
+            present: isNonPlaceholderString(cloudConfig.apiSecret) || isNonPlaceholderString(cloudConfig.appSecret),
+            source: "EasyAR development center Cloud Recognition/CRS API Secret when available for management or legacy integrations.",
+            storeIn: localConfigPath,
+            sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
+            mcpCheck: "easyar_validate_local_config"
+          },
+          {
+            id: "cloud-app-key-legacy",
+            label: "easyar.cloudRecognition.appKey",
+            required: false,
+            present: isNonPlaceholderString(cloudConfig.appKey),
+            source: "Legacy alias for Cloud Recognition API Key. Prefer easyar.cloudRecognition.apiKey for Sense 4.1+ APPID + API KEY.",
+            storeIn: localConfigPath,
+            sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
+            mcpCheck: "easyar_validate_local_config"
+          },
+          {
+            id: "cloud-app-secret-legacy",
             label: "easyar.cloudRecognition.appSecret",
-            required: true,
+            required: false,
             present: isNonPlaceholderString(cloudConfig.appSecret),
-            source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+            source: "Legacy alias for Cloud Recognition API Secret when available.",
             storeIn: localConfigPath,
             sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
             mcpCheck: "easyar_validate_local_config"
@@ -4746,10 +4766,10 @@ function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: 
       configured: auth.cloudCredentialsEndpointConfigured,
       method: "POST",
       path: "/mcp/cloud-recognition/credentials",
-      purpose: "Return Cloud Recognition app metadata and presence flags for the registered user without returning appKey or appSecret values.",
+      purpose: "Return Cloud Recognition app metadata and presence flags for the registered user without returning raw API KEY/API Secret values.",
       requestFields: ["sampleId", "bundleIdentifier", "platform"],
-      requiredResponseFields: ["ok", "cloudRecognition.appId", "cloudRecognition.appKeyPresent", "cloudRecognition.appSecretPresent"],
-      optionalResponseFields: ["cloudRecognition.serviceRegion", "cloudRecognition.targetLibraryCount", "cloudRecognition.dashboardUrl"],
+      requiredResponseFields: ["ok", "cloudRecognition.appId", "cloudRecognition.apiKeyPresent"],
+      optionalResponseFields: ["cloudRecognition.apiSecretPresent", "cloudRecognition.appKeyPresent", "cloudRecognition.appSecretPresent", "cloudRecognition.serviceRegion", "cloudRecognition.targetLibraryCount", "cloudRecognition.dashboardUrl"],
       usedByTools: ["easyar_discover_cloud_credentials", "easyar_check_official_access", "easyar_account_materials"]
     })
   ];
@@ -4797,7 +4817,7 @@ function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: 
     examples: includeExamples ? buildOfficialApiContractExamples(resolvedBaseUrl) : [],
     responsePolicy: [
       "Responses may include account metadata, package metadata, and presence flags.",
-      "Responses must not include raw license keys, API tokens, appKey, appSecret, passwords, verification codes, signing keys, or provisioning profiles.",
+      "Responses must not include raw license keys, API tokens, API keys, API secrets, appKey, appSecret, passwords, verification codes, signing keys, or provisioning profiles.",
       "If a backend must report sensitive material existence, return boolean presence flags and dashboard URLs instead of values.",
       "Use non-2xx status codes plus redacted JSON error bodies for unauthorized, expired, unlicensed, and entitlement failures."
     ],
@@ -4809,7 +4829,7 @@ function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: 
       "Run easyar_write_deployment_readiness and keep blockers at zero before release."
     ],
     readyForProductionOfficialAccess,
-    security: "This contract is schema and deployment guidance only. It intentionally contains no EasyAR account token, license key, appKey, appSecret, or user password."
+    security: "This contract is schema and deployment guidance only. It intentionally contains no EasyAR account token, license key, API key, API secret, appKey, appSecret, or user password."
   };
 }
 
@@ -4857,7 +4877,7 @@ function buildOfficialApiHandoff(baseUrl: string | undefined, includeCurl: boole
     "easyar_check_account returns configured=true and ok=true for a registered EasyAR test account.",
     "easyar_validate_license validates the local EasyAR Sense license for the Unity bundle/package identifier without echoing the license key.",
     "easyar_discover_downloads returns only account-authorized package metadata and never bypasses EasyAR download gates.",
-    "easyar_discover_cloud_credentials returns appId and presence flags, never appKey or appSecret.",
+    "easyar_discover_cloud_credentials returns appId and presence flags, never raw API KEY/API Secret, appKey, or appSecret values.",
     "easyar_check_official_access passes for image-tracking and cloud-recognition using the same deployment environment.",
     "easyar_write_deployment_readiness has no official endpoint blockers.",
     "Fixture smoke remains green, then a real staging/prod canary run is recorded in OFFICIAL_ACCESS.md."
@@ -4902,7 +4922,7 @@ function buildOfficialApiHandoff(baseUrl: string | undefined, includeCurl: boole
       "Run node scripts/official-api-fixture-smoke.mjs, then run real endpoint canaries with a registered EasyAR test account.",
       "Run easyar_write_official_access_report for image-tracking and cloud-recognition after endpoints are configured."
     ],
-    security: "This handoff contains endpoint names, request/response schemas, and non-secret canary templates only. It must not contain EasyAR passwords, verification codes, account tokens, license keys, appKey, appSecret, signing keys, or private user data."
+    security: "This handoff contains endpoint names, request/response schemas, and non-secret canary templates only. It must not contain EasyAR passwords, verification codes, account tokens, license keys, API keys, API secrets, appKey, appSecret, signing keys, or private user data."
   };
 }
 
@@ -4917,7 +4937,7 @@ function officialApiBackendTodo(endpointId: string): string {
     return "Return only authorized SDK/plugin/sample package metadata for the registered account without granting unauthorized downloads.";
   }
   if (endpointId === "cloud-credentials-discovery") {
-    return "Return Cloud Recognition app metadata and secret presence flags without returning appKey or appSecret values.";
+    return "Return Cloud Recognition app metadata and API KEY presence flags without returning raw API KEY/API Secret values.";
   }
   return "Map this endpoint to an authorized official EasyAR backend service.";
 }
@@ -4943,8 +4963,8 @@ function officialApiEndpointAcceptance(endpointId: string): string[] {
   }
   if (endpointId === "cloud-credentials-discovery") {
     return [
-      "Configured Cloud Recognition app returns appId plus appKeyPresent/appSecretPresent flags.",
-      "Response never includes appKey or appSecret raw values."
+      "Configured Cloud Recognition app returns appId plus apiKeyPresent and optional apiSecretPresent flags.",
+      "Response never includes raw API KEY/API Secret, appKey, or appSecret values."
     ];
   }
   return ["Endpoint passes its required response fields and redaction policy."];
@@ -5005,6 +5025,8 @@ function buildOfficialApiContractExamples(baseUrl: string) {
         ok: true,
         cloudRecognition: {
           appId: "<app id or masked app id>",
+          apiKeyPresent: true,
+          apiSecretPresent: true,
           appKeyPresent: true,
           appSecretPresent: true,
           serviceRegion: "configured"
@@ -6701,7 +6723,7 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
             evidence: hasCompleteCloudRecognitionConfig(cloudConfig ?? {})
               ? `Cloud Recognition credentials are configured in ${path.relative(root, cloudConfigPath)}.`
               : `Cloud Recognition credentials are missing or incomplete in ${path.relative(root, cloudConfigPath)}.`,
-            action: "Fill appId, appKey, and appSecret from the official EasyAR Cloud Recognition account into local config, never into committed source."
+            action: "Fill CRS AppId and API KEY from the official EasyAR Cloud Recognition account into local config, never into committed source."
           }
         ])
   ];
@@ -7216,7 +7238,7 @@ function chooseWorkflowNextState(input: {
         "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json.",
         "Fill official EasyAR license/account values locally without committing secrets.",
         input.sample.id === "cloud-recognition"
-          ? "Fill Cloud Recognition appId, appKey, and appSecret from the official EasyAR account."
+          ? "Fill Cloud Recognition CRS AppId and API KEY from the official EasyAR account."
           : "For Image Tracking, keep target assets under Assets and avoid secret values in scripts."
       ]
     );
@@ -9312,7 +9334,7 @@ async function buildConfigIntegrationAudit(
     ...(needsCloudRecognition && !hasCloudConsumer
       ? [{
           id: "cloud-credential-consumer-not-found",
-          detail: "No Cloud Recognition appId/appKey/appSecret consumer was found in scripts, scenes, prefabs, or assets.",
+          detail: "No Cloud Recognition appId/apiKey consumer was found in scripts, scenes, prefabs, or assets.",
           action: "Inspect the official Cloud Recognition sample scripts and wire credentials through serialized fields or official APIs without hardcoding secrets."
         }]
       : []),
@@ -9706,7 +9728,7 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
     return "Import or create Image Tracking target assets/images before running the Image Tracking sample.";
   }
   if (checkId === "cloud-recognition-credentials") {
-    return "Fill easyar.cloudRecognition.appId, appKey, and appSecret in ProjectSettings/EasyAR/easyar.local.json.";
+    return "Fill easyar.cloudRecognition.appId and apiKey in ProjectSettings/EasyAR/easyar.local.json. Legacy appKey/appSecret fields are still accepted.";
   }
   return "Review the EasyAR Unity checklist and rerun readiness checks.";
 }
@@ -9740,7 +9762,9 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
         id: "cloud-recognition-credentials",
         ok: hasCompleteCloudRecognitionConfig(cloudConfig),
         detail: hasCompleteCloudRecognitionConfig(cloudConfig)
-          ? "Cloud recognition appId, appKey, and appSecret are configured in local config."
+          ? cloudRecognitionCredentialMode(cloudConfig) === "appId-apiKey"
+            ? "Cloud recognition appId and apiKey are configured in local config."
+            : "Cloud recognition legacy appId, appKey, and appSecret are configured in local config."
           : "Cloud recognition credentials are incomplete or missing in ProjectSettings/EasyAR/easyar.local.json."
       }
     ];
@@ -9820,6 +9844,8 @@ async function buildSampleSceneAuditSpecifics(root: string, sample: SampleInfo, 
     const config = await readCloudRecognitionConfig(root);
     const presence = {
       appId: isNonPlaceholderString(config.appId),
+      apiKey: isNonPlaceholderString(config.apiKey),
+      apiSecret: isNonPlaceholderString(config.apiSecret),
       appKey: isNonPlaceholderString(config.appKey),
       appSecret: isNonPlaceholderString(config.appSecret)
     };
@@ -10032,8 +10058,8 @@ async function buildLocalConfigFromEnvReport(
     accountToken: envFirst(["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"]),
     licenseKey: envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"]),
     cloudAppId: envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"]),
-    cloudAppKey: envFirst(["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"]),
-    cloudAppSecret: envFirst(["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]),
+    cloudApiKey: envFirst(["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"]),
+    cloudApiSecret: envFirst(["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]),
     bundleIdentifier: bundleIdentifierInput ?? envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)
   };
   const envPresence = [
@@ -10042,12 +10068,14 @@ async function buildLocalConfigFromEnvReport(
     envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envValues.licenseKey), "required for focused sample runs"),
     envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envValues.bundleIdentifier), bundleIdentifierInput ? "provided as non-secret tool argument" : "defaults to focused sample identifier when unset"),
     envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envValues.cloudAppId), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.appKey", ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envValues.cloudAppKey), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.appSecret", ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envValues.cloudAppSecret), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking")
+    envPresenceItem("easyar.cloudRecognition.apiKey", ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envValues.cloudApiKey), needsCloudRecognition ? "required for Cloud Recognition Sense 4.1+ APPID + API KEY" : "optional for Image Tracking"),
+    envPresenceItem("easyar.cloudRecognition.apiSecret", ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envValues.cloudApiSecret), "optional legacy/management secret; keep local when available")
   ];
   const requiredMissing = envPresence
     .filter((item) =>
-      (item.field === "easyar.accountToken" || item.field === "easyar.licenseKey" || (needsCloudRecognition && item.field.startsWith("easyar.cloudRecognition."))) &&
+      (item.field === "easyar.accountToken"
+        || item.field === "easyar.licenseKey"
+        || (needsCloudRecognition && (item.field === "easyar.cloudRecognition.appId" || item.field === "easyar.cloudRecognition.apiKey"))) &&
       !item.present
     )
     .map((item) => item.field);
@@ -10067,8 +10095,11 @@ async function buildLocalConfigFromEnvReport(
       cloudRecognition: {
         ...(isRecord(existingEasyAR.cloudRecognition) ? existingEasyAR.cloudRecognition : {}),
         appId: envValues.cloudAppId ?? "",
-        appKey: envValues.cloudAppKey ?? "",
-        appSecret: envValues.cloudAppSecret ?? ""
+        apiKey: envValues.cloudApiKey ?? "",
+        apiSecret: envValues.cloudApiSecret ?? "",
+        appKey: envValues.cloudApiKey ?? "",
+        appSecret: envValues.cloudApiSecret ?? "",
+        credentialMode: envValues.cloudApiKey ? "appId-apiKey" : ""
       }
     },
     unity: {
@@ -10194,31 +10225,55 @@ async function buildLocalConfigForm(
       envNames: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
       placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
       sharePolicy: needsCloudRecognition ? "Sensitive account-scoped config. MCP reports presence only." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with appKey and appSecret." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "Fill together with apiKey from the official API KEY list." : "Leave empty unless this project also runs Cloud Recognition."
     }),
     localConfigFormField({
-      id: "cloud-app-key",
+      id: "cloud-api-key",
+      jsonPath: "easyar.cloudRecognition.apiKey",
+      label: "Cloud Recognition API Key",
+      required: needsCloudRecognition,
+      present: materialPresent("cloud-api-key"),
+      source: "EasyAR development center Cloud Recognition/CRS API KEY list. Sense 4.1+ uses APPID + API KEY.",
+      envNames: ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
+      placeholder: needsCloudRecognition ? "<paste locally from API KEY list>" : "",
+      sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
+      userAction: needsCloudRecognition ? "Fill together with appId. Legacy appKey/appSecret fields can stay as aliases when needed." : "Leave empty unless this project also runs Cloud Recognition."
+    }),
+    localConfigFormField({
+      id: "cloud-api-secret",
+      jsonPath: "easyar.cloudRecognition.apiSecret",
+      label: "Cloud Recognition API Secret",
+      required: false,
+      present: materialPresent("cloud-api-secret"),
+      source: "EasyAR development center Cloud Recognition/CRS API Secret when available for management or legacy integrations.",
+      envNames: ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"],
+      placeholder: needsCloudRecognition ? "<paste locally from API KEY list when available>" : "",
+      sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
+      userAction: needsCloudRecognition ? "Optional for Sense 4.1+ runtime credential validation; keep it local if the official account exposes it." : "Leave empty unless this project also runs Cloud Recognition."
+    }),
+    localConfigFormField({
+      id: "cloud-app-key-legacy",
       jsonPath: "easyar.cloudRecognition.appKey",
-      label: "Cloud Recognition appKey",
-      required: needsCloudRecognition,
-      present: materialPresent("cloud-app-key"),
-      source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+      label: "Cloud Recognition legacy appKey",
+      required: false,
+      present: materialPresent("cloud-app-key-legacy"),
+      source: "Legacy alias for Cloud Recognition API Key.",
       envNames: ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
-      placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
+      placeholder: needsCloudRecognition ? "<optional legacy alias for apiKey>" : "",
       sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with appId and appSecret." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "Prefer apiKey; fill this only for legacy tools or compatibility." : "Leave empty unless this project also runs Cloud Recognition."
     }),
     localConfigFormField({
-      id: "cloud-app-secret",
+      id: "cloud-app-secret-legacy",
       jsonPath: "easyar.cloudRecognition.appSecret",
-      label: "Cloud Recognition appSecret",
-      required: needsCloudRecognition,
-      present: materialPresent("cloud-app-secret"),
-      source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+      label: "Cloud Recognition legacy appSecret",
+      required: false,
+      present: materialPresent("cloud-app-secret-legacy"),
+      source: "Legacy alias for Cloud Recognition API Secret.",
       envNames: ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"],
-      placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
+      placeholder: needsCloudRecognition ? "<optional legacy alias for apiSecret>" : "",
       sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with appId and appKey." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "Prefer apiSecret when the official account exposes a secret; fill this only for legacy tools or compatibility." : "Leave empty unless this project also runs Cloud Recognition."
     })
   ];
   const missingRequiredFields = fields.filter((field) => field.required && !field.present).map((field) => field.jsonPath);
@@ -10231,8 +10286,10 @@ async function buildLocalConfigForm(
       licenseKey: "<paste locally; never send to MCP chat>",
       cloudRecognition: {
         appId: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : "",
-        appKey: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : "",
-        appSecret: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : ""
+        apiKey: needsCloudRecognition ? "<paste locally; required for Cloud Recognition Sense 4.1+>" : "",
+        apiSecret: needsCloudRecognition ? "<paste locally if exposed by API KEY list>" : "",
+        appKey: needsCloudRecognition ? "<optional legacy alias for apiKey>" : "",
+        appSecret: needsCloudRecognition ? "<optional legacy alias for apiSecret>" : ""
       }
     },
     unity: {
@@ -10296,7 +10353,7 @@ async function buildLocalConfigForm(
     envBackedWrite,
     validationChain,
     nextActions: Array.from(new Set(nextActions)),
-    security: "This form returns only field names, placeholders, presence status, and validation calls. Actual account tokens, license keys, appKey, and appSecret must stay in local files or local environment variables."
+    security: "This form returns only field names, placeholders, presence status, and validation calls. Actual account tokens, license keys, API keys, appKey, and appSecret must stay in local files or local environment variables."
   };
 }
 
@@ -10334,19 +10391,19 @@ async function buildLocalConfigHandoffReport(
     envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"])), "required for focused sample runs"),
     envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)), "defaults to focused sample identifier when unset"),
     envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.appKey", ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.appSecret", ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking")
+    envPresenceItem("easyar.cloudRecognition.apiKey", ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"])), needsCloudRecognition ? "required for Cloud Recognition Sense 4.1+ APPID + API KEY" : "optional for Image Tracking"),
+    envPresenceItem("easyar.cloudRecognition.apiSecret", ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"])), "optional legacy/management secret; keep local when available")
   ];
   const failedLocalChecks = localConfig.checks.filter((check) => !check.ok).map((check) => check.id);
   const manualFileSteps = [
     "Open https://www.easyar.cn/ in a browser and register or log in with the user's EasyAR account.",
     `Create or locate the EasyAR Sense license for ${platform} and the Unity bundle/package identifier.`,
     ...(needsCloudRecognition
-      ? ["Create or locate the Cloud Recognition/CRS application and copy appId, appKey, and appSecret locally."]
+      ? ["Create or locate the Cloud Recognition/CRS application and copy CRS AppId plus API KEY locally. Keep API Secret local if the account page exposes it."]
       : ["Cloud Recognition credentials are not required for Image Tracking, but can remain empty as a complete empty group."]),
     "Run easyar_prepare_unity_project if easyar.local.json.example is missing.",
     `Copy ${path.relative(root, examplePath)} to ${path.relative(root, configPath)}.`,
-    "Fill the JSON file locally. Do not paste account passwords, API tokens, license keys, appKey, or appSecret into the AI chat.",
+    "Fill the JSON file locally. Do not paste account passwords, API tokens, license keys, API keys, appKey, or appSecret into the AI chat.",
     `Run easyar_validate_local_config projectPath=${root}.`
   ];
   const envBackedWrite = {
@@ -10357,7 +10414,9 @@ async function buildLocalConfigHandoffReport(
       targetPlatform: platform
     },
     requiredEnv: envPresence
-      .filter((item) => item.field === "easyar.accountToken" || item.field === "easyar.licenseKey" || (needsCloudRecognition && item.field.startsWith("easyar.cloudRecognition.")))
+      .filter((item) => item.field === "easyar.accountToken"
+        || item.field === "easyar.licenseKey"
+        || (needsCloudRecognition && (item.field === "easyar.cloudRecognition.appId" || item.field === "easyar.cloudRecognition.apiKey")))
       .flatMap((item) => item.envNames)
   };
   const validationChain = [
@@ -10379,7 +10438,7 @@ async function buildLocalConfigHandoffReport(
       : []),
     `Use either the manual file steps or ${envBackedWrite.command}; then run ${validationChain[0]}.`,
     needsCloudRecognition
-      ? "For Cloud Recognition, appId, appKey, and appSecret must be filled together before the sample can be considered ready."
+      ? "For Cloud Recognition, appId and apiKey must be filled before the sample can be considered ready. Legacy appKey/appSecret fields are still accepted."
       : "For Image Tracking, leave Cloud Recognition credentials empty unless the project also needs Cloud Recognition."
   ]));
 
@@ -10417,12 +10476,12 @@ async function buildLocalConfigHandoffReport(
     sampleSpecific: needsCloudRecognition
       ? [
           "Cloud Recognition is account-scoped and cannot run with placeholder credentials.",
-          "The MCP server should stop at local-config validation until appId, appKey, and appSecret are present.",
+          "The MCP server should stop at local-config validation until appId and apiKey are present.",
           "Only presence and placeholder status are reported back to the AI client."
         ]
       : [
           "Image Tracking needs an EasyAR license and target assets, but not Cloud Recognition app credentials.",
-          "Cloud Recognition fields can stay empty as long as appId, appKey, and appSecret are all empty."
+          "Cloud Recognition fields can stay empty as long as appId, apiKey, apiSecret, appKey, and appSecret are all empty."
         ],
     nextActions,
     security: "This handoff never returns secret values. It guides the user to register/login in the browser and store account-scoped values only in local files or local environment variables."
@@ -10509,7 +10568,7 @@ function validateLocalConfig(config: unknown) {
     {
       id: "cloud-recognition",
       ok: hasCloudRecognitionConfig(cloudRecognition),
-      detail: "cloudRecognition credentials are either all configured or all intentionally empty."
+      detail: "cloudRecognition credentials are either empty, configured as appId + apiKey, or configured with legacy appId + appKey + appSecret."
     }
   ];
 }
@@ -10534,7 +10593,7 @@ function localConfigAction(checkId: string): string {
     return "Set unity.bundleIdentifier to the Android package name or iOS bundle identifier bound to the EasyAR license.";
   }
   if (checkId === "cloud-recognition") {
-    return "Either leave all cloudRecognition fields empty or fill appId, appKey, and appSecret together.";
+    return "Either leave all cloudRecognition fields empty, fill appId and apiKey for Sense 4.1+, or fill legacy appId, appKey, and appSecret together.";
   }
   return "Review ProjectSettings/EasyAR/easyar.local.json.";
 }
@@ -10590,14 +10649,27 @@ function sampleExpectedIssueBehavior(sample: SampleInfo): string {
 }
 
 function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
-  const fields = [value.appId, value.appKey, value.appSecret];
+  const fields = [value.appId, value.apiKey, value.apiSecret, value.appKey, value.appSecret];
   const configuredCount = fields.filter(isNonPlaceholderString).length;
-  const emptyCount = fields.filter((field) => typeof field === "string" && field.trim() === "").length;
-  return configuredCount === fields.length || emptyCount === fields.length;
+  const emptyCount = fields.filter((field) => field === undefined || field === null || (typeof field === "string" && field.trim() === "")).length;
+  return hasCompleteCloudRecognitionConfig(value) || emptyCount === fields.length;
 }
 
 function hasCompleteCloudRecognitionConfig(value: Record<string, unknown>): boolean {
-  return [value.appId, value.appKey, value.appSecret].every(isNonPlaceholderString);
+  const hasAppId = isNonPlaceholderString(value.appId);
+  const hasModernApiKey = isNonPlaceholderString(value.apiKey);
+  const hasLegacyKeySecret = isNonPlaceholderString(value.appKey) && isNonPlaceholderString(value.appSecret);
+  return hasAppId && (hasModernApiKey || hasLegacyKeySecret);
+}
+
+function cloudRecognitionCredentialMode(value: Record<string, unknown>): "appId-apiKey" | "legacy-appKey-appSecret" | "empty-or-incomplete" {
+  if (isNonPlaceholderString(value.appId) && isNonPlaceholderString(value.apiKey)) {
+    return "appId-apiKey";
+  }
+  if (isNonPlaceholderString(value.appId) && isNonPlaceholderString(value.appKey) && isNonPlaceholderString(value.appSecret)) {
+    return "legacy-appKey-appSecret";
+  }
+  return "empty-or-incomplete";
 }
 
 function summarizeLog(logText: string) {
@@ -10754,7 +10826,7 @@ function sampleSpecificLogRules(sample: SampleInfo | null): UnityLogRule[] {
         pattern: /(cloud\s*recognition|cloudrecognizer|cloud).{0,180}(appId|appKey|appSecret|credential|secret|key|unauthorized|forbidden|invalid|missing)/i,
         title: "Cloud Recognition credentials are invalid or missing",
         actions: [
-          "Fill easyar.cloudRecognition.appId, appKey, and appSecret in ProjectSettings/EasyAR/easyar.local.json.",
+          "Fill easyar.cloudRecognition.appId and apiKey in ProjectSettings/EasyAR/easyar.local.json. Legacy appKey/appSecret is also accepted.",
           "Run easyar_check_sample_readiness with sampleId=cloud-recognition and confirm cloud-recognition-credentials passes.",
           "Verify the credentials and target library in the official EasyAR account."
         ]
@@ -13559,9 +13631,9 @@ function buildSampleValidationHelper(sample: SampleInfo): string {
                 throw new InvalidOperationException("Cloud Recognition requires ProjectSettings/EasyAR/easyar.local.json.");
             }
             var localConfig = File.ReadAllText(localConfigPath);
-            if (!ContainsConfiguredJsonString(localConfig, "appId") || !ContainsConfiguredJsonString(localConfig, "appKey") || !ContainsConfiguredJsonString(localConfig, "appSecret"))
+            if (!ContainsConfiguredJsonString(localConfig, "appId") || (!ContainsConfiguredJsonString(localConfig, "apiKey") && (!ContainsConfiguredJsonString(localConfig, "appKey") || !ContainsConfiguredJsonString(localConfig, "appSecret"))))
             {
-                throw new InvalidOperationException("Cloud Recognition requires appId, appKey, and appSecret in easyar.local.json.");
+                throw new InvalidOperationException("Cloud Recognition requires appId plus apiKey in easyar.local.json. Legacy appKey/appSecret is also accepted.");
             }
             UnityEngine.Debug.Log("Validated Cloud Recognition local credential presence without printing secret values.");
 `
@@ -13686,8 +13758,10 @@ ${sampleValidation}
 function buildLocalConfigBridgeEditor(sample: SampleInfo): string {
   const cloudValidation = sample.id === "cloud-recognition"
     ? `            RequireConfiguredJsonString(json, "appId", "Cloud Recognition appId is missing or still a placeholder.");
-            RequireConfiguredJsonString(json, "appKey", "Cloud Recognition appKey is missing or still a placeholder.");
-            RequireConfiguredJsonString(json, "appSecret", "Cloud Recognition appSecret is missing or still a placeholder.");
+            if (!ContainsConfiguredJsonString(json, "apiKey") && (!ContainsConfiguredJsonString(json, "appKey") || !ContainsConfiguredJsonString(json, "appSecret")))
+            {
+                throw new InvalidOperationException("Cloud Recognition apiKey is missing or legacy appKey/appSecret is incomplete.");
+            }
 `
     : "";
 
@@ -13775,6 +13849,8 @@ namespace EasyAR.Samples.Generated
         public string AccountToken { get; private set; }
         public string BundleIdentifier { get; private set; }
         public string CloudRecognitionAppId { get; private set; }
+        public string CloudRecognitionApiKey { get; private set; }
+        public string CloudRecognitionApiSecret { get; private set; }
         public string CloudRecognitionAppKey { get; private set; }
         public string CloudRecognitionAppSecret { get; private set; }
 
@@ -13782,8 +13858,8 @@ namespace EasyAR.Samples.Generated
         public bool HasAccountToken => IsConfigured(AccountToken);
         public bool HasCloudRecognitionCredentials =>
             IsConfigured(CloudRecognitionAppId)
-            && IsConfigured(CloudRecognitionAppKey)
-            && IsConfigured(CloudRecognitionAppSecret);
+            && (IsConfigured(CloudRecognitionApiKey)
+                || (IsConfigured(CloudRecognitionAppKey) && IsConfigured(CloudRecognitionAppSecret)));
 
         private void Awake()
         {
@@ -13856,6 +13932,8 @@ namespace EasyAR.Samples.Generated
             AccountToken = ReadString(json, "accountToken");
             BundleIdentifier = ReadString(json, "bundleIdentifier");
             CloudRecognitionAppId = ReadString(json, "appId");
+            CloudRecognitionApiKey = ReadString(json, "apiKey");
+            CloudRecognitionApiSecret = ReadString(json, "apiSecret");
             CloudRecognitionAppKey = ReadString(json, "appKey");
             CloudRecognitionAppSecret = ReadString(json, "appSecret");
         }
@@ -14022,7 +14100,7 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           "Register or log in through https://www.easyar.cn/ or the EasyAR development center in a browser.",
           "Create or locate the EasyAR Sense license for the Unity bundle/package identifier below.",
           ...(needsCloudRecognition
-            ? ["Create or locate Cloud Recognition/CRS credentials in the official EasyAR account, then fill appId, appKey, and appSecret together."]
+            ? ["Create or locate Cloud Recognition/CRS credentials in the official EasyAR account: the Cloud Recognition/CRS library AppId plus an API KEY. Sense 4.1+ uses CRS AppId + API KEY."]
             : ["Cloud Recognition credentials can stay empty for the Image Tracking focused sample."])
         ],
         neverShareInChat: [
@@ -14030,6 +14108,8 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           "SMS/email/authenticator verification codes",
           "easyar.accountToken",
           "easyar.licenseKey",
+          "easyar.cloudRecognition.apiKey",
+          "easyar.cloudRecognition.apiSecret",
           "easyar.cloudRecognition.appKey",
           "easyar.cloudRecognition.appSecret"
         ],
@@ -14039,8 +14119,8 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           licenseKey: ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"],
           bundleIdentifier: ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"],
           cloudAppId: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
-          cloudAppKey: ["EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
-          cloudAppSecret: ["EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]
+          cloudApiKey: ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
+          cloudApiSecret: ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]
         },
         validation: "Run easyar_validate_local_config after editing. The MCP server reports field presence and placeholders only, never secret values."
       },
@@ -14052,8 +14132,11 @@ function buildLocalConfigExample(sample: SampleInfo): string {
         licenseKey: "paste-easyar-license-key-here",
         cloudRecognition: {
           appId: "",
+          apiKey: "",
+          apiSecret: "",
           appKey: "",
-          appSecret: ""
+          appSecret: "",
+          credentialMode: ""
         }
       },
       unity: {
@@ -14116,14 +14199,14 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
       "",
       "## Cloud Recognition Checklist",
       "",
-      "1. Fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in local config.",
+      "1. Fill `easyar.cloudRecognition.appId` and `apiKey` in local config. Legacy `appKey`/`appSecret` aliases are still accepted.",
       "2. Confirm network access is allowed on the target platform.",
       "3. Verify the cloud database/target library is configured in the official EasyAR account.",
       "4. Test on a real device with a network path to the selected EasyAR cloud recognition service.",
       "",
       "Expected readiness checks:",
       "",
-      "- `cloud-recognition-credentials` should report all three cloud fields configured.",
+      "- `cloud-recognition-credentials` should report CRS AppId + API Key configured.",
       "- `sample-scene` should find an official Cloud Recognition scene."
     ].join("\n") + "\n";
   }
@@ -14161,7 +14244,7 @@ async function writeFocusedSampleSupportFiles(root: string, sample: SampleInfo, 
       [
         "# Cloud Recognition Credentials",
         "",
-        "Fill `ProjectSettings/EasyAR/easyar.local.json` with official `appId`, `appKey`, and `appSecret` values from the registered EasyAR account.",
+        "Fill `ProjectSettings/EasyAR/easyar.local.json` with official CRS `appId` and API `apiKey` values from the registered EasyAR account. Keep `apiSecret` local if the account page exposes it.",
         "",
         "Do not commit cloud recognition credentials. The generated `.gitignore` protects the local config file."
       ].join("\n") + "\n",

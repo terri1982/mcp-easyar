@@ -52,7 +52,7 @@ easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=image-track
 
 Common blockers:
 
-- `cloud-recognition-credentials`: `ProjectSettings/EasyAR/easyar.local.json` does not contain non-placeholder `appId`, `appKey`, and `appSecret`.
+- `cloud-recognition-credentials`: `ProjectSettings/EasyAR/easyar.local.json` does not contain non-placeholder `appId` plus `apiKey` for Sense 4.1+, or a complete legacy `appId`/`appKey`/`appSecret` set.
 - `focused-sample-scene-imported`: the Cloud Recognition sample exists in the EasyAR package cache but has not been imported into `Assets/Samples`.
 - `package-cache-sample-available`: the MCP server found a candidate under `Library/PackageCache/**/Samples~`; import it through Unity Package Manager Samples.
 - `cloud-recognition-network`: Unity or device logs indicate timeout, unreachable host, TLS, DNS, or service connectivity problems.
@@ -87,4 +87,4 @@ Paste `ISSUE_REPORT.md` into a GitHub issue and reference `SUPPORT_BUNDLE.md`, `
 
 ## Security
 
-Do not post EasyAR license keys, account tokens, Cloud Recognition `appKey` or `appSecret`, signing keys, provisioning profiles, device-private identifiers, or full private logs. The MCP reports redact common key names, but users should still review issue content before publishing it on GitHub.
+Do not post EasyAR license keys, account tokens, Cloud Recognition API KEY/API Secret, `appKey` or `appSecret`, signing keys, provisioning profiles, device-private identifiers, or full private logs. The MCP reports redact common key names, but users should still review issue content before publishing it on GitHub.

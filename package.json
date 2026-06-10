@@ -9,7 +9,11 @@
   },
   "files": [
     "dist",
-    "docs",
+    "docs/OFFICIAL_API_CONTRACT.md",
+    "docs/OFFICIAL_API_HANDOFF.md",
+    "docs/quickstart.md",
+    "docs/RELEASE_MANIFEST.md",
+    "docs/troubleshooting.md",
     "assets/easyar-icon.png",
     ".env.example",
     "README.md",

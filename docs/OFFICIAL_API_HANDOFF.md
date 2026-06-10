@@ -1,7 +1,7 @@
 # mcp-easyar Official API Handoff
 
-Generated at: 2026-06-10T14:23:58.106Z
-Deployment target: staging
+Generated at: 2026-06-10T15:38:16.374Z
+Deployment target: unspecified
 Server: mcp-easyar 0.1.0
 Repository: https://github.com/terri1982/mcp-easyar
 
@@ -141,9 +141,9 @@ Env: EASYAR_CLOUD_CREDENTIALS_ENDPOINT
 Method: POST
 Expected URL: https://www.easyar.cn/mcp/cloud-recognition/credentials
 
-Return Cloud Recognition app metadata and presence flags for the registered user without returning appKey or appSecret values.
+Return Cloud Recognition app metadata and presence flags for the registered user without returning raw API KEY/API Secret values.
 
-Backend owner todo: Return Cloud Recognition app metadata and secret presence flags without returning appKey or appSecret values.
+Backend owner todo: Return Cloud Recognition app metadata and API KEY presence flags without returning raw API KEY/API Secret values.
 
 Request fields:
 - sampleId
@@ -153,8 +153,7 @@ Request fields:
 Required response fields:
 - ok
 - cloudRecognition.appId
-- cloudRecognition.appKeyPresent
-- cloudRecognition.appSecretPresent
+- cloudRecognition.apiKeyPresent
 
 Used by MCP tools:
 - easyar_discover_cloud_credentials
@@ -162,8 +161,8 @@ Used by MCP tools:
 - easyar_account_materials
 
 Acceptance:
-- Configured Cloud Recognition app returns appId plus appKeyPresent/appSecretPresent flags.
-- Response never includes appKey or appSecret raw values.
+- Configured Cloud Recognition app returns appId plus apiKeyPresent and optional apiSecretPresent flags.
+- Response never includes raw API KEY/API Secret, appKey, or appSecret values.
 
 Canary command template:
 ```bash
@@ -186,7 +185,7 @@ curl -fsS -X POST -H "Authorization: Bearer ${EASYAR_API_TOKEN}" -H "Content-Typ
 - easyar_check_account returns configured=true and ok=true for a registered EasyAR test account.
 - easyar_validate_license validates the local EasyAR Sense license for the Unity bundle/package identifier without echoing the license key.
 - easyar_discover_downloads returns only account-authorized package metadata and never bypasses EasyAR download gates.
-- easyar_discover_cloud_credentials returns appId and presence flags, never appKey or appSecret.
+- easyar_discover_cloud_credentials returns appId and presence flags, never raw API KEY/API Secret, appKey, or appSecret values.
 - easyar_check_official_access passes for image-tracking and cloud-recognition using the same deployment environment.
 - easyar_write_deployment_readiness has no official endpoint blockers.
 - Fixture smoke remains green, then a real staging/prod canary run is recorded in OFFICIAL_ACCESS.md.
@@ -217,4 +216,4 @@ curl -fsS -X POST -H "Authorization: Bearer ${EASYAR_API_TOKEN}" -H "Content-Typ
 
 ## Security
 
-This handoff contains endpoint names, request/response schemas, and non-secret canary templates only. It must not contain EasyAR passwords, verification codes, account tokens, license keys, appKey, appSecret, signing keys, or private user data.
+This handoff contains endpoint names, request/response schemas, and non-secret canary templates only. It must not contain EasyAR passwords, verification codes, account tokens, license keys, API keys, API secrets, appKey, appSecret, signing keys, or private user data.

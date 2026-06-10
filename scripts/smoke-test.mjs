@@ -486,7 +486,7 @@ try {
   });
   assertTextIncludes(officialApiContract, "\"id\": \"account-status\"");
   assertTextIncludes(officialApiContract, "\"envName\": \"EASYAR_LICENSE_VALIDATE_ENDPOINT\"");
-  assertTextIncludes(officialApiContract, "\"appSecretPresent\"");
+  assertTextIncludes(officialApiContract, "\"apiKeyPresent\"");
   assertTextIncludes(officialApiContract, "\"readyForProductionOfficialAccess\": false");
   assertTextIncludes(officialApiContract, "Responses must not include raw license keys");
 
@@ -604,7 +604,7 @@ try {
   assertTextIncludes(officialApiHandoff, "downloads-discovery");
   assertTextIncludes(officialApiHandoff, "cloud-credentials-discovery");
   assertTextIncludes(officialApiHandoff, "curl -fsS");
-  assertTextIncludes(officialApiHandoff, "Response never includes appKey or appSecret raw values");
+  assertTextIncludes(officialApiHandoff, "Response never includes raw API KEY/API Secret, appKey, or appSecret values");
   assert(!extractText(officialApiHandoff).includes("fixture-token"), "Official API handoff should not include fixture token values");
 
   const writtenOfficialApiHandoff = await callTool("easyar_write_official_api_handoff", {
@@ -1299,8 +1299,8 @@ try {
   });
   assertTextIncludes(missingEnvConfig, "\"canWrite\": false");
   assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appId");
-  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appKey");
-  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appSecret");
+  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.apiKey");
+  assertTextExcludes(missingEnvConfig, "Set local environment variable(s) for easyar.cloudRecognition.appSecret");
 
   const envWrittenConfig = await callTool("easyar_write_local_config_from_env", {
     projectPath,
@@ -1362,7 +1362,7 @@ try {
     path.join(projectPath, "Assets", "Editor", "EasyARLocalConfigBridge.cs"),
     "utf8"
   );
-  assert(cloudBridgeEditor.includes("Cloud Recognition appSecret"), "Cloud bridge editor should validate cloud appSecret presence");
+  assert(cloudBridgeEditor.includes("Cloud Recognition apiKey"), "Cloud bridge editor should validate cloud apiKey presence");
   assert(cloudBridgeEditor.includes("File.WriteAllText(targetPath, json)"), "Cloud bridge editor should export runtime json");
   const cloudBridgeRuntime = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs"),
@@ -1838,7 +1838,32 @@ try {
     projectPath,
     sampleId: "cloud-recognition"
   });
-  assertTextIncludes(configuredCloudReadiness, "Cloud recognition appId, appKey, and appSecret are configured");
+  assertTextIncludes(configuredCloudReadiness, "Cloud recognition legacy appId, appKey, and appSecret are configured");
+
+  await writeFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
+    JSON.stringify({
+      easyar: {
+        apiBaseUrl: "https://www.easyar.cn",
+        accountToken: "test-account-token",
+        licenseKey: "test-license-key",
+        cloudRecognition: {
+          appId: "test-cloud-app-id",
+          apiKey: "test-cloud-api-key"
+        }
+      },
+      unity: {
+        targetPlatform: "android",
+        bundleIdentifier: "com.easyar.testsample"
+      }
+    }),
+    "utf8"
+  );
+  const configuredModernCloudReadiness = await callTool("easyar_check_sample_readiness", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(configuredModernCloudReadiness, "Cloud recognition appId and apiKey are configured");
 
   const script = await callTool("easyar_create_mono_behaviour", {
     projectPath,
