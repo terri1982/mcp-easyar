@@ -78,6 +78,14 @@ try {
     "easyar_write_code_plan should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_code_change_summary"),
+    "easyar_generate_code_change_summary should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_code_change_summary"),
+    "easyar_write_code_change_summary should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_run_unity_compile_check"),
     "easyar_run_unity_compile_check should be listed"
   );
@@ -572,6 +580,31 @@ try {
   assertTextIncludes(scriptReview, "hardcoded-easyar-secret");
   assertTextIncludes(scriptReview, "expensive-update-lookup");
   assertTextIncludes(scriptReview, "touch-without-phase-check");
+
+  const codeChangeSummary = await callTool("easyar_generate_code_change_summary", {
+    projectPath,
+    sampleId: "image-tracking",
+    goal: "Audit risky Image Tracking code changes before Unity compilation.",
+    targetFiles: ["Assets/Scripts/RiskyEasyARController.cs"],
+    notes: "Temporary code review note. appSecret=should-not-leak"
+  });
+  assertTextIncludes(codeChangeSummary, "hardcoded-easyar-secret");
+  assertTextIncludes(codeChangeSummary, "appSecret=<redacted>");
+  assertTextIncludes(codeChangeSummary, "easyar_run_unity_compile_check");
+
+  const writtenCodeChange = await callTool("easyar_write_code_change_summary", {
+    projectPath,
+    sampleId: "image-tracking",
+    goal: "Summarize risky Image Tracking code changes.",
+    targetFiles: ["Assets/Scripts/RiskyEasyARController.cs"]
+  });
+  assertTextIncludes(writtenCodeChange, "CODE_CHANGE.md");
+  const codeChangeMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "CODE_CHANGE.md"),
+    "utf8"
+  );
+  assert(codeChangeMarkdown.includes("EasyAR Focused Code Change - Image Tracking"), "Code change markdown should include title");
+  assert(codeChangeMarkdown.includes("hardcoded-easyar-secret"), "Code change markdown should include static review issue");
 
   const riskyRunReport = await callTool("easyar_generate_run_report", {
     projectPath,

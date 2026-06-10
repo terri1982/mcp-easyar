@@ -140,6 +140,7 @@ Review generated or edited scripts before compiling:
 
 ```text
 easyar_review_csharp_scripts projectPath=/path/to/UnityProject
+easyar_write_code_change_summary projectPath=/path/to/UnityProject sampleId=image-tracking goal="Summarize script changes" targetFiles='["Assets/Scripts/ImageTargetContentController.cs"]'
 easyar_run_unity_compile_check projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
 

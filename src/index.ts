@@ -62,6 +62,8 @@ const toolCatalog = [
   "easyar_write_code_plan",
   "easyar_create_mono_behaviour",
   "easyar_write_csharp_file",
+  "easyar_generate_code_change_summary",
+  "easyar_write_code_change_summary",
   "easyar_review_csharp_scripts",
   "easyar_unity_environment",
   "easyar_run_unity_compile_check",
@@ -164,7 +166,7 @@ const quickstartWorkflow = [
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
   "12. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "13. Use `easyar_write_code_plan`, `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
+  "13. Use `easyar_write_code_plan`, `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, `easyar_write_code_change_summary`, and `easyar_review_csharp_scripts` for project code.",
   "14. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "15. Use `easyar_write_run_result` after compile, build, or device attempts to preserve handoff evidence and next actions.",
   "",
@@ -1380,6 +1382,63 @@ server.tool(
 );
 
 server.tool(
+  "easyar_generate_code_change_summary",
+  "Generate a focused Unity C# change summary after editing scripts, including static review and next verification steps.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    goal: z.string().describe("Code change goal or user request that motivated the script edits."),
+    targetFiles: z.array(z.string()).describe("Relative .cs files that were created or changed."),
+    notes: z.string().optional().describe("Optional short notes about the implementation. Do not include secrets."),
+    maxIssues: z.number().int().positive().max(200).default(80)
+  },
+  async ({ projectPath, sampleId, goal, targetFiles, notes, maxIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildCodeChangeSummary(root, sample, goal, targetFiles, notes, maxIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_code_change_summary",
+  "Write a focused Unity C# change summary Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    goal: z.string().describe("Code change goal or user request that motivated the script edits."),
+    targetFiles: z.array(z.string()).describe("Relative .cs files that were created or changed."),
+    notes: z.string().optional().describe("Optional short notes about the implementation. Do not include secrets."),
+    relativePath: z.string().optional().describe("Optional summary path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/CODE_CHANGE.md."),
+    maxIssues: z.number().int().positive().max(200).default(80),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing code change artifact.")
+  },
+  async ({ projectPath, sampleId, goal, targetFiles, notes, relativePath, maxIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const summary = await buildCodeChangeSummary(root, sample, goal, targetFiles, notes, maxIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "CODE_CHANGE.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildCodeChangeSummaryMarkdown(summary), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      goal,
+      targetFileCount: summary.targetFiles.length,
+      issueCount: summary.scriptReview.issueCount,
+      nextActions: summary.nextActions,
+      note: "Run Unity compilation after reviewing this summary."
+    });
+  }
+);
+
+server.tool(
   "easyar_review_csharp_scripts",
   "Review Unity C# scripts for common EasyAR workflow risks before opening or building the project.",
   {
@@ -2175,6 +2234,81 @@ async function buildCodePlan(root: string, sample: SampleInfo, goal: string, tar
     ],
     security: "This code plan does not include secret values. Keep official EasyAR credentials in local config or environment-backed storage."
   };
+}
+
+async function buildCodeChangeSummary(
+  root: string,
+  sample: SampleInfo,
+  goal: string,
+  targetFiles: string[],
+  notes: string | undefined,
+  maxIssues: number
+) {
+  if (targetFiles.length === 0) {
+    throw new Error("targetFiles must include at least one changed .cs file.");
+  }
+  const normalizedTargets = targetFiles.map((relativePath) => normalizeProjectRelativePath(root, relativePath));
+  const fileSummaries = await Promise.all(normalizedTargets.map(async (relativePath) => {
+    const absolutePath = path.join(root, relativePath);
+    if (!await exists(absolutePath)) {
+      return {
+        path: relativePath,
+        exists: false,
+        sizeBytes: null,
+        lineCount: null,
+        mentionsEasyAR: false,
+        mentionsMonoBehaviour: false
+      };
+    }
+    const text = await readFile(absolutePath, "utf8");
+    return {
+      path: relativePath,
+      exists: true,
+      sizeBytes: Buffer.byteLength(text, "utf8"),
+      lineCount: text.split(/\r?\n/).length,
+      mentionsEasyAR: /\busing\s+EasyAR\b|EasyAR\./.test(text),
+      mentionsMonoBehaviour: /:\s*MonoBehaviour\b/.test(text)
+    };
+  }));
+  const scriptReview = await buildScriptReviewReport(root, normalizedTargets, normalizedTargets.length, maxIssues);
+  const missingFiles = fileSummaries.filter((file) => !file.exists).map((file) => file.path);
+  const nextActions = buildCodeChangeNextActions(sample, scriptReview.issueCount, missingFiles);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    goal,
+    notes: sanitizeRunResultNotes(notes),
+    targetFiles: normalizedTargets,
+    fileSummaries,
+    scriptReview,
+    missingFiles,
+    nextActions,
+    security: "Secret values are not returned. Do not include EasyAR license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in code change notes."
+  };
+}
+
+function buildCodeChangeNextActions(
+  sample: SampleInfo,
+  issueCount: number,
+  missingFiles: string[]
+): string[] {
+  const actions: string[] = [];
+  if (missingFiles.length > 0) {
+    actions.push(`Create or correct missing target file(s): ${missingFiles.join(", ")}.`);
+  }
+  if (issueCount > 0) {
+    actions.push("Fix static script review issues before Unity compilation.");
+  }
+  actions.push(`Run easyar_run_unity_compile_check with sampleId=${sample.id}.`);
+  actions.push("Regenerate easyar_write_support_bundle after Unity compile or build attempts.");
+  actions.push("Record the outcome with easyar_write_run_result.");
+  return actions;
 }
 
 function normalizeProjectRelativePath(root: string, relativePath: string): string {
@@ -3425,6 +3559,51 @@ function buildCodePlanMarkdown(plan: Awaited<ReturnType<typeof buildCodePlan>>):
     "## Security",
     "",
     plan.security,
+    ""
+  ].join("\n");
+}
+
+function buildCodeChangeSummaryMarkdown(summary: Awaited<ReturnType<typeof buildCodeChangeSummary>>): string {
+  return [
+    `# EasyAR Focused Code Change - ${summary.sample.name}`,
+    "",
+    `Generated at: ${summary.generatedAt}`,
+    `Project: ${summary.projectPath}`,
+    `Sample id: ${summary.sample.id}`,
+    `Status: ${summary.sample.implementationStatus}`,
+    "",
+    "## Goal",
+    "",
+    summary.goal,
+    "",
+    "## Notes",
+    "",
+    summary.notes ?? "No notes recorded.",
+    "",
+    "## Target Files",
+    "",
+    ...summary.fileSummaries.flatMap((file) => [
+      `- ${file.path}`,
+      `  - Exists: ${file.exists ? "yes" : "no"}`,
+      `  - Size bytes: ${file.sizeBytes ?? "unknown"}`,
+      `  - Lines: ${file.lineCount ?? "unknown"}`,
+      `  - Mentions EasyAR: ${file.mentionsEasyAR ? "yes" : "no"}`,
+      `  - MonoBehaviour: ${file.mentionsMonoBehaviour ? "yes" : "no"}`
+    ]),
+    "",
+    "## Static Review",
+    "",
+    `Reviewed files: ${summary.scriptReview.reviewedFileCount}`,
+    `Issue count: ${summary.scriptReview.issueCount}`,
+    ...markdownIssueList(summary.scriptReview.issues.map((issue) => `${issue.severity} ${issue.id} ${issue.file}${issue.line ? `:${issue.line}` : ""} - ${issue.title}`), "No static script issues detected."),
+    "",
+    "## Next Actions",
+    "",
+    ...summary.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    summary.security,
     ""
   ].join("\n");
 }

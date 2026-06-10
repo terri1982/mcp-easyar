@@ -21,6 +21,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - generate focused support bundles that summarize project state, scene audit, run report, and latest Unity log diagnostics
 - record focused sample run results for compile, build, and device validation handoff
 - plan scoped Unity C# changes before Codex or Claude writes sample scripts
+- summarize Unity C# code changes after script edits and before Unity compilation
 - list common EasyAR Unity sample categories with focused/deferred status
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for Android/iOS player settings and camera permissions
@@ -173,6 +174,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_code_plan`: write the focused C# implementation plan to `Assets/EasyARGenerated/<sampleId>/CODE_PLAN.md`.
 - `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
+- `easyar_generate_code_change_summary`: generate a focused C# change summary after script edits.
+- `easyar_write_code_change_summary`: write the focused C# change summary to `Assets/EasyARGenerated/<sampleId>/CODE_CHANGE.md`.
 - `easyar_review_csharp_scripts`: review Unity C# scripts for common EasyAR secret, lifecycle, input, and performance risks.
 - `easyar_unity_environment`: inspect `EASYAR_UNITY_PATH` and common Unity install locations without launching Unity.
 - `easyar_run_unity_compile_check`: open Unity in batch mode to force script import/compilation and analyze the generated log.
