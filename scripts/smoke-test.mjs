@@ -340,6 +340,14 @@ try {
     "easyar_write_account_materials should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_portal_evidence"),
+    "easyar_portal_evidence should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_portal_evidence"),
+    "easyar_write_portal_evidence should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_next_workflow_step"),
     "easyar_next_workflow_step should be listed"
   );
@@ -587,6 +595,62 @@ try {
   assertTextIncludes(accountMaterials, "\"requiredForDeviceRun\": true");
   assertTextIncludes(accountMaterials, "Never paste into chat");
   assertTextIncludes(accountMaterials, "\"missingRequired\"");
+
+  const portalEvidence = await callTool("easyar_portal_evidence", {
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountName: "armall",
+    apiKeyRecordId: "19639",
+    apiKeyAppName: "ARMallTest",
+    apiKeyCreatedAt: "2025-11-07 17:24",
+    cloudServicesEnabled: ["cloud-recognition", "spatialmap", "mega-landmark", "ar-operations", "mega-block"],
+    apiKeyPresent: true,
+    apiSecretPresent: true,
+    senseLicenseStatus: "missing",
+    cloudLibraryStatus: "missing",
+    cloudTargetCount: 0,
+    portalUrl: "https://portal.easyar.cn/apikey/info/19639?token=should-not-leak",
+    notes: [
+      "Observed API KEY value a22141c97489953f9f57e0e7acf25b25 should redact",
+      "Observed API Secret value ea54ff52a76c384c3b62e394ad6b281113507767faaa4b12218c7c48d89d904c should redact"
+    ]
+  });
+  assertTextIncludes(portalEvidence, "\"apiKeyRecordId\": \"19639\"");
+  assertTextIncludes(portalEvidence, "\"apiKeyPresent\": true");
+  assertTextIncludes(portalEvidence, "\"cloudLibraryStatus\": \"missing\"");
+  assertTextIncludes(portalEvidence, "cloud-library");
+  assertTextIncludes(portalEvidence, "cloud-target-image");
+  assertTextIncludes(portalEvidence, "<redacted>");
+  assert(!extractText(portalEvidence).includes("a22141c97489953f9f57e0e7acf25b25"), "Portal evidence should redact API KEY-like values");
+  assert(!extractText(portalEvidence).includes("ea54ff52a76c384c3b62e394ad6b281113507767faaa4b12218c7c48d89d904c"), "Portal evidence should redact API Secret-like values");
+  assert(!extractText(portalEvidence).includes("should-not-leak"), "Portal evidence should redact URL query strings");
+
+  const portalEvidenceRoot = await createUnityProject();
+  const writtenPortalEvidence = await callTool("easyar_write_portal_evidence", {
+    projectPath: portalEvidenceRoot,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountName: "armall",
+    apiKeyRecordId: "19639",
+    apiKeyAppName: "ARMallTest",
+    cloudServicesEnabled: ["cloud-recognition"],
+    apiKeyPresent: true,
+    apiSecretPresent: true,
+    senseLicenseStatus: "missing",
+    cloudLibraryStatus: "missing",
+    cloudTargetCount: 0
+  });
+  assertTextIncludes(writtenPortalEvidence, "PORTAL_EVIDENCE.md");
+  const portalEvidenceMarkdown = await readFile(
+    path.join(portalEvidenceRoot, "Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md"),
+    "utf8"
+  );
+  assert(portalEvidenceMarkdown.includes("EasyAR Portal Evidence"), "Portal evidence markdown should include title");
+  assert(portalEvidenceMarkdown.includes("API KEY record id: 19639"), "Portal evidence markdown should include non-secret API KEY record id");
+  assert(portalEvidenceMarkdown.includes("Cloud library status: missing"), "Portal evidence markdown should include cloud library status");
+  assert(portalEvidenceMarkdown.includes("No Cloud Recognition image library was observed"), "Portal evidence markdown should include library blocker");
+  assert(!portalEvidenceMarkdown.includes("a22141c97489953f9f57e0e7acf25b25"), "Portal evidence markdown should not include API KEY-like values");
+  await rm(portalEvidenceRoot, { recursive: true, force: true });
 
   const accountCheck = await callTool("easyar_check_account", {});
   assertTextIncludes(accountCheck, "\"configured\": false");

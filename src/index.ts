@@ -93,6 +93,8 @@ const toolCatalog = [
   "easyar_write_account_onboarding",
   "easyar_account_materials",
   "easyar_write_account_materials",
+  "easyar_portal_evidence",
+  "easyar_write_portal_evidence",
   "easyar_check_account",
   "easyar_validate_license",
   "easyar_discover_downloads",
@@ -863,6 +865,93 @@ server.tool(
       missingRequiredCount: report.materials.filter((item) => item.required && !item.present).length,
       nextActions: report.nextActions,
       note: "The account materials artifact lists field names and storage locations only. It does not include secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_portal_evidence",
+  "Generate a safe EasyAR portal evidence report from non-secret browser observations such as app id, service flags, license presence, and Cloud Recognition library status.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to compare portal observations against local config presence."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because portal evidence is most important for cloud setup."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    accountName: z.string().optional().describe("Optional visible account name from the portal. Do not provide passwords or verification codes."),
+    apiKeyRecordId: z.string().optional().describe("Non-secret record id from a portal URL such as /apikey/info/<id>."),
+    apiKeyAppName: z.string().optional().describe("Visible API KEY application name."),
+    apiKeyCreatedAt: z.string().optional().describe("Visible API KEY creation time."),
+    cloudServicesEnabled: z.array(z.enum(["cloud-recognition", "spatialmap", "mega-landmark", "ar-operations", "mega-block", "other"])).default([]),
+    apiKeyPresent: z.boolean().optional().describe("Whether the API KEY field is present. Do not pass the API KEY value."),
+    apiSecretPresent: z.boolean().optional().describe("Whether the API Secret field is present. Do not pass the API Secret value."),
+    tokenStatus: z.enum(["not-checked", "not-needed", "present", "missing", "expired", "unknown"]).default("not-checked"),
+    senseLicenseStatus: z.enum(["not-checked", "present", "missing", "unknown"]).default("not-checked"),
+    senseLicenseRecordId: z.string().optional().describe("Optional non-secret Sense license record id, if visible in the portal URL or table."),
+    cloudLibraryStatus: z.enum(["not-checked", "present", "missing", "unknown"]).default("not-checked"),
+    cloudLibraryName: z.string().optional().describe("Optional non-secret Cloud Recognition library name."),
+    cloudLibraryRecordId: z.string().optional().describe("Optional non-secret Cloud Recognition library record id."),
+    cloudTargetCount: z.number().int().nonnegative().optional().describe("Visible number of uploaded Cloud Recognition target images."),
+    portalUrl: z.string().url().optional().describe("Optional portal page URL used for the observation. Query strings are redacted in output."),
+    notes: z.array(z.string()).default([]).describe("Optional non-secret observations. Secret-looking text is redacted before output.")
+  },
+  async (input) => {
+    const root = input.projectPath ? resolveProjectPath(input.projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = input.sampleId ? findSample(input.sampleId) : findSample("cloud-recognition");
+    return jsonText(await buildPortalEvidenceReport({ ...input, root, sample }));
+  }
+);
+
+server.tool(
+  "easyar_write_portal_evidence",
+  "Write a safe EasyAR portal evidence report without storing portal passwords, API KEY values, API Secret values, license keys, appKey, or appSecret.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, writes to Assets/EasyARGenerated/PORTAL_EVIDENCE.md by default."),
+    outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because portal evidence is most important for cloud setup."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    accountName: z.string().optional(),
+    apiKeyRecordId: z.string().optional(),
+    apiKeyAppName: z.string().optional(),
+    apiKeyCreatedAt: z.string().optional(),
+    cloudServicesEnabled: z.array(z.enum(["cloud-recognition", "spatialmap", "mega-landmark", "ar-operations", "mega-block", "other"])).default([]),
+    apiKeyPresent: z.boolean().optional(),
+    apiSecretPresent: z.boolean().optional(),
+    tokenStatus: z.enum(["not-checked", "not-needed", "present", "missing", "expired", "unknown"]).default("not-checked"),
+    senseLicenseStatus: z.enum(["not-checked", "present", "missing", "unknown"]).default("not-checked"),
+    senseLicenseRecordId: z.string().optional(),
+    cloudLibraryStatus: z.enum(["not-checked", "present", "missing", "unknown"]).default("not-checked"),
+    cloudLibraryName: z.string().optional(),
+    cloudLibraryRecordId: z.string().optional(),
+    cloudTargetCount: z.number().int().nonnegative().optional(),
+    portalUrl: z.string().url().optional(),
+    notes: z.array(z.string()).default([]),
+    relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/PORTAL_EVIDENCE.md for Unity projects or EasyARGenerated/PORTAL_EVIDENCE.md for outputRoot."),
+    overwrite: z.boolean().default(true)
+  },
+  async ({ projectPath, outputRoot, relativePath, overwrite, ...input }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
+    await ensureDirectory(root);
+    const sample = input.sampleId ? findSample(input.sampleId) : findSample("cloud-recognition");
+    const report = await buildPortalEvidenceReport({ ...input, root: projectPath ? root : null, sample });
+    const defaultRelativePath = projectPath
+      ? path.join("Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md")
+      : path.join("EasyARGenerated", "PORTAL_EVIDENCE.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildPortalEvidenceMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      readyForLocalConfig: report.readyForLocalConfig,
+      readyForCloudDeviceValidation: report.readyForCloudDeviceValidation,
+      blockerCount: report.blockers.length,
+      nextActions: report.nextActions,
+      security: report.security
     });
   }
 );
@@ -5527,6 +5616,205 @@ function officialAccessRemoteCheck(id: string, required: boolean, result: Awaite
     detail: result.endpoint ? `Endpoint: ${result.endpoint}` : "Endpoint is not configured.",
     nextActions: result.nextActions
   };
+}
+
+async function buildPortalEvidenceReport(input: {
+  root: string | null;
+  sample: SampleInfo;
+  platform: "android" | "ios" | "standalone" | "unknown";
+  accountName?: string;
+  apiKeyRecordId?: string;
+  apiKeyAppName?: string;
+  apiKeyCreatedAt?: string;
+  cloudServicesEnabled: Array<"cloud-recognition" | "spatialmap" | "mega-landmark" | "ar-operations" | "mega-block" | "other">;
+  apiKeyPresent?: boolean;
+  apiSecretPresent?: boolean;
+  tokenStatus: "not-checked" | "not-needed" | "present" | "missing" | "expired" | "unknown";
+  senseLicenseStatus: "not-checked" | "present" | "missing" | "unknown";
+  senseLicenseRecordId?: string;
+  cloudLibraryStatus: "not-checked" | "present" | "missing" | "unknown";
+  cloudLibraryName?: string;
+  cloudLibraryRecordId?: string;
+  cloudTargetCount?: number;
+  portalUrl?: string;
+  notes: string[];
+}) {
+  const needsCloudRecognition = input.sample.id === "cloud-recognition";
+  const localConfig = input.root ? await buildLocalConfigValidationReport(input.root) : null;
+  const cloudConfig = input.root ? await readCloudRecognitionConfig(input.root) : {};
+  const localConfigForRemote = input.root ? await readLocalConfigForRemoteValidation(input.root) : {};
+  const hasCloudLibrary = input.cloudLibraryStatus === "present";
+  const hasCloudTargets = typeof input.cloudTargetCount === "number" && input.cloudTargetCount > 0;
+  const cloudServiceEnabled = input.cloudServicesEnabled.includes("cloud-recognition");
+  const localCloudReady = !needsCloudRecognition || (
+    isNonPlaceholderString(cloudConfig.appId)
+    && (
+      isNonPlaceholderString(cloudConfig.apiKey)
+      || (isNonPlaceholderString(cloudConfig.appKey) && isNonPlaceholderString(cloudConfig.appSecret))
+    )
+  );
+  const localLicenseReady = localConfig
+    ? localConfig.checks.some((check) => check.id === "license-key" && check.ok)
+    : false;
+  const blockers = [
+    portalEvidenceBlocker(
+      "sense-license",
+      input.senseLicenseStatus !== "missing",
+      "Sense License record is missing in the observed portal page.",
+      "Create or locate the EasyAR Sense license bound to the Unity bundle/package identifier."
+    ),
+    portalEvidenceBlocker(
+      "local-license-config",
+      !input.root || localLicenseReady,
+      "Local easyar.local.json does not have a valid EasyAR license presence check.",
+      "Fill easyar.licenseKey locally, then run easyar_validate_local_config."
+    ),
+    portalEvidenceBlocker(
+      "cloud-service-enabled",
+      !needsCloudRecognition || cloudServiceEnabled,
+      "Cloud Recognition is not listed as enabled for the observed API KEY app.",
+      "Enable Cloud Recognition for the API KEY app in the EasyAR development center."
+    ),
+    portalEvidenceBlocker(
+      "cloud-api-key-presence",
+      !needsCloudRecognition || input.apiKeyPresent === true,
+      "Portal API KEY presence was not confirmed.",
+      "Confirm the API KEY field exists in the portal, but do not paste the value into MCP chat."
+    ),
+    portalEvidenceBlocker(
+      "cloud-api-secret-presence",
+      !needsCloudRecognition || input.apiSecretPresent === true,
+      "Portal API Secret presence was not confirmed.",
+      "Confirm the API Secret field exists in the portal, but do not paste the value into MCP chat."
+    ),
+    portalEvidenceBlocker(
+      "local-cloud-config",
+      !input.root || localCloudReady,
+      "Local Cloud Recognition credentials are not complete for the focused sample.",
+      "Fill easyar.cloudRecognition.appId plus apiKey locally, or legacy appId/appKey/appSecret, then validate local config."
+    ),
+    portalEvidenceBlocker(
+      "cloud-library",
+      !needsCloudRecognition || hasCloudLibrary,
+      "No Cloud Recognition image library was observed.",
+      "Create a Cloud Recognition image library in the EasyAR development center."
+    ),
+    portalEvidenceBlocker(
+      "cloud-target-image",
+      !needsCloudRecognition || hasCloudTargets,
+      "No uploaded Cloud Recognition target image count was observed.",
+      "Upload at least one test target image to the Cloud Recognition library before device validation."
+    )
+  ].filter((blocker) => !blocker.ok);
+  const readyForLocalConfig = input.root ? Boolean(localConfig?.valid) : false;
+  const readyForCloudDeviceValidation = !needsCloudRecognition || (readyForLocalConfig && cloudServiceEnabled && hasCloudLibrary && hasCloudTargets);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample: {
+      id: input.sample.id,
+      name: input.sample.name
+    },
+    platform: input.platform,
+    portal: {
+      accountName: sanitizePortalText(input.accountName),
+      portalUrl: sanitizePortalUrl(input.portalUrl),
+      apiKeyRecordId: sanitizePortalId(input.apiKeyRecordId),
+      apiKeyAppName: sanitizePortalText(input.apiKeyAppName),
+      apiKeyCreatedAt: sanitizePortalText(input.apiKeyCreatedAt),
+      cloudServicesEnabled: input.cloudServicesEnabled,
+      apiKeyPresent: input.apiKeyPresent ?? null,
+      apiSecretPresent: input.apiSecretPresent ?? null,
+      tokenStatus: input.tokenStatus,
+      senseLicenseStatus: input.senseLicenseStatus,
+      senseLicenseRecordId: sanitizePortalId(input.senseLicenseRecordId),
+      cloudLibraryStatus: input.cloudLibraryStatus,
+      cloudLibraryName: sanitizePortalText(input.cloudLibraryName),
+      cloudLibraryRecordId: sanitizePortalId(input.cloudLibraryRecordId),
+      cloudTargetCount: input.cloudTargetCount ?? null
+    },
+    localConfig: input.root
+      ? {
+          path: path.join(input.root, "ProjectSettings", "EasyAR", "easyar.local.json"),
+          valid: localConfig?.valid ?? false,
+          licenseKeyPresent: localLicenseReady,
+          bundleIdentifier: localConfigForRemote.bundleIdentifier ?? null,
+          cloudRecognition: {
+            appIdPresent: isNonPlaceholderString(cloudConfig.appId),
+            apiKeyPresent: isNonPlaceholderString(cloudConfig.apiKey),
+            apiSecretPresent: isNonPlaceholderString(cloudConfig.apiSecret),
+            appKeyPresent: isNonPlaceholderString(cloudConfig.appKey),
+            appSecretPresent: isNonPlaceholderString(cloudConfig.appSecret)
+          }
+        }
+      : null,
+    readyForLocalConfig,
+    readyForCloudDeviceValidation,
+    blockers,
+    notes: input.notes.map((note) => sanitizePortalText(note)).filter((note): note is string => Boolean(note)),
+    nextActions: blockers.length > 0
+      ? Array.from(new Set(blockers.map((blocker) => blocker.action)))
+      : [
+          "Portal evidence and local config presence are sufficient for the focused account-material handoff.",
+          "Continue with easyar_write_focused_preflight and the Unity compile/build/device validation sequence."
+        ],
+    security: "Portal evidence stores only non-secret ids, names, service flags, presence booleans, counts, and redacted notes. It must not include EasyAR passwords, verification codes, API KEY values, API Secret values, license keys, appKey, appSecret, tokens, signing keys, or private account data."
+  };
+}
+
+function portalEvidenceBlocker(id: string, ok: boolean, detail: string, action: string) {
+  return {
+    id,
+    ok,
+    detail,
+    action
+  };
+}
+
+function sanitizePortalText(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const redacted = redactSecretText(value.trim())
+    .replace(/\b[A-Fa-f0-9]{24,}\b/g, "<redacted>")
+    .replace(/\b[A-Za-z0-9+/=_-]{40,}\b/g, "<redacted>");
+  if (looksLikeStandaloneSecret(redacted)) {
+    return "<redacted>";
+  }
+  return redacted;
+}
+
+function sanitizePortalId(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!/^[A-Za-z0-9._:-]{1,64}$/.test(trimmed) || looksLikeStandaloneSecret(trimmed)) {
+    return "<redacted>";
+  }
+  return trimmed;
+}
+
+function sanitizePortalUrl(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = new URL(value);
+    parsed.search = "";
+    parsed.hash = "";
+    return redactSecretText(parsed.toString());
+  } catch {
+    return sanitizePortalText(value);
+  }
+}
+
+function looksLikeStandaloneSecret(value: string): boolean {
+  if (value === "<redacted>") {
+    return false;
+  }
+  return /^(?:[A-Fa-f0-9]{24,}|[A-Za-z0-9+/=_-]{40,})$/.test(value);
 }
 
 async function buildClientSetupReport(
@@ -13037,6 +13325,77 @@ function buildAccountMaterialsMarkdown(report: Awaited<ReturnType<typeof buildAc
     report.security,
     ""
   ].join("\n");
+}
+
+function buildPortalEvidenceMarkdown(report: Awaited<ReturnType<typeof buildPortalEvidenceReport>>): string {
+  return [
+    "# EasyAR Portal Evidence",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath ?? "not provided"}`,
+    `Sample: ${report.sample.name} (${report.sample.id})`,
+    `Platform: ${report.platform}`,
+    `Ready for local config: ${report.readyForLocalConfig ? "yes" : "no"}`,
+    `Ready for Cloud Recognition device validation: ${report.readyForCloudDeviceValidation ? "yes" : "no"}`,
+    "",
+    "## Portal Observations",
+    "",
+    `Account name: ${report.portal.accountName ?? "not recorded"}`,
+    `Portal URL: ${report.portal.portalUrl ?? "not recorded"}`,
+    `API KEY record id: ${report.portal.apiKeyRecordId ?? "not recorded"}`,
+    `API KEY app name: ${report.portal.apiKeyAppName ?? "not recorded"}`,
+    `API KEY created at: ${report.portal.apiKeyCreatedAt ?? "not recorded"}`,
+    `Cloud services enabled: ${report.portal.cloudServicesEnabled.length > 0 ? report.portal.cloudServicesEnabled.join(", ") : "not recorded"}`,
+    `API KEY present: ${presenceLabel(report.portal.apiKeyPresent)}`,
+    `API Secret present: ${presenceLabel(report.portal.apiSecretPresent)}`,
+    `Token status: ${report.portal.tokenStatus}`,
+    `Sense License status: ${report.portal.senseLicenseStatus}`,
+    `Sense License record id: ${report.portal.senseLicenseRecordId ?? "not recorded"}`,
+    `Cloud library status: ${report.portal.cloudLibraryStatus}`,
+    `Cloud library name: ${report.portal.cloudLibraryName ?? "not recorded"}`,
+    `Cloud library record id: ${report.portal.cloudLibraryRecordId ?? "not recorded"}`,
+    `Cloud target count: ${report.portal.cloudTargetCount ?? "not recorded"}`,
+    "",
+    "## Local Config Presence",
+    "",
+    ...(report.localConfig
+      ? [
+          `Config path: ${report.localConfig.path}`,
+          `Valid: ${report.localConfig.valid ? "yes" : "no"}`,
+          `License key present: ${report.localConfig.licenseKeyPresent ? "yes" : "no"}`,
+          `Bundle identifier: ${report.localConfig.bundleIdentifier ?? "not configured"}`,
+          `Cloud appId present: ${report.localConfig.cloudRecognition.appIdPresent ? "yes" : "no"}`,
+          `Cloud apiKey present: ${report.localConfig.cloudRecognition.apiKeyPresent ? "yes" : "no"}`,
+          `Cloud apiSecret present: ${report.localConfig.cloudRecognition.apiSecretPresent ? "yes" : "no"}`,
+          `Cloud appKey present: ${report.localConfig.cloudRecognition.appKeyPresent ? "yes" : "no"}`,
+          `Cloud appSecret present: ${report.localConfig.cloudRecognition.appSecretPresent ? "yes" : "no"}`
+        ]
+      : ["No projectPath was provided, so local config was not inspected."]),
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(report.blockers.map((blocker) => `${blocker.id}: ${blocker.detail} Action: ${blocker.action}`), "No portal evidence blockers."),
+    "",
+    "## Notes",
+    "",
+    ...markdownIssueList(report.notes, "No notes recorded."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    report.security,
+    ""
+  ].join("\n");
+}
+
+function presenceLabel(value: boolean | null): string {
+  if (value === null) {
+    return "not recorded";
+  }
+  return value ? "yes" : "no";
 }
 
 function buildLocalConfigFormMarkdown(form: Awaited<ReturnType<typeof buildLocalConfigForm>>): string {

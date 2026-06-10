@@ -264,6 +264,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_account_onboarding`: write the account onboarding guide to `Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md` or `EasyARGenerated/ACCOUNT_ONBOARDING.md`.
 - `easyar_account_materials`: generate a field-by-field checklist of EasyAR account materials, source locations, local storage targets, and share policies.
 - `easyar_write_account_materials`: write the account materials checklist to `Assets/EasyARGenerated/ACCOUNT_MATERIALS.md` or `EasyARGenerated/ACCOUNT_MATERIALS.md`.
+- `easyar_portal_evidence`: generate a safe EasyAR portal evidence report from non-secret browser observations such as app record id, service flags, license presence, and Cloud Recognition library status.
+- `easyar_write_portal_evidence`: write the safe portal evidence report to `Assets/EasyARGenerated/PORTAL_EVIDENCE.md` or `EasyARGenerated/PORTAL_EVIDENCE.md` without storing API KEY/API Secret/license values.
 - `easyar_onboarding_report`: generate a first-run project onboarding report across client setup, official access, release manifest, and workflow state.
 - `easyar_write_onboarding_report`: write the onboarding report to `Assets/EasyARGenerated/<sampleId>/ONBOARDING.md`.
 - `easyar_generate_project_handoff`: generate a project-level continuation dashboard across client setup, account materials, local config, Unity environment, focused sample state, and next calls.
