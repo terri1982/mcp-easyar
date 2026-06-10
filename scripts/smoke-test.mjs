@@ -69,6 +69,10 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_review_csharp_scripts"),
     "easyar_review_csharp_scripts should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_run_unity_compile_check"),
+    "easyar_run_unity_compile_check should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -141,6 +145,7 @@ try {
   });
   assertTextIncludes(imageRunSequence, "\"supportedNow\": true");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
+  assertTextIncludes(imageRunSequence, "easyar_run_unity_compile_check");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
   assertTextIncludes(imageRunSequence, "\"logPath\"");
   assertTextIncludes(imageRunSequence, "easyar_analyze_latest_unity_log");
@@ -169,6 +174,14 @@ try {
   assertTextIncludes(initialReadiness, "\"ready\": false");
   assertTextIncludes(initialReadiness, "Import the official EasyAR Unity Plugin package");
   assertTextIncludes(initialReadiness, "image-target-assets");
+
+  const compileDryRun = await callTool("easyar_run_unity_compile_check", {
+    projectPath,
+    sampleId: "image-tracking",
+    dryRun: true
+  });
+  assertTextIncludes(compileDryRun, "\"dryRun\": true");
+  assertTextIncludes(compileDryRun, "mcp-easyar-CompileCheck.log");
 
   const prepared = await callTool("easyar_prepare_unity_project", {
     projectPath,

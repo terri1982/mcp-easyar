@@ -130,6 +130,7 @@ Review generated or edited scripts before compiling:
 
 ```text
 easyar_review_csharp_scripts projectPath=/path/to/UnityProject
+easyar_run_unity_compile_check projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
 
 ## 7. Final Readiness Check

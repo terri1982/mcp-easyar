@@ -53,6 +53,7 @@ const toolCatalog = [
   "easyar_write_csharp_file",
   "easyar_review_csharp_scripts",
   "easyar_unity_environment",
+  "easyar_run_unity_compile_check",
   "easyar_run_unity_method"
 ] as const;
 
@@ -1069,6 +1070,54 @@ server.tool(
 );
 
 server.tool(
+  "easyar_run_unity_compile_check",
+  "Open a Unity project in batch mode to force script import/compilation, then optionally analyze the produced log.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().optional().describe("Optional focused sample id used for log diagnostics."),
+    unityPath: z.string().optional().describe("Unity executable path. Defaults to EASYAR_UNITY_PATH or Unity on PATH."),
+    logPath: z.string().optional().describe("Optional Unity -logFile path. Defaults to Logs/mcp-easyar-CompileCheck.log inside the project."),
+    timeoutSeconds: z.number().int().positive().max(1800).default(600),
+    dryRun: z.boolean().default(false).describe("Return the command without launching Unity.")
+  },
+  async ({ projectPath, sampleId, unityPath, logPath, timeoutSeconds, dryRun }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const unity = unityPath ?? process.env.EASYAR_UNITY_PATH ?? "Unity";
+    const sample = sampleId ? findSample(sampleId) : null;
+    const resolvedLogPath = resolveUnityLogPath(root, logPath ?? path.join("Logs", "mcp-easyar-CompileCheck.log"));
+    const args = buildUnityArgs(root, null, resolvedLogPath);
+
+    if (dryRun) {
+      return jsonText({
+        dryRun: true,
+        command: [unity, ...args].join(" "),
+        logPath: resolvedLogPath,
+        nextStep: "Run without dryRun to force Unity script import/compilation."
+      });
+    }
+
+    const result = await runUnity(unity, root, null, timeoutSeconds, resolvedLogPath);
+    const logText = await exists(resolvedLogPath) ? await readLogTail(resolvedLogPath, 200000) : `${result.stdout}\n${result.stderr}`;
+    const issues = analyzeUnityLog(logText, sample);
+    return jsonText({
+      ...result,
+      sample: sample ? {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      } : null,
+      summary: summarizeLog(logText),
+      issueCount: issues.length,
+      issues,
+      nextActions: issues.length > 0
+        ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
+        : ["No known EasyAR/Unity issue patterns were detected. If Unity exited 0, continue with the focused run sequence."]
+    });
+  }
+);
+
+server.tool(
   "easyar_run_unity_method",
   "Run a Unity static editor method in batch mode for project automation.",
   {
@@ -1238,6 +1287,16 @@ function buildFocusedRunSequence(input: {
       {
         name: "Configure Unity",
         steps: [
+          {
+            step: "Run Unity compile/import check",
+            tool: "easyar_run_unity_compile_check",
+            arguments: {
+              projectPath,
+              sampleId: sample.id,
+              logPath: path.join("Logs", "mcp-easyar-CompileCheck.log")
+            },
+            expected: "Unity opens the project in batch mode, imports scripts, and exits without compile errors."
+          },
           {
             step: "Generate mobile player settings helper",
             tool: "easyar_create_mobile_settings_helper",
@@ -2937,21 +2996,27 @@ function defaultUnityBatchLogPath(executeMethod: string): string {
   return path.join("Logs", `mcp-easyar-${executeMethod.split(".").pop() ?? "unity-method"}.log`);
 }
 
-async function runUnity(unity: string, projectPath: string, executeMethod: string, timeoutSeconds: number, logPath: string | null) {
-  if (logPath) {
-    await mkdir(path.dirname(logPath), { recursive: true });
-  }
+function buildUnityArgs(projectPath: string, executeMethod: string | null, logPath: string | null): string[] {
   const args = [
     "-batchmode",
     "-quit",
     "-projectPath",
-    projectPath,
-    "-executeMethod",
-    executeMethod
+    projectPath
   ];
+  if (executeMethod) {
+    args.push("-executeMethod", executeMethod);
+  }
   if (logPath) {
     args.push("-logFile", logPath);
   }
+  return args;
+}
+
+async function runUnity(unity: string, projectPath: string, executeMethod: string | null, timeoutSeconds: number, logPath: string | null) {
+  if (logPath) {
+    await mkdir(path.dirname(logPath), { recursive: true });
+  }
+  const args = buildUnityArgs(projectPath, executeMethod, logPath);
 
   return new Promise<{ command: string; exitCode: number | null; logPath: string | null; stdout: string; stderr: string }>((resolve, reject) => {
     const child = spawn(unity, args, { stdio: ["ignore", "pipe", "pipe"] });
