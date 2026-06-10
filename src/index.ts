@@ -3205,7 +3205,7 @@ async function collectUnityExecutables(dirPath: string, found: Set<string>, dept
 async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
   const easyarSignals = filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 120));
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
-  const matchingScenes = matchSampleScenes(sample, sampleScenes);
+  const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
   const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
 
   const checks = [
@@ -3297,7 +3297,7 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
   const allEasyARSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 160);
   const easyarSignals = filterOfficialEasyARSignals(allEasyARSignals);
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
-  const matchingScenes = matchSampleScenes(sample, sampleScenes);
+  const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
   const targetAssets = sample.id === "image-tracking"
     ? await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, 80)
     : [];
@@ -3933,7 +3933,7 @@ async function buildSampleSceneAudit(root: string, sample: SampleInfo, maxCandid
     .filter((candidatePath) => !filterOfficialEasyARSignals([candidatePath]).includes(candidatePath))
     .slice(0, maxCandidates);
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, maxCandidates * 3);
-  const matchingScenes = matchSampleScenes(sample, sampleScenes).slice(0, maxCandidates);
+  const matchingScenes = (await matchSampleScenes(root, sample, sampleScenes)).slice(0, maxCandidates);
   const buildSettingsHints = await readBuildSettingsSceneHints(root, sample);
   const sampleSpecific = await buildSampleSceneAuditSpecifics(root, sample, maxCandidates);
   const readiness = await buildSampleReadinessReport(root, sample);
@@ -4637,10 +4637,38 @@ function filterOfficialEasyARSignals(paths: string[]): string[] {
   );
 }
 
-function matchSampleScenes(sample: SampleInfo, scenePaths: string[]): string[] {
-  return scenePaths.filter((scenePath) =>
-    sample.unityScenes.some((hint) => scenePath.toLowerCase().includes(hint.toLowerCase()))
-  );
+async function matchSampleScenes(root: string, sample: SampleInfo, scenePaths: string[]): Promise<string[]> {
+  const matches: string[] = [];
+  for (const scenePath of scenePaths) {
+    if (sample.unityScenes.some((hint) => scenePath.toLowerCase().includes(hint.toLowerCase()))) {
+      matches.push(scenePath);
+      continue;
+    }
+    if (await sceneContentMatchesSample(root, sample, scenePath)) {
+      matches.push(scenePath);
+    }
+  }
+  return matches;
+}
+
+async function sceneContentMatchesSample(root: string, sample: SampleInfo, scenePath: string): Promise<boolean> {
+  const absolutePath = path.join(root, scenePath);
+  if (!absolutePath.startsWith(root + path.sep) || !await exists(absolutePath)) {
+    return false;
+  }
+  let text = "";
+  try {
+    text = await readFile(absolutePath, "utf8");
+  } catch {
+    return false;
+  }
+  if (sample.id === "image-tracking") {
+    return /ImageTracking|ImageTarget|ImageTracker|TargetDataFileSource/i.test(text);
+  }
+  if (sample.id === "cloud-recognition") {
+    return /CloudRecognition|CloudRecognizer|CloudRecogniz/i.test(text);
+  }
+  return false;
 }
 
 function readinessAction(checkId: string, sample: SampleInfo): string {
@@ -4749,7 +4777,7 @@ async function readBuildSettingsSceneHints(root: string, sample: SampleInfo) {
   }
 
   const enabledScenes = scenes.filter((scene) => scene.enabled).map((scene) => scene.path);
-  const matchingEnabledScenes = enabledScenes.filter((scenePath) => matchSampleScenes(sample, [scenePath]).length > 0);
+  const matchingEnabledScenes = await matchSampleScenes(root, sample, enabledScenes);
   const firstEnabledScene = enabledScenes[0] ?? null;
   return {
     fileExists: true,
@@ -5564,7 +5592,7 @@ function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRu
     "## Readiness",
     "",
     `Ready: ${report.readiness.ready ? "yes" : "no"}`,
-    ...markdownIssueList(failedReadiness.map((check) => `${check.id}: ${check.detail}`), "All readiness checks passed."),
+    ...markdownIssueList(failedReadiness.map((check) => `MISSING ${check.id}: ${check.detail}`), "All readiness checks passed."),
     "",
     "## Local Config",
     "",

@@ -39,6 +39,7 @@ Initial public MVP for `mcp-easyar`.
 - Official EasyAR Unity Plugin and focused sample import checklist generation with `IMPORT_CHECKLIST.md` artifacts.
 - Unity project inspection and sample readiness diagnostics.
 - Sample-specific readiness checks for Image Tracking target assets and Cloud Recognition credentials.
+- Image Tracking scene detection by Unity scene content markers such as `ImageTarget`, `ImageTracker`, and `TargetDataFileSource`, so custom scene names can still be validated.
 - Focused Unity log diagnostics for Image Tracking target loading/detection and Cloud Recognition credential/network failures.
 - Latest Unity log discovery and tail analysis for failed Editor/batch runs.
 - Project-local Unity batch log path support for `easyar_run_unity_method` and focused run sequences.

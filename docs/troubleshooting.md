@@ -26,6 +26,10 @@ Common blockers:
 - `image-tracking-target-load`: Unity logs indicate the target file cannot be loaded.
 - `image-tracking-no-detection`: the app opens camera but never detects the target.
 
+Custom scene note:
+
+The MCP server recognizes Image Tracking scenes by official sample naming hints and by scene content markers such as `ImageTarget`, `ImageTracker`, and `TargetDataFileSource`. This allows custom scenes such as an RMB recognition scene to be treated as Image Tracking candidates even when the filename does not contain `ImageTracking`.
+
 Recommended flow:
 
 ```text

@@ -626,7 +626,11 @@ try {
   await mkdir(path.join(projectPath, "Assets", "EasyAR"), { recursive: true });
   await writeFile(path.join(projectPath, "Assets", "EasyAR", "EasyARSense.asset"), "fake-easyar-signal", "utf8");
   await mkdir(path.join(projectPath, "Assets", "Scenes"), { recursive: true });
-  await writeFile(path.join(projectPath, "Assets", "Scenes", "ImageTracking.unity"), "%YAML 1.1\n", "utf8");
+  await writeFile(
+    path.join(projectPath, "Assets", "Scenes", "RMBRecognition.unity"),
+    "%YAML 1.1\nm_Name: ImageTarget-rmb\nTargetDataFileSource:\n",
+    "utf8"
+  );
   await writeFile(
     path.join(projectPath, "ProjectSettings", "EditorBuildSettings.asset"),
     [
@@ -635,7 +639,7 @@ try {
       "EditorBuildSettings:",
       "  m_Scenes:",
       "  - enabled: 1",
-      "    path: Assets/Scenes/ImageTracking.unity",
+      "    path: Assets/Scenes/RMBRecognition.unity",
       "    guid: 00000000000000000000000000000000"
     ].join("\n"),
     "utf8"
@@ -647,7 +651,7 @@ try {
   });
   assertTextIncludes(readyImportChecklist, "\"readyForFocusedPreparation\": true");
   assertTextIncludes(readyImportChecklist, "Assets/EasyAR/EasyARSense.asset");
-  assertTextIncludes(readyImportChecklist, "Assets/Scenes/ImageTracking.unity");
+  assertTextIncludes(readyImportChecklist, "Assets/Scenes/RMBRecognition.unity");
   assertTextIncludes(readyImportChecklist, "Assets/Targets/ImageTarget.jpg");
 
   const readySceneAudit = await callTool("easyar_audit_sample_scene", {
@@ -655,7 +659,7 @@ try {
     sampleId: "image-tracking"
   });
   assertTextIncludes(readySceneAudit, "\"readyForUnityValidation\": true");
-  assertTextIncludes(readySceneAudit, "Assets/Scenes/ImageTracking.unity");
+  assertTextIncludes(readySceneAudit, "Assets/Scenes/RMBRecognition.unity");
   assertTextIncludes(readySceneAudit, "Assets/EasyAR/EasyARSense.asset");
   assertTextIncludes(readySceneAudit, "Assets/Targets/ImageTarget.jpg");
 
