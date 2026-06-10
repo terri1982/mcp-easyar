@@ -13,6 +13,8 @@ This MVP focuses on local Unity project assistance:
 
 The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
 
+This project must not be used to bypass EasyAR login, license checks, download authorization, enterprise gates, rate limits, or any other access control.
+
 Official references used by this MVP:
 
 - EasyAR sample apps: https://www.easyar.cn/doc/en/develop/samples.html
@@ -64,6 +66,31 @@ Use the same stdio command:
 ```bash
 node /absolute/path/to/easyar-official-mcp-server/dist/index.js
 ```
+
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+Run checks:
+
+```bash
+npm run build
+npm run typecheck
+```
+
+## Publish To GitHub
+
+After authenticating GitHub CLI with your account:
+
+```bash
+gh auth login
+gh repo create easyar-official-mcp-server --public --source=. --remote=origin --push
+```
+
+Use `--private` instead of `--public` if this repository should not be public yet.
 
 ## Tools
 
