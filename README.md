@@ -13,6 +13,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
+- generate an ordered focused sample run sequence for Codex or Claude
 - list common EasyAR Unity sample categories with focused/deferred status
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for Android/iOS player settings and camera permissions
@@ -137,6 +138,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_check_account`: call a configured official EasyAR account-status endpoint with `EASYAR_API_TOKEN`.
 - `easyar_validate_license`: call a configured official EasyAR license-validation endpoint using local config or explicit input without returning secrets.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
+- `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
 - `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.

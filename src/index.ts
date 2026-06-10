@@ -36,6 +36,7 @@ const toolCatalog = [
   "easyar_validate_license",
   "easyar_generate_client_config",
   "easyar_generate_sample_plan",
+  "easyar_generate_run_sequence",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -143,12 +144,13 @@ const quickstartWorkflow = [
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
-  "9. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
-  "10. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
-  "11. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "12. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
-  "13. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
+  "8. Run `easyar_generate_run_sequence` for an ordered Codex/Claude execution plan.",
+  "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
+  "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
+  "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
+  "12. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "13. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
+  "14. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -421,6 +423,32 @@ server.tool(
     ].join("\n");
 
     return markdownText(plan);
+  }
+);
+
+server.tool(
+  "easyar_generate_run_sequence",
+  "Generate an ordered MCP and Unity batch sequence for the focused Image Tracking or Cloud Recognition sample run-through.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
+    developmentBuild: z.boolean().default(true).describe("Whether the generated build helper should use a Unity development build.")
+  },
+  async ({ projectPath, sampleId, platform, outputPath, developmentBuild }) => {
+    const sample = findSample(sampleId);
+    const root = resolveProjectPath(projectPath);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    return jsonText(buildFocusedRunSequence({
+      projectPath: root,
+      sample,
+      platform,
+      outputPath: outputPath ?? defaultOutput,
+      developmentBuild
+    }));
   }
 );
 
@@ -1032,6 +1060,164 @@ function buildClientConfig(client: typeof clientKinds[number], entrypoint: strin
     command: "node",
     args: [entrypoint],
     env
+  };
+}
+
+function buildFocusedRunSequence(input: {
+  projectPath: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  outputPath: string;
+  developmentBuild: boolean;
+}) {
+  const { projectPath, sample, platform, outputPath, developmentBuild } = input;
+  const focused = sample.implementationStatus === "focused";
+  const sampleSpecific = sample.id === "cloud-recognition"
+    ? [
+        {
+          step: "Fill cloud recognition credentials",
+          tool: "easyar_validate_local_config",
+          arguments: { projectPath },
+          expected: "Local config exists and cloudRecognition fields are either intentionally empty or all filled.",
+          requiredBeforeDeviceRun: true
+        },
+        {
+          step: "Confirm Cloud Recognition readiness",
+          tool: "easyar_check_sample_readiness",
+          arguments: { projectPath, sampleId: sample.id },
+          expected: "cloud-recognition-credentials passes before a real device run.",
+          requiredBeforeDeviceRun: true
+        }
+      ]
+    : [
+        {
+          step: "Add Image Tracking target assets",
+          tool: "easyar_check_sample_readiness",
+          arguments: { projectPath, sampleId: sample.id },
+          expected: "image-target-assets passes after target images or target database assets are under Assets.",
+          requiredBeforeDeviceRun: true
+        }
+      ];
+
+  return {
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    supportedNow: focused,
+    projectPath,
+    platform,
+    outputPath,
+    developmentBuild,
+    phases: [
+      {
+        name: "Inspect",
+        steps: [
+          {
+            step: "Inspect Unity project",
+            tool: "easyar_inspect_unity_project",
+            arguments: { projectPath },
+            expected: "Project has Assets, Packages/manifest.json, ProjectSettings/ProjectVersion.txt, and EasyAR import signals."
+          },
+          {
+            step: "Check focused sample readiness",
+            tool: "easyar_check_sample_readiness",
+            arguments: { projectPath, sampleId: sample.id },
+            expected: "Only proceed when missing items are understood. Deferred samples should stop here."
+          }
+        ]
+      },
+      {
+        name: "Prepare",
+        steps: [
+          {
+            step: "Generate EasyAR helpers, local config example, runbook, and support directories",
+            tool: "easyar_prepare_unity_project",
+            arguments: { projectPath, sampleId: sample.id, overwrite: false },
+            expected: `Assets/EasyARGenerated/${sample.id}/RUNBOOK.md and Editor helper scripts are present.`
+          },
+          {
+            step: "Validate local config without exposing secrets",
+            tool: "easyar_validate_local_config",
+            arguments: { projectPath },
+            expected: "License key, account token, target platform, and optional cloud fields are valid."
+          },
+          ...sampleSpecific
+        ]
+      },
+      {
+        name: "Configure Unity",
+        steps: [
+          {
+            step: "Generate mobile player settings helper",
+            tool: "easyar_create_mobile_settings_helper",
+            arguments: { projectPath, sampleId: sample.id, platform, overwrite: true },
+            expected: "EasyARMobileSettingsHelper.cs is generated for the target platform."
+          },
+          {
+            step: "Apply mobile player settings in Unity batch mode",
+            tool: "easyar_run_unity_method",
+            arguments: {
+              projectPath,
+              executeMethod: "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings"
+            },
+            expected: "Unity exits successfully after applying package/bundle identifier and camera/network-related settings."
+          },
+          {
+            step: "Generate Build Settings helper",
+            tool: "easyar_create_build_settings_helper",
+            arguments: { projectPath, sampleId: sample.id, platform, overwrite: true },
+            expected: "EasyARBuildSettingsHelper.cs points at the focused official sample scene."
+          },
+          {
+            step: "Apply Build Settings in Unity batch mode",
+            tool: "easyar_run_unity_method",
+            arguments: {
+              projectPath,
+              executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings"
+            },
+            expected: "Matching official sample scene is enabled in Build Settings."
+          }
+        ]
+      },
+      {
+        name: "Build And Diagnose",
+        steps: [
+          {
+            step: "Generate device build helper",
+            tool: "easyar_create_device_build_helper",
+            arguments: { projectPath, platform, outputPath, developmentBuild, overwrite: true },
+            expected: "EasyARDeviceBuildHelper.cs is generated."
+          },
+          {
+            step: "Run Unity player build",
+            tool: "easyar_run_unity_method",
+            arguments: {
+              projectPath,
+              executeMethod: "EasyAR.EditorTools.EasyARDeviceBuildHelper.Build",
+              timeoutSeconds: 1800
+            },
+            expected: "Android APK or iOS Xcode project is produced."
+          },
+          {
+            step: "Analyze Unity logs if any step fails",
+            tool: "easyar_analyze_unity_log",
+            arguments: { sampleId: sample.id, logText: "paste relevant Unity log excerpt here" },
+            expected: "Focused diagnostics identify Image Tracking target issues or Cloud Recognition credential/network issues."
+          }
+        ]
+      }
+    ],
+    stopConditions: focused
+      ? [
+          "Stop before device build if easyar_check_sample_readiness reports missing EasyAR assets, sample scene, local config, image target assets, or cloud credentials.",
+          "Stop if Unity compilation fails; run easyar_analyze_unity_log and fix the first compiler error."
+        ]
+      : [
+          "This sample is deferred. Current run-through scope is image-tracking and cloud-recognition."
+        ],
+    security: "Do not paste or commit EasyAR account tokens, license keys, cloud credentials, signing keys, or provisioning secrets."
   };
 }
 

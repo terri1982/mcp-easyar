@@ -114,6 +114,24 @@ try {
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
 
   const projectPath = await createUnityProject();
+  const imageRunSequence = await callTool("easyar_generate_run_sequence", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(imageRunSequence, "\"supportedNow\": true");
+  assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
+  assertTextIncludes(imageRunSequence, "image-target-assets");
+
+  const cloudRunSequence = await callTool("easyar_generate_run_sequence", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "ios",
+    outputPath: "Builds/iOS/cloud-recognition"
+  });
+  assertTextIncludes(cloudRunSequence, "cloud-recognition-credentials");
+  assertTextIncludes(cloudRunSequence, "Builds/iOS/cloud-recognition");
+
   const initialReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,
     sampleId: "image-tracking"
