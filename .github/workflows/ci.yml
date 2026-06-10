@@ -32,5 +32,8 @@ jobs:
       - name: MCP smoke test
         run: npm test
 
+      - name: Bin smoke test
+        run: npm run bin:smoke
+
       - name: Package dry run
         run: npm run pack:check

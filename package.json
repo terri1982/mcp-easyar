@@ -15,9 +15,11 @@
     "SECURITY.md"
   ],
   "scripts": {
+    "bin:smoke": "npm run build && MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs",
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "pack:check": "npm run build && npm pack --dry-run",
+    "postbuild": "chmod +x dist/index.js",
     "start": "node dist/index.js",
     "test": "npm run build && node scripts/smoke-test.mjs",
     "typecheck": "tsc --noEmit"

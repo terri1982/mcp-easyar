@@ -3,8 +3,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-const serverPath = path.resolve("dist/index.js");
-const child = spawn(process.execPath, [serverPath], {
+const command = process.env.MCP_EASYAR_SMOKE_COMMAND ?? process.execPath;
+const args = process.env.MCP_EASYAR_SMOKE_COMMAND
+  ? []
+  : [path.resolve("dist/index.js")];
+const child = spawn(command, args, {
   env: {
     ...process.env,
     EASYAR_API_BASE_URL: "https://www.easyar.cn",
