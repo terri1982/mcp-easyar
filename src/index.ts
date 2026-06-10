@@ -223,6 +223,84 @@ server.tool(
 );
 
 server.tool(
+  "easyar_check_sample_readiness",
+  "Check whether a Unity project has the local pieces needed to run a specific EasyAR sample workflow.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Sample id from easyar_list_samples.")
+  },
+  async ({ projectPath, sampleId }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const easyarSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 120);
+    const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
+    const matchingScenes = matchSampleScenes(sample, sampleScenes);
+
+    const checks = [
+      {
+        id: "unity-project",
+        ok: await exists(path.join(root, "Assets")) && await exists(path.join(root, "ProjectSettings", "ProjectVersion.txt")),
+        detail: "Unity project contains Assets and ProjectSettings/ProjectVersion.txt."
+      },
+      {
+        id: "packages-manifest",
+        ok: await exists(path.join(root, "Packages", "manifest.json")),
+        detail: "Unity Packages/manifest.json exists."
+      },
+      {
+        id: "easyar-assets",
+        ok: easyarSignals.length > 0,
+        detail: easyarSignals.length > 0
+          ? `Found ${easyarSignals.length} EasyAR-related asset/package path(s).`
+          : "No EasyAR-related asset/package path was found. Import the official EasyAR Unity Plugin package."
+      },
+      {
+        id: "sample-scene",
+        ok: matchingScenes.length > 0,
+        detail: matchingScenes.length > 0
+          ? `Found matching sample scene(s): ${matchingScenes.join(", ")}.`
+          : `No scene matched hints: ${sample.unityScenes.join(", ")}. Import the official ${sample.name} sample scene.`
+      },
+      {
+        id: "local-config-template",
+        ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example")),
+        detail: "ProjectSettings/EasyAR/easyar.local.json.example exists."
+      },
+      {
+        id: "local-config",
+        ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")),
+        detail: "ProjectSettings/EasyAR/easyar.local.json exists for local license and account credentials."
+      },
+      {
+        id: "sample-runner",
+        ok: await exists(path.join(root, "Assets", "Editor", "EasyARSampleRunner.cs")),
+        detail: "Assets/Editor/EasyARSampleRunner.cs exists."
+      },
+      {
+        id: "build-settings-helper",
+        ok: await exists(path.join(root, "Assets", "Editor", "EasyARBuildSettingsHelper.cs")),
+        detail: "Assets/Editor/EasyARBuildSettingsHelper.cs exists."
+      }
+    ];
+
+    const nextActions = checks
+      .filter((check) => !check.ok)
+      .map((check) => readinessAction(check.id, sample));
+
+    return jsonText({
+      projectPath: root,
+      sample: sample.name,
+      unityVersion: await readUnityVersion(root),
+      ready: checks.every((check) => check.ok),
+      checks,
+      matchingScenes,
+      nextActions
+    });
+  }
+);
+
+server.tool(
   "easyar_prepare_unity_project",
   "Prepare a Unity project for an authorized EasyAR sample workflow by creating editor helpers, local config templates, and secret ignore rules.",
   {
@@ -458,13 +536,41 @@ async function findFiles(root: string, relativeDirs: string[], pattern: RegExp, 
   for (const relativeDir of relativeDirs) {
     const start = path.join(root, relativeDir);
     if (await exists(start)) {
-      await walk(start, pattern, found, limit);
+      await walk(root, start, pattern, found, limit);
     }
   }
   return found.map((filePath) => path.relative(root, filePath));
 }
 
-async function walk(dirPath: string, pattern: RegExp, found: string[], limit: number): Promise<void> {
+function matchSampleScenes(sample: SampleInfo, scenePaths: string[]): string[] {
+  return scenePaths.filter((scenePath) =>
+    sample.unityScenes.some((hint) => scenePath.toLowerCase().includes(hint.toLowerCase()))
+  );
+}
+
+function readinessAction(checkId: string, sample: SampleInfo): string {
+  if (checkId === "unity-project") {
+    return "Open or create a Unity project before running EasyAR sample tools.";
+  }
+  if (checkId === "packages-manifest") {
+    return "Open the project once in Unity so Packages/manifest.json is created.";
+  }
+  if (checkId === "easyar-assets") {
+    return "Import the official EasyAR Unity Plugin package from the EasyAR download page.";
+  }
+  if (checkId === "sample-scene") {
+    return `Import the official ${sample.name} sample scene, then rerun easyar_check_sample_readiness.`;
+  }
+  if (checkId === "local-config-template" || checkId === "sample-runner" || checkId === "build-settings-helper") {
+    return `Run easyar_prepare_unity_project with sampleId "${sample.id}".`;
+  }
+  if (checkId === "local-config") {
+    return "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json and fill it with official local credentials.";
+  }
+  return "Review the EasyAR Unity checklist and rerun readiness checks.";
+}
+
+async function walk(root: string, dirPath: string, pattern: RegExp, found: string[], limit: number): Promise<void> {
   if (found.length >= limit) {
     return;
   }
@@ -481,8 +587,8 @@ async function walk(dirPath: string, pattern: RegExp, found: string[], limit: nu
 
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {
-      await walk(fullPath, pattern, found, limit);
-    } else if (pattern.test(fullPath)) {
+      await walk(root, fullPath, pattern, found, limit);
+    } else if (pattern.test(path.relative(root, fullPath))) {
       found.push(fullPath);
     }
   }

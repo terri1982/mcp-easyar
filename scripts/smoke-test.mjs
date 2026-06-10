@@ -56,6 +56,13 @@ try {
   assertTextIncludes(officialInfo, "easyarSenseUnityPlugin");
 
   const projectPath = await createUnityProject();
+  const initialReadiness = await callTool("easyar_check_sample_readiness", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(initialReadiness, "\"ready\": false");
+  assertTextIncludes(initialReadiness, "Import the official EasyAR Unity Plugin package");
+
   const prepared = await callTool("easyar_prepare_unity_project", {
     projectPath,
     sampleId: "image-tracking"
@@ -79,6 +86,12 @@ try {
     overwrite: true
   });
   assertTextIncludes(standaloneBuildSettings, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
+
+  const preparedReadiness = await callTool("easyar_check_sample_readiness", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(preparedReadiness, "EasyARBuildSettingsHelper.cs exists");
 
   const script = await callTool("easyar_create_mono_behaviour", {
     projectPath,

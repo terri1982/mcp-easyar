@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/easyar-icon.png" alt="EasyAR logo" width="96" height="96">
+</p>
+
 # EasyAR Official MCP Server
 
 [![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
@@ -7,6 +11,7 @@ EasyAR Official MCP Server helps registered EasyAR users connect AI coding tools
 This MVP focuses on local Unity project assistance:
 
 - inspect Unity project structure and EasyAR-related files
+- diagnose whether a Unity project is ready to run a selected EasyAR sample
 - list common EasyAR Unity sample categories
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for adding sample scenes to Unity Build Settings
@@ -103,6 +108,7 @@ Use `--private` instead of `--public` if this repository should not be public ye
 - `easyar_list_samples`: list supported sample categories.
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
 - `easyar_inspect_unity_project`: inspect a Unity project for package, asset, scene, and EasyAR signals.
+- `easyar_check_sample_readiness`: report missing local requirements before running a selected sample.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.
 - `easyar_prepare_unity_project`: create a sample runner, EasyAR local config template, and secret ignore rules in a Unity project.
 - `easyar_create_build_settings_helper`: create `Assets/Editor/EasyARBuildSettingsHelper.cs` for Build Settings automation.
