@@ -73,6 +73,10 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_run_unity_compile_check"),
     "easyar_run_unity_compile_check should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_run_sequence"),
+    "easyar_write_run_sequence should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -159,6 +163,35 @@ try {
   });
   assertTextIncludes(cloudRunSequence, "cloud-recognition-credentials");
   assertTextIncludes(cloudRunSequence, "Builds/iOS/cloud-recognition");
+
+  const writtenRunSequence = await callTool("easyar_write_run_sequence", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(writtenRunSequence, "RUN_SEQUENCE.md");
+  const runSequenceMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "RUN_SEQUENCE.md"),
+    "utf8"
+  );
+  assert(runSequenceMarkdown.includes("EasyAR Focused Run Sequence - Image Tracking"), "Run sequence markdown should include title");
+  assert(runSequenceMarkdown.includes("EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings"), "Run sequence markdown should include Unity build settings method");
+  assert(runSequenceMarkdown.includes("mcp-easyar-CompileCheck.log"), "Run sequence markdown should include compile log path");
+
+  const writtenCloudRunSequence = await callTool("easyar_write_run_sequence", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "ios",
+    outputPath: "Builds/iOS/cloud-recognition"
+  });
+  assertTextIncludes(writtenCloudRunSequence, "RUN_SEQUENCE.md");
+  const cloudRunSequenceMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "RUN_SEQUENCE.md"),
+    "utf8"
+  );
+  assert(cloudRunSequenceMarkdown.includes("EasyAR Focused Run Sequence - Cloud Recognition"), "Cloud run sequence markdown should include title");
+  assert(cloudRunSequenceMarkdown.includes("cloud-recognition-credentials"), "Cloud run sequence markdown should include credential readiness");
+  assert(cloudRunSequenceMarkdown.includes("Builds/iOS/cloud-recognition"), "Cloud run sequence markdown should include iOS output path");
 
   const initialRunReport = await callTool("easyar_generate_run_report", {
     projectPath,

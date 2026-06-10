@@ -37,6 +37,7 @@ const toolCatalog = [
   "easyar_generate_client_config",
   "easyar_generate_sample_plan",
   "easyar_generate_run_sequence",
+  "easyar_write_run_sequence",
   "easyar_generate_run_report",
   "easyar_write_run_report",
   "easyar_inspect_unity_project",
@@ -149,7 +150,7 @@ const quickstartWorkflow = [
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_generate_run_sequence` for an ordered Codex/Claude execution plan and `easyar_generate_run_report` for current project status.",
+  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_generate_run_report` for current project status.",
   "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
@@ -535,6 +536,51 @@ server.tool(
       outputPath: outputPath ?? defaultOutput,
       developmentBuild
     }));
+  }
+);
+
+server.tool(
+  "easyar_write_run_sequence",
+  "Write the focused sample MCP and Unity batch run sequence as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
+    developmentBuild: z.boolean().default(true).describe("Whether the generated build helper should use a Unity development build."),
+    relativePath: z.string().optional().describe("Optional sequence path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/RUN_SEQUENCE.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing run sequence artifact.")
+  },
+  async ({ projectPath, sampleId, platform, outputPath, developmentBuild, relativePath, overwrite }) => {
+    const sample = findSample(sampleId);
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    const sequence = buildFocusedRunSequence({
+      projectPath: root,
+      sample,
+      platform,
+      outputPath: outputPath ?? defaultOutput,
+      developmentBuild
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "RUN_SEQUENCE.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildRunSequenceMarkdown(sequence), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      platform,
+      outputPath: sequence.outputPath,
+      phaseCount: sequence.phases.length,
+      note: "The run sequence artifact contains MCP call arguments and Unity batch method names, not secret values."
+    });
   }
 );
 
@@ -2410,6 +2456,42 @@ function buildRunReportMarkdown(report: Awaited<ReturnType<typeof buildFocusedRu
     report.security,
     ""
   ].join("\n");
+}
+
+function buildRunSequenceMarkdown(sequence: ReturnType<typeof buildFocusedRunSequence>): string {
+  const lines = [
+    `# EasyAR Focused Run Sequence - ${sequence.sample.name}`,
+    "",
+    `Project: ${sequence.projectPath}`,
+    `Sample id: ${sequence.sample.id}`,
+    `Status: ${sequence.sample.implementationStatus}`,
+    `Supported now: ${sequence.supportedNow ? "yes" : "no"}`,
+    `Platform: ${sequence.platform}`,
+    `Output path: ${sequence.outputPath}`,
+    `Development build: ${sequence.developmentBuild ? "yes" : "no"}`,
+    "",
+    "## Execution Phases",
+    ""
+  ];
+
+  for (const phase of sequence.phases) {
+    lines.push(`### ${phase.name}`, "");
+    phase.steps.forEach((step, index) => {
+      lines.push(`${index + 1}. ${step.step}`);
+      lines.push(`   - Tool: \`${step.tool}\``);
+      lines.push(`   - Arguments: \`${JSON.stringify(step.arguments)}\``);
+      lines.push(`   - Expected: ${step.expected}`);
+      if ("requiredBeforeDeviceRun" in step && step.requiredBeforeDeviceRun) {
+        lines.push("   - Required before device run: yes");
+      }
+      lines.push("");
+    });
+  }
+
+  lines.push("## Stop Conditions", "");
+  lines.push(...sequence.stopConditions.map((condition) => `- ${condition}`));
+  lines.push("", "## Security", "", sequence.security, "");
+  return lines.join("\n");
 }
 
 function markdownIssueList(items: string[], emptyMessage: string): string[] {

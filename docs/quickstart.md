@@ -60,6 +60,7 @@ Call:
 easyar_list_samples
 easyar_generate_sample_plan sampleId=image-tracking platform=android
 easyar_generate_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
+easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_generate_run_report projectPath=/path/to/UnityProject sampleId=image-tracking
 easyar_write_run_report projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
