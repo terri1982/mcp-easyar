@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: EasyAR official website
+    url: https://www.easyar.cn/
+    about: Register, log in, and manage official EasyAR account materials.
+  - name: mcp-easyar quickstart
+    url: https://github.com/terri1982/mcp-easyar/blob/main/docs/quickstart.md
+    about: Start here for MCP client setup and focused sample workflows.

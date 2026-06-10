@@ -26,9 +26,24 @@ npm run dev
 
 ## Pull Requests
 
-Before opening a pull request, run:
+Before opening a pull request, use `.github/pull_request_template.md` and run:
 
 ```bash
-npm run build
 npm run typecheck
+npm test
+npm run bin:smoke
+npm run install:check
+npm run package:smoke
+npm run pack:check
+npm run release:check
 ```
+
+Do not mark a PR or release as production-ready unless:
+
+```bash
+EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
+```
+
+passes with real official EasyAR endpoint evidence and real-device Image Tracking / Cloud Recognition evidence.
+
+Use the focused sample issue template for Image Tracking or Cloud Recognition run-through failures, and use the release readiness template before tagging a GitHub release or publishing the npm package.

@@ -1,0 +1,62 @@
+name: Release readiness gate
+description: Track a release or npm publish candidate for mcp-easyar.
+title: "[Release]: "
+labels:
+  - release
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template before tagging a GitHub release or publishing the npm package.
+
+        Do not paste EasyAR license keys, account tokens, website passwords, Cloud Recognition API keys/secrets, signing keys, provisioning profiles, or private logs.
+  - type: input
+    id: commit
+    attributes:
+      label: Commit SHA
+      description: Commit being considered for release.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification commands
+      description: Paste command names and pass/fail status, not secret values.
+      placeholder: |
+        - npm run release:check: passed
+        - EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check: blocked/passed
+    validations:
+      required: true
+  - type: textarea
+    id: production-blockers
+    attributes:
+      label: Production blockers
+      description: Paste the blocker ids from release:check or PRODUCTION_VALIDATION.md.
+      placeholder: |
+        - official-api-contract
+        - focused-scope-run-through
+    validations:
+      required: false
+  - type: textarea
+    id: focused-samples
+    attributes:
+      label: Focused sample evidence
+      description: Link or list Image Tracking and Cloud Recognition RUN_RESULT.md / COMPLETION_REPORT.md evidence.
+      placeholder: |
+        - Image Tracking: Assets/EasyARGenerated/image-tracking/COMPLETION_REPORT.md
+        - Cloud Recognition: Assets/EasyARGenerated/cloud-recognition/COMPLETION_REPORT.md
+    validations:
+      required: true
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Gates
+      options:
+        - label: `npm run release:check` passes.
+          required: true
+        - label: Official EasyAR account API endpoint evidence is recorded or this issue is explicitly tracking that blocker.
+          required: true
+        - label: Image Tracking and Cloud Recognition real-device evidence is recorded or this issue is explicitly tracking that blocker.
+          required: true
+        - label: No secrets or private logs are included.
+          required: true
