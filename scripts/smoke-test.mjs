@@ -389,6 +389,20 @@ try {
   assertTextIncludes(cloudLogAnalysis, "cloud-recognition-credentials");
   assertTextIncludes(cloudLogAnalysis, "\"id\": \"cloud-recognition\"");
 
+  await mkdir(path.join(projectPath, "Logs"), { recursive: true });
+  await writeFile(
+    path.join(projectPath, "Logs", "Editor.log"),
+    "CloudRecognizer network timeout while requesting cloud recognition service",
+    "utf8"
+  );
+  const latestLogAnalysis = await callTool("easyar_analyze_latest_unity_log", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(latestLogAnalysis, "\"analyzed\": true");
+  assertTextIncludes(latestLogAnalysis, "cloud-recognition-network");
+  assertTextIncludes(latestLogAnalysis, "Editor.log");
+
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
   console.log("MCP smoke test passed.");

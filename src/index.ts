@@ -2,7 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, open, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -42,6 +42,7 @@ const toolCatalog = [
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
   "easyar_analyze_unity_log",
+  "easyar_analyze_latest_unity_log",
   "easyar_prepare_unity_project",
   "easyar_create_mobile_settings_helper",
   "easyar_create_build_settings_helper",
@@ -605,6 +606,64 @@ server.tool(
       nextActions: issues.length > 0
         ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
         : ["No known EasyAR/Unity issue patterns were detected. Check the full Unity Console and device logs if the problem persists."]
+    });
+  }
+);
+
+server.tool(
+  "easyar_analyze_latest_unity_log",
+  "Find the most recent Unity Editor/project log and analyze its tail with optional focused sample diagnostics.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to search project Logs and Library locations."),
+    sampleId: z.string().optional().describe("Optional focused sample id for sample-specific diagnostics."),
+    maxBytes: z.number().int().positive().max(1024 * 1024).default(200000).describe("Maximum bytes to read from the end of the latest log."),
+    maxIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, sampleId, maxBytes, maxIssues }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = sampleId ? findSample(sampleId) : null;
+    const candidates = await findUnityLogCandidates(root);
+    const latest = candidates.find((candidate) => candidate.exists);
+    if (!latest) {
+      return jsonText({
+        projectPath: root,
+        sample: sample ? {
+          id: sample.id,
+          name: sample.name,
+          implementationStatus: sample.implementationStatus
+        } : null,
+        analyzed: false,
+        candidates,
+        nextActions: [
+          "Run Unity once, then retry this tool.",
+          "If you already have a log file, call easyar_analyze_unity_log with logPath."
+        ]
+      });
+    }
+
+    const text = await readLogTail(latest.path, maxBytes);
+    const issues = analyzeUnityLog(text, sample).slice(0, maxIssues);
+    return jsonText({
+      projectPath: root,
+      sample: sample ? {
+        id: sample.id,
+        name: sample.name,
+        implementationStatus: sample.implementationStatus
+      } : null,
+      analyzed: true,
+      logPath: latest.path,
+      logSizeBytes: latest.size,
+      logModifiedAt: latest.modifiedAt,
+      bytesRead: Buffer.byteLength(text, "utf8"),
+      summary: summarizeLog(text),
+      issueCount: issues.length,
+      issues,
+      nextActions: issues.length > 0
+        ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
+        : ["No known EasyAR/Unity issue patterns were detected in the latest log tail."]
     });
   }
 );
@@ -1403,6 +1462,99 @@ async function readLogFile(logPath: string): Promise<string> {
     throw new Error("Log file is larger than 5 MiB. Pass a smaller excerpt with logText.");
   }
   return readFile(resolved, "utf8");
+}
+
+type UnityLogCandidate = {
+  path: string;
+  source: string;
+  exists: boolean;
+  size: number | null;
+  modifiedAt: string | null;
+  mtimeMs: number;
+};
+
+async function findUnityLogCandidates(root: string | null): Promise<UnityLogCandidate[]> {
+  const candidateSpecs: Array<{ path: string; source: string }> = [];
+  if (root) {
+    candidateSpecs.push(
+      { path: path.join(root, "Logs", "Editor.log"), source: "project Logs/Editor.log" },
+      { path: path.join(root, "Logs", "Unity.log"), source: "project Logs/Unity.log" },
+      { path: path.join(root, "Library", "Editor.log"), source: "project Library/Editor.log" }
+    );
+    const projectLogsDir = path.join(root, "Logs");
+    if (await exists(projectLogsDir)) {
+      for (const entry of await readdir(projectLogsDir, { withFileTypes: true })) {
+        if (entry.isFile() && /\.log$/i.test(entry.name)) {
+          candidateSpecs.push({
+            path: path.join(projectLogsDir, entry.name),
+            source: "project Logs/*.log"
+          });
+        }
+      }
+    }
+  }
+
+  const home = process.env.HOME;
+  if (home) {
+    candidateSpecs.push(
+      { path: path.join(home, "Library", "Logs", "Unity", "Editor.log"), source: "macOS Unity Editor.log" },
+      { path: path.join(home, ".config", "unity3d", "Editor.log"), source: "Linux Unity Editor.log" }
+    );
+  }
+  if (process.env.LOCALAPPDATA) {
+    candidateSpecs.push({
+      path: path.join(process.env.LOCALAPPDATA, "Unity", "Editor", "Editor.log"),
+      source: "Windows Unity Editor.log"
+    });
+  }
+
+  const unique = new Map<string, string>();
+  for (const candidate of candidateSpecs) {
+    unique.set(candidate.path, candidate.source);
+  }
+
+  const candidates = await Promise.all(
+    Array.from(unique.entries()).map(async ([candidatePath, source]) => {
+      try {
+        const info = await stat(candidatePath);
+        return {
+          path: candidatePath,
+          source,
+          exists: info.isFile(),
+          size: info.isFile() ? info.size : null,
+          modifiedAt: info.isFile() ? info.mtime.toISOString() : null,
+          mtimeMs: info.isFile() ? info.mtimeMs : 0
+        };
+      } catch {
+        return {
+          path: candidatePath,
+          source,
+          exists: false,
+          size: null,
+          modifiedAt: null,
+          mtimeMs: 0
+        };
+      }
+    })
+  );
+
+  return candidates.sort((left, right) => Number(right.exists) - Number(left.exists) || right.mtimeMs - left.mtimeMs);
+}
+
+async function readLogTail(logPath: string, maxBytes: number): Promise<string> {
+  const info = await stat(logPath);
+  if (!info.isFile()) {
+    throw new Error(`${logPath} is not a file.`);
+  }
+  const bytesToRead = Math.min(info.size, maxBytes);
+  const file = await open(logPath, "r");
+  try {
+    const buffer = Buffer.alloc(bytesToRead);
+    await file.read(buffer, 0, bytesToRead, Math.max(0, info.size - bytesToRead));
+    return buffer.toString("utf8");
+  } finally {
+    await file.close();
+  }
 }
 
 async function readJsonFile(filePath: string): Promise<unknown> {

@@ -156,4 +156,10 @@ For local log files:
 easyar_analyze_unity_log sampleId=cloud-recognition logPath=/path/to/Editor.log
 ```
 
+To let the MCP server find the newest Unity log automatically:
+
+```text
+easyar_analyze_latest_unity_log projectPath=/path/to/UnityProject sampleId=cloud-recognition
+```
+
 The tool classifies common EasyAR license, plugin import, camera permission, C# compile, Android/Gradle, iOS signing, and sample scene issues. With `sampleId=image-tracking` or `sampleId=cloud-recognition`, it adds focused target-asset, cloud credential, and network diagnostics.
