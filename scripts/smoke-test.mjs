@@ -2442,6 +2442,14 @@ exit 0
   assertTextIncludes(cloudDeviceValidation, "cloud-target-library-ready");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
 
+  const cloudPreflightWithoutPortalEvidence = await callTool("easyar_generate_focused_preflight", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(cloudPreflightWithoutPortalEvidence, "portal-evidence");
+  assertTextIncludes(cloudPreflightWithoutPortalEvidence, "PORTAL_EVIDENCE.md is missing");
+
   const preexistingPortalEvidence = await callTool("easyar_write_portal_evidence", {
     projectPath,
     sampleId: "cloud-recognition",
@@ -2457,6 +2465,41 @@ exit 0
     cloudTargetCount: 0
   });
   assertTextIncludes(preexistingPortalEvidence, "PORTAL_EVIDENCE.md");
+
+  const cloudPreflightWithMissingLibrary = await callTool("easyar_generate_focused_preflight", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(cloudPreflightWithMissingLibrary, "portal-evidence");
+  assertTextIncludes(cloudPreflightWithMissingLibrary, "cloud library status=missing");
+  assertTextIncludes(cloudPreflightWithMissingLibrary, "cloud target count=0");
+
+  const readyPortalEvidence = await callTool("easyar_write_portal_evidence", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    accountName: "armall",
+    apiKeyRecordId: "19639",
+    apiKeyAppName: "ARMallTest",
+    cloudServicesEnabled: ["cloud-recognition"],
+    apiKeyPresent: true,
+    apiSecretPresent: true,
+    senseLicenseStatus: "present",
+    cloudLibraryStatus: "present",
+    cloudLibraryName: "TestLibrary",
+    cloudTargetCount: 1
+  });
+  assertTextIncludes(readyPortalEvidence, "PORTAL_EVIDENCE.md");
+
+  const cloudPreflightWithReadyPortal = await callTool("easyar_generate_focused_preflight", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(cloudPreflightWithReadyPortal, "\"id\": \"portal-evidence\"");
+  assertTextIncludes(cloudPreflightWithReadyPortal, "Portal evidence is sufficient");
+  assert(!extractText(cloudPreflightWithReadyPortal).includes("cloud library status=missing"), "Ready portal evidence should clear missing library detail");
 
   const focusedHandoffPackPlan = await callTool("easyar_generate_focused_handoff_pack", {
     projectPath,

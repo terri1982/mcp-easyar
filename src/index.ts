@@ -8103,7 +8103,8 @@ async function buildFocusedPreflight(
     readiness,
     sceneAudit,
     scriptReview,
-    workflowState
+    workflowState,
+    portalEvidence
   ] = await Promise.all([
     buildAccountMaterialsReport(root, sample, platform),
     buildUnityEnvironmentReport(root, sample),
@@ -8113,11 +8114,22 @@ async function buildFocusedPreflight(
     buildSampleReadinessReport(root, sample),
     buildSampleSceneAudit(root, sample, 25),
     buildScriptReviewReport(root, undefined, 80, maxScriptIssues),
-    buildWorkflowState(root, sample, platform, outputPath, maxScriptIssues)
+    buildWorkflowState(root, sample, platform, outputPath, maxScriptIssues),
+    readPortalEvidenceArtifact(root, sample)
   ]);
+  const portalEvidenceReady = sample.id !== "cloud-recognition" || (
+    portalEvidence.exists
+    && portalEvidence.senseLicenseStatus !== "missing"
+    && portalEvidence.cloudLibraryStatus === "present"
+    && typeof portalEvidence.cloudTargetCount === "number"
+    && portalEvidence.cloudTargetCount > 0
+    && portalEvidence.apiKeyPresent !== false
+    && portalEvidence.apiSecretPresent !== false
+  );
   const checks = [
     preflightCheck("sample-focus", sample.implementationStatus === "focused", "sample", `${sample.name} status is ${sample.implementationStatus}.`, "Use image-tracking or cloud-recognition for the current focused run-through."),
     preflightCheck("account-materials", accountMaterials.missingRequired.length === 0, "account", accountMaterials.missingRequired.length > 0 ? `Missing account material(s): ${accountMaterials.missingRequired.join(", ")}.` : "Required account materials are present or not required.", "Run easyar_write_account_onboarding and easyar_write_account_materials, then prepare official account values."),
+    preflightCheck("portal-evidence", portalEvidenceReady, "account", portalEvidenceReady ? "Portal evidence is sufficient for the selected sample." : portalEvidencePreflightDetail(portalEvidence, sample), `Run easyar_write_portal_evidence projectPath=${root} sampleId=${sample.id} platform=${platform} after checking the logged-in EasyAR development center page.`),
     preflightCheck("local-config", localConfig.valid, "config", localConfig.valid ? "Local EasyAR config is valid." : `Local config failing check(s): ${localConfig.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_write_local_config_from_env or fill ProjectSettings/EasyAR/easyar.local.json locally, then validate again."),
     preflightCheck("unity-environment", unityEnvironment.readyForUnityBatch, "unity", unityEnvironment.readyForUnityBatch ? `Unity batch path ready: ${unityEnvironment.recommendedUnityPath}.` : "No Unity executable path is ready for batch automation.", "Run easyar_write_unity_environment_report and set EASYAR_UNITY_PATH or pass unityPath explicitly."),
     preflightCheck("official-imports", importChecklist.readyForFocusedPreparation, "import", importChecklist.readyForFocusedPreparation ? "Official plugin and focused import requirements are present." : `Missing import item(s): ${importChecklist.items.filter((item) => item.required && !item.ok).map((item) => item.id).join(", ")}.`, buildImportChecklistAction(importChecklist)),
@@ -8167,6 +8179,10 @@ async function buildFocusedPreflight(
       importReady: importChecklist.readyForFocusedPreparation,
       packageCacheSamples: sampleImportGuide.packageCacheSamples,
       localConfigValid: localConfig.valid,
+      portalEvidenceExists: portalEvidence.exists,
+      portalSenseLicenseStatus: portalEvidence.senseLicenseStatus,
+      portalCloudLibraryStatus: portalEvidence.cloudLibraryStatus,
+      portalCloudTargetCount: portalEvidence.cloudTargetCount,
       readinessReady: readiness.ready,
       sceneReady: sceneAudit.readyForUnityValidation,
       scriptIssueCount: scriptReview.issueCount,
@@ -8175,6 +8191,7 @@ async function buildFocusedPreflight(
     },
     references: {
       accountMaterials: path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
+      portalEvidence: path.join("Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md"),
       unityEnvironment: path.join("Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
       importChecklist: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "IMPORT_CHECKLIST.md")),
       sampleImportGuide: path.relative(root, path.join(focusedSampleGeneratedDir(root, sample), "SAMPLE_IMPORT_GUIDE.md")),
@@ -8213,6 +8230,9 @@ function preflightNextCall(
 ) {
   if (blocker.id === "account-materials") {
     return { tool: "easyar_write_account_materials", arguments: { projectPath: root, sampleId: sample.id, platform } };
+  }
+  if (blocker.id === "portal-evidence") {
+    return { tool: "easyar_write_portal_evidence", arguments: { projectPath: root, sampleId: sample.id, platform } };
   }
   if (blocker.id === "local-config") {
     return { tool: "easyar_validate_local_config", arguments: { projectPath: root } };
@@ -9331,11 +9351,79 @@ async function readRunResultArtifact(root: string, sample: SampleInfo) {
   }
 }
 
+async function readPortalEvidenceArtifact(root: string, sample: SampleInfo) {
+  const absolutePath = path.join(root, "Assets", "EasyARGenerated", "PORTAL_EVIDENCE.md");
+  const relativePath = path.relative(root, absolutePath);
+  try {
+    const body = await readFile(absolutePath, "utf8");
+    return {
+      exists: true,
+      relativePath,
+      sampleId: parseMarkdownField(body, "Sample") ?? sample.id,
+      apiKeyPresent: parseYesNoField(body, "API KEY present"),
+      apiSecretPresent: parseYesNoField(body, "API Secret present"),
+      senseLicenseStatus: parseMarkdownField(body, "Sense License status"),
+      cloudLibraryStatus: parseMarkdownField(body, "Cloud library status"),
+      cloudTargetCount: parseNumberField(body, "Cloud target count")
+    };
+  } catch {
+    return {
+      exists: false,
+      relativePath,
+      sampleId: sample.id,
+      apiKeyPresent: null,
+      apiSecretPresent: null,
+      senseLicenseStatus: null,
+      cloudLibraryStatus: null,
+      cloudTargetCount: null
+    };
+  }
+}
+
+function portalEvidencePreflightDetail(portalEvidence: Awaited<ReturnType<typeof readPortalEvidenceArtifact>>, sample: SampleInfo): string {
+  if (sample.id !== "cloud-recognition") {
+    return "Portal evidence is optional for this sample.";
+  }
+  if (!portalEvidence.exists) {
+    return "PORTAL_EVIDENCE.md is missing; Cloud Recognition needs non-secret portal evidence before device build.";
+  }
+  const missing = [
+    portalEvidence.apiKeyPresent === false ? "API KEY presence" : null,
+    portalEvidence.apiSecretPresent === false ? "API Secret presence" : null,
+    portalEvidence.senseLicenseStatus === "missing" ? "Sense License status=missing" : null,
+    portalEvidence.cloudLibraryStatus !== "present" ? `cloud library status=${portalEvidence.cloudLibraryStatus ?? "unknown"}` : null,
+    !(typeof portalEvidence.cloudTargetCount === "number" && portalEvidence.cloudTargetCount > 0) ? `cloud target count=${portalEvidence.cloudTargetCount ?? "unknown"}` : null
+  ].filter((item): item is string => Boolean(item));
+  return missing.length > 0
+    ? `Cloud Recognition portal evidence is incomplete: ${missing.join(", ")}.`
+    : "Cloud Recognition portal evidence is ready.";
+}
+
 function parseRunResultStatus(markdown: string): typeof runResultStatuses[number] | null {
   const value = parseMarkdownField(markdown, "Overall status");
   return runResultStatuses.includes(value as typeof runResultStatuses[number])
     ? value as typeof runResultStatuses[number]
     : null;
+}
+
+function parseYesNoField(markdown: string, field: string): boolean | null {
+  const value = parseMarkdownField(markdown, field);
+  if (value === "yes") {
+    return true;
+  }
+  if (value === "no") {
+    return false;
+  }
+  return null;
+}
+
+function parseNumberField(markdown: string, field: string): number | null {
+  const value = parseMarkdownField(markdown, field);
+  if (!value || value === "not recorded") {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function parseMarkdownField(markdown: string, field: string): string | null {
@@ -11885,6 +11973,10 @@ function buildFocusedPreflightMarkdown(preflight: Awaited<ReturnType<typeof buil
     `Import ready: ${preflight.summaries.importReady ? "yes" : "no"}`,
     `PackageCache samples: ${preflight.summaries.packageCacheSamples.length > 0 ? preflight.summaries.packageCacheSamples.join(", ") : "none"}`,
     `Local config valid: ${preflight.summaries.localConfigValid ? "yes" : "no"}`,
+    `Portal evidence exists: ${preflight.summaries.portalEvidenceExists ? "yes" : "no"}`,
+    `Portal Sense License status: ${preflight.summaries.portalSenseLicenseStatus ?? "unknown"}`,
+    `Portal cloud library status: ${preflight.summaries.portalCloudLibraryStatus ?? "unknown"}`,
+    `Portal cloud target count: ${preflight.summaries.portalCloudTargetCount ?? "unknown"}`,
     `Readiness ready: ${preflight.summaries.readinessReady ? "yes" : "no"}`,
     `Scene ready: ${preflight.summaries.sceneReady ? "yes" : "no"}`,
     `Script issue count: ${preflight.summaries.scriptIssueCount}`,
