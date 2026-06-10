@@ -157,6 +157,15 @@ Then validate without exposing secrets:
 easyar_validate_local_config projectPath=/path/to/UnityProject
 ```
 
+Before any Unity batch command, write the Unity executable setup report:
+
+```text
+easyar_unity_environment
+easyar_write_unity_environment_report projectPath=/path/to/UnityProject sampleId=image-tracking
+```
+
+`UNITY_ENVIRONMENT.md` records discovered Unity executable candidates, the recommended `EASYAR_UNITY_PATH` value, and a dry-run `easyar_run_unity_compile_check` command. It does not launch Unity and does not contain EasyAR account or Cloud Recognition secrets.
+
 ## 5. Configure Build Settings
 
 First apply mobile player settings for camera-capable samples:

@@ -137,6 +137,7 @@ const toolCatalog = [
   "easyar_write_code_change_summary",
   "easyar_review_csharp_scripts",
   "easyar_unity_environment",
+  "easyar_write_unity_environment_report",
   "easyar_run_unity_compile_check",
   "easyar_run_unity_method"
 ] as const;
@@ -2384,21 +2385,40 @@ server.tool(
   "Inspect local Unity executable configuration and common install locations without launching Unity.",
   {},
   async () => {
-    const configuredPath = process.env.EASYAR_UNITY_PATH ?? null;
-    const configuredExists = configuredPath ? await exists(configuredPath) : false;
-    const candidates = await findUnityCandidates();
+    return jsonText(await buildUnityEnvironmentReport(null, null));
+  }
+);
+
+server.tool(
+  "easyar_write_unity_environment_report",
+  "Write a Unity executable setup report for MCP batch compile/build automation without launching Unity.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().optional().describe("Optional focused sample id used for suggested dry-run compile command."),
+    relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/UNITY_ENVIRONMENT.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing Unity environment report.")
+  },
+  async ({ projectPath, sampleId, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = sampleId ? findSample(sampleId) : null;
+    const report = await buildUnityEnvironmentReport(root, sample);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(root, "Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildUnityEnvironmentMarkdown(report), overwrite, written);
 
     return jsonText({
-      configuredPath,
-      configuredExists,
-      pathCommand: "Unity",
-      candidates,
-      recommendedUnityPath: configuredExists
-        ? configuredPath
-        : candidates.find((candidate) => candidate.exists)?.path ?? null,
-      nextActions: configuredExists || candidates.some((candidate) => candidate.exists)
-        ? ["Use the recommendedUnityPath as EASYAR_UNITY_PATH or pass it as unityPath to easyar_run_unity_method."]
-        : ["Install Unity through Unity Hub, then set EASYAR_UNITY_PATH to the Unity executable path."]
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      projectPath: root,
+      sample: sample?.name ?? null,
+      readyForUnityBatch: report.readyForUnityBatch,
+      recommendedUnityPath: report.recommendedUnityPath,
+      nextActions: report.nextActions,
+      note: "This report does not launch Unity and does not contain secret values."
     });
   }
 );
@@ -3874,6 +3894,64 @@ async function collectUnityExecutables(dirPath: string, found: Set<string>, dept
   }
 }
 
+async function buildUnityEnvironmentReport(root: string | null, sample: SampleInfo | null) {
+  const configuredPath = process.env.EASYAR_UNITY_PATH ?? null;
+  const configuredExists = configuredPath ? await exists(configuredPath) : false;
+  const candidates = await findUnityCandidates();
+  const recommendedUnityPath = configuredExists
+    ? configuredPath
+    : candidates.find((candidate) => candidate.exists)?.path ?? null;
+  const unityVersion = root ? await readUnityVersion(root) : null;
+  const readyForUnityBatch = Boolean(recommendedUnityPath);
+  const escapedRecommendedPath = recommendedUnityPath ? shellSingleQuote(recommendedUnityPath) : null;
+  const dryRunCompileCommand = root && sample
+    ? `easyar_run_unity_compile_check projectPath=${root} sampleId=${sample.id} unityPath=${recommendedUnityPath ?? "/path/to/Unity"} dryRun=true`
+    : root
+      ? `easyar_run_unity_compile_check projectPath=${root} unityPath=${recommendedUnityPath ?? "/path/to/Unity"} dryRun=true`
+      : "easyar_run_unity_compile_check projectPath=/path/to/UnityProject sampleId=image-tracking unityPath=/path/to/Unity dryRun=true";
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: sample
+      ? {
+          id: sample.id,
+          name: sample.name,
+          implementationStatus: sample.implementationStatus
+        }
+      : null,
+    unityVersion,
+    configuredPath,
+    configuredExists,
+    pathCommand: "Unity",
+    candidates,
+    recommendedUnityPath,
+    readyForUnityBatch,
+    environment: {
+      variable: "EASYAR_UNITY_PATH",
+      exportCommand: escapedRecommendedPath ? `export EASYAR_UNITY_PATH=${escapedRecommendedPath}` : "export EASYAR_UNITY_PATH=/path/to/Unity",
+      clientConfigHint: "Set EASYAR_UNITY_PATH in the MCP client environment or pass unityPath explicitly to Unity batch tools."
+    },
+    dryRunCompileCommand,
+    nextActions: readyForUnityBatch
+      ? [
+          "Set EASYAR_UNITY_PATH to recommendedUnityPath in the MCP client environment, or pass unityPath explicitly.",
+          "Run the dry-run compile command to confirm the Unity batch command shape.",
+          "Run easyar_run_unity_compile_check without dryRun after official assets, sample scene, and local config are ready."
+        ]
+      : [
+          "Install Unity through Unity Hub with Android/iOS build support as needed.",
+          "Open the Unity project once so ProjectSettings and Library metadata are initialized.",
+          "Set EASYAR_UNITY_PATH to the Unity executable path, then rerun easyar_unity_environment."
+        ],
+    security: "Unity environment reports contain executable paths and commands only. They do not include EasyAR account tokens, license keys, Cloud Recognition credentials, or signing secrets."
+  };
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
 async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
   const easyarSignals = filterOfficialEasyARSignals(await findFiles(root, ["Assets", "Packages"], /easyar/i, 120));
   const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
@@ -4633,6 +4711,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md"),
       purpose: "Field-by-field EasyAR account material source, storage, and sharing policy checklist.",
       generateWith: `easyar_write_account_materials sampleId=${sample.id}`
+    },
+    {
+      name: "Unity Environment",
+      relativePath: path.join("Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
+      purpose: "Unity executable discovery, EASYAR_UNITY_PATH setup, and batch compile dry-run guidance.",
+      generateWith: `easyar_write_unity_environment_report sampleId=${sample.id}`
     },
     {
       name: "Workflow State",
@@ -7324,6 +7408,48 @@ function buildDeploymentReadinessMarkdown(report: DeploymentReadinessReport): st
     "## Security",
     "",
     ...report.security.map((item) => `- ${item}`),
+    ""
+  ].join("\n");
+}
+
+function buildUnityEnvironmentMarkdown(report: Awaited<ReturnType<typeof buildUnityEnvironmentReport>>): string {
+  return [
+    "# EasyAR Unity Environment",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath ?? "not provided"}`,
+    `Sample: ${report.sample ? `${report.sample.name} (${report.sample.id})` : "not provided"}`,
+    `Unity project version: ${report.unityVersion ?? "unknown"}`,
+    `Ready for Unity batch: ${report.readyForUnityBatch ? "yes" : "no"}`,
+    "",
+    "## Current Configuration",
+    "",
+    `EASYAR_UNITY_PATH: ${report.configuredPath ?? "not set"}`,
+    `Configured path exists: ${report.configuredExists ? "yes" : "no"}`,
+    `PATH command fallback: ${report.pathCommand}`,
+    `Recommended Unity path: ${report.recommendedUnityPath ?? "not found"}`,
+    "",
+    "## Candidates",
+    "",
+    ...markdownIssueList(report.candidates.map((candidate) => `${candidate.exists ? "OK" : "MISSING"} ${candidate.path}`), "No Unity executable candidates were found."),
+    "",
+    "## MCP Client Environment",
+    "",
+    `Variable: ${report.environment.variable}`,
+    `Export command: ${report.environment.exportCommand}`,
+    `Client config hint: ${report.environment.clientConfigHint}`,
+    "",
+    "## Dry Run",
+    "",
+    report.dryRunCompileCommand,
+    "",
+    "## Next Actions",
+    "",
+    ...report.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    report.security,
     ""
   ].join("\n");
 }

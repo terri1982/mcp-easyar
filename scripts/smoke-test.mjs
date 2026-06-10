@@ -95,6 +95,10 @@ try {
     "easyar_run_unity_compile_check should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_unity_environment_report"),
+    "easyar_write_unity_environment_report should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_discover_downloads"),
     "easyar_discover_downloads should be listed"
   );
@@ -411,8 +415,23 @@ try {
 
   const unityEnvironment = await callTool("easyar_unity_environment", {});
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
+  assertTextIncludes(unityEnvironment, "\"readyForUnityBatch\"");
 
   const projectPath = await createUnityProject();
+  const writtenUnityEnvironment = await callTool("easyar_write_unity_environment_report", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(writtenUnityEnvironment, "UNITY_ENVIRONMENT.md");
+  assertTextIncludes(writtenUnityEnvironment, "\"readyForUnityBatch\"");
+  const unityEnvironmentMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "UNITY_ENVIRONMENT.md"),
+    "utf8"
+  );
+  assert(unityEnvironmentMarkdown.includes("EasyAR Unity Environment"), "Unity environment markdown should include title");
+  assert(unityEnvironmentMarkdown.includes("EASYAR_UNITY_PATH"), "Unity environment markdown should include env variable");
+  assert(unityEnvironmentMarkdown.includes("easyar_run_unity_compile_check"), "Unity environment markdown should include compile dry-run");
+
   const onboardingReport = await callTool("easyar_onboarding_report", {
     projectPath,
     sampleId: "image-tracking",
@@ -1267,6 +1286,7 @@ try {
   assertTextIncludes(artifactIndex, "ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_ONBOARDING.md");
   assertTextIncludes(artifactIndex, "ACCOUNT_MATERIALS.md");
+  assertTextIncludes(artifactIndex, "UNITY_ENVIRONMENT.md");
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
@@ -1290,6 +1310,7 @@ try {
   assert(artifactIndexMarkdown.includes("SUPPORT_BUNDLE.md"), "Artifact index markdown should list support bundle");
   assert(artifactIndexMarkdown.includes("ACCOUNT_ONBOARDING.md"), "Artifact index markdown should list account onboarding");
   assert(artifactIndexMarkdown.includes("ACCOUNT_MATERIALS.md"), "Artifact index markdown should list account materials");
+  assert(artifactIndexMarkdown.includes("UNITY_ENVIRONMENT.md"), "Artifact index markdown should list Unity environment");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
 

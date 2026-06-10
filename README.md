@@ -47,6 +47,7 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - run a Unity batch compile/import check after code changes
 - run a Unity static editor method in batch mode
 - inspect Unity executable configuration before batch mode runs
+- write Unity executable setup reports with `EASYAR_UNITY_PATH` guidance and compile dry-run commands
 - analyze Unity Editor/build logs for common EasyAR issues plus Image Tracking and Cloud Recognition specifics
 - find and analyze the latest Unity log after a failed batch run
 - expose EasyAR workflow guidance as MCP resources
@@ -242,6 +243,7 @@ After registration/login, the user creates or locates the EasyAR Sense license a
 - `easyar_write_code_change_summary`: write the focused C# change summary to `Assets/EasyARGenerated/<sampleId>/CODE_CHANGE.md`.
 - `easyar_review_csharp_scripts`: review Unity C# scripts for common EasyAR secret, lifecycle, input, and performance risks.
 - `easyar_unity_environment`: inspect `EASYAR_UNITY_PATH` and common Unity install locations without launching Unity.
+- `easyar_write_unity_environment_report`: write Unity executable discovery, `EASYAR_UNITY_PATH`, and batch compile dry-run guidance to `Assets/EasyARGenerated/UNITY_ENVIRONMENT.md`.
 - `easyar_run_unity_compile_check`: open Unity in batch mode to force script import/compilation and analyze the generated log.
 - `easyar_run_unity_method`: execute a Unity static editor method in batch mode, optionally writing a project-local Unity log with `logPath`.
 - `easyar_analyze_unity_log`: analyze Unity Editor/build logs and suggest next debugging actions, with optional focused sample diagnostics.
