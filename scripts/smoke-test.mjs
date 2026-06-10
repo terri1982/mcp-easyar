@@ -121,6 +121,8 @@ try {
   });
   assertTextIncludes(imageRunSequence, "\"supportedNow\": true");
   assertTextIncludes(imageRunSequence, "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings");
+  assertTextIncludes(imageRunSequence, "\"logPath\"");
+  assertTextIncludes(imageRunSequence, "easyar_analyze_latest_unity_log");
   assertTextIncludes(imageRunSequence, "image-target-assets");
 
   const cloudRunSequence = await callTool("easyar_generate_run_sequence", {

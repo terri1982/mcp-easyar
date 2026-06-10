@@ -101,6 +101,8 @@ easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=i
 easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings
 ```
 
+For repeatable diagnostics, pass `logPath=Logs/mcp-easyar-ConfigureBuildSettings.log` or follow the `easyar_generate_run_sequence` output, which includes project-local log paths for Unity batch calls.
+
 ## 6. Add Project Code
 
 For common sample logic, call:

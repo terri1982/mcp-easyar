@@ -962,12 +962,14 @@ server.tool(
     projectPath: z.string().describe("Unity project path."),
     executeMethod: z.string().describe("Fully qualified static method, for example EasyAR.EditorTools.EasyARSampleRunner.OpenSampleScene."),
     unityPath: z.string().optional().describe("Unity executable path. Defaults to EASYAR_UNITY_PATH or Unity on PATH."),
+    logPath: z.string().optional().describe("Optional Unity -logFile path. Relative paths are resolved inside the Unity project."),
     timeoutSeconds: z.number().int().positive().max(1800).default(300)
   },
-  async ({ projectPath, executeMethod, unityPath, timeoutSeconds }) => {
+  async ({ projectPath, executeMethod, unityPath, logPath, timeoutSeconds }) => {
     const root = resolveProjectPath(projectPath);
     const unity = unityPath ?? process.env.EASYAR_UNITY_PATH ?? "Unity";
-    const result = await runUnity(unity, root, executeMethod, timeoutSeconds);
+    const resolvedLogPath = logPath ? resolveUnityLogPath(root, logPath) : null;
+    const result = await runUnity(unity, root, executeMethod, timeoutSeconds, resolvedLogPath);
     return jsonText(result);
   }
 );
@@ -1128,7 +1130,8 @@ function buildFocusedRunSequence(input: {
             tool: "easyar_run_unity_method",
             arguments: {
               projectPath,
-              executeMethod: "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings"
+              executeMethod: "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings",
+              logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings")
             },
             expected: "Unity exits successfully after applying package/bundle identifier and camera/network-related settings."
           },
@@ -1143,7 +1146,8 @@ function buildFocusedRunSequence(input: {
             tool: "easyar_run_unity_method",
             arguments: {
               projectPath,
-              executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings"
+              executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings",
+              logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings")
             },
             expected: "Matching official sample scene is enabled in Build Settings."
           }
@@ -1164,14 +1168,15 @@ function buildFocusedRunSequence(input: {
             arguments: {
               projectPath,
               executeMethod: "EasyAR.EditorTools.EasyARDeviceBuildHelper.Build",
+              logPath: defaultUnityBatchLogPath("EasyAR.EditorTools.EasyARDeviceBuildHelper.Build"),
               timeoutSeconds: 1800
             },
             expected: "Android APK or iOS Xcode project is produced."
           },
           {
             step: "Analyze Unity logs if any step fails",
-            tool: "easyar_analyze_unity_log",
-            arguments: { sampleId: sample.id, logText: "paste relevant Unity log excerpt here" },
+            tool: "easyar_analyze_latest_unity_log",
+            arguments: { projectPath, sampleId: sample.id },
             expected: "Focused diagnostics identify Image Tracking target issues or Cloud Recognition credential/network issues."
           }
         ]
@@ -2701,7 +2706,20 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function runUnity(unity: string, projectPath: string, executeMethod: string, timeoutSeconds: number) {
+function resolveUnityLogPath(root: string, logPath: string): string {
+  const resolved = path.isAbsolute(logPath) ? logPath : path.resolve(root, logPath);
+  assertInside(root, resolved);
+  return resolved;
+}
+
+function defaultUnityBatchLogPath(executeMethod: string): string {
+  return path.join("Logs", `mcp-easyar-${executeMethod.split(".").pop() ?? "unity-method"}.log`);
+}
+
+async function runUnity(unity: string, projectPath: string, executeMethod: string, timeoutSeconds: number, logPath: string | null) {
+  if (logPath) {
+    await mkdir(path.dirname(logPath), { recursive: true });
+  }
   const args = [
     "-batchmode",
     "-quit",
@@ -2710,8 +2728,11 @@ async function runUnity(unity: string, projectPath: string, executeMethod: strin
     "-executeMethod",
     executeMethod
   ];
+  if (logPath) {
+    args.push("-logFile", logPath);
+  }
 
-  return new Promise<{ command: string; exitCode: number | null; stdout: string; stderr: string }>((resolve, reject) => {
+  return new Promise<{ command: string; exitCode: number | null; logPath: string | null; stdout: string; stderr: string }>((resolve, reject) => {
     const child = spawn(unity, args, { stdio: ["ignore", "pipe", "pipe"] });
     const timeout = setTimeout(() => {
       child.kill("SIGTERM");
@@ -2735,6 +2756,7 @@ async function runUnity(unity: string, projectPath: string, executeMethod: strin
       resolve({
         command: [unity, ...args].join(" "),
         exitCode,
+        logPath,
         stdout: stdout.slice(-12000),
         stderr: stderr.slice(-12000)
       });

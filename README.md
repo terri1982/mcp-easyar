@@ -155,7 +155,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
 - `easyar_review_csharp_scripts`: review Unity C# scripts for common EasyAR secret, lifecycle, input, and performance risks.
 - `easyar_unity_environment`: inspect `EASYAR_UNITY_PATH` and common Unity install locations without launching Unity.
-- `easyar_run_unity_method`: execute a Unity static editor method in batch mode.
+- `easyar_run_unity_method`: execute a Unity static editor method in batch mode, optionally writing a project-local Unity log with `logPath`.
 - `easyar_analyze_unity_log`: analyze Unity Editor/build logs and suggest next debugging actions, with optional focused sample diagnostics.
 - `easyar_analyze_latest_unity_log`: locate the latest Unity Editor/project log and analyze its tail.
 
