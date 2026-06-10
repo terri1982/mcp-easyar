@@ -8,12 +8,12 @@
 
 `mcp-easyar` helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
 
-This MVP focuses on local Unity project assistance:
+This MVP focuses on local Unity project assistance. The current sample run-through scope is intentionally limited to Image Tracking and Cloud Recognition; Hello AR, Surface Tracking, and other samples are cataloged for later expansion.
 
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
-- list common EasyAR Unity sample categories
+- list common EasyAR Unity sample categories with focused/deferred status
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for Android/iOS player settings and camera permissions
 - generate an Editor helper for adding sample scenes to Unity Build Settings

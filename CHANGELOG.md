@@ -8,10 +8,12 @@ Initial public MVP for `mcp-easyar`.
 
 - MCP stdio server for authorized EasyAR Unity workflows.
 - Official EasyAR links, package-version notes, sample catalog, checklist, and quickstart resources.
+- Focused sample run-through scope for Image Tracking and Cloud Recognition, with other samples marked deferred.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.
 - Authorization status checks that do not expose secret values.
 - Configurable official EasyAR account-status and license-validation endpoint calls.
 - Unity project inspection and sample readiness diagnostics.
+- Sample-specific readiness checks for Image Tracking target assets and Cloud Recognition credentials.
 - EasyAR local config template generation and validation without returning secrets.
 - Unity Editor helper generation for sample scene opening, mobile player settings, Build Settings configuration, and device/player builds.
 - Unity C# MonoBehaviour templates for image tracking, surface placement, cloud recognition, and lifecycle workflows.

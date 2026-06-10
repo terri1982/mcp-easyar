@@ -73,6 +73,8 @@ try {
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "easyar_check_sample_readiness");
+  assertTextIncludes(status, "\"focusedSamples\"");
+  assertTextIncludes(status, "\"cloud-recognition\"");
   assertTextIncludes(status, "account-scoped SDK download discovery");
 
   const officialInfo = await callTool("easyar_official_info", {});
@@ -118,6 +120,7 @@ try {
   });
   assertTextIncludes(initialReadiness, "\"ready\": false");
   assertTextIncludes(initialReadiness, "Import the official EasyAR Unity Plugin package");
+  assertTextIncludes(initialReadiness, "image-target-assets");
 
   const prepared = await callTool("easyar_prepare_unity_project", {
     projectPath,
@@ -162,6 +165,9 @@ try {
   });
   assertTextIncludes(validConfig, "\"valid\": true");
   assertTextIncludes(validConfig, "Secret values are not returned");
+
+  await mkdir(path.join(projectPath, "Assets", "Targets"), { recursive: true });
+  await writeFile(path.join(projectPath, "Assets", "Targets", "ImageTarget.jpg"), "fake-image-target", "utf8");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),
@@ -223,6 +229,40 @@ try {
     sampleId: "image-tracking"
   });
   assertTextIncludes(preparedReadiness, "EasyARBuildSettingsHelper.cs exists");
+  assertTextIncludes(preparedReadiness, "ImageTarget.jpg");
+
+  const missingCloudReadiness = await callTool("easyar_check_sample_readiness", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(missingCloudReadiness, "cloud-recognition-credentials");
+  assertTextIncludes(missingCloudReadiness, "credentials are incomplete");
+
+  await writeFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
+    JSON.stringify({
+      easyar: {
+        apiBaseUrl: "https://www.easyar.cn",
+        accountToken: "test-account-token",
+        licenseKey: "test-license-key",
+        cloudRecognition: {
+          appId: "test-cloud-app-id",
+          appKey: "test-cloud-app-key",
+          appSecret: "test-cloud-app-secret"
+        }
+      },
+      unity: {
+        targetPlatform: "android",
+        bundleIdentifier: "com.easyar.testsample"
+      }
+    }),
+    "utf8"
+  );
+  const configuredCloudReadiness = await callTool("easyar_check_sample_readiness", {
+    projectPath,
+    sampleId: "cloud-recognition"
+  });
+  assertTextIncludes(configuredCloudReadiness, "Cloud recognition appId, appKey, and appSecret are configured");
 
   const script = await callTool("easyar_create_mono_behaviour", {
     projectPath,

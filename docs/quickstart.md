@@ -45,12 +45,21 @@ easyar_validate_license projectPath=/path/to/UnityProject platform=android
 
 ## 3. Choose A Sample
 
+For now, use one of the focused sample workflows:
+
+- `image-tracking`
+- `cloud-recognition`
+
+Other EasyAR samples are intentionally deferred until the focused workflows are running cleanly.
+
 Call:
 
 ```text
 easyar_list_samples
 easyar_generate_sample_plan sampleId=image-tracking platform=android
 ```
+
+For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.
 
 Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page before expecting a real device run to succeed.
 

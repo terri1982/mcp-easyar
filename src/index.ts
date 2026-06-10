@@ -12,6 +12,7 @@ type SampleInfo = {
   id: string;
   name: string;
   description: string;
+  implementationStatus: "focused" | "deferred";
   unityScenes: string[];
   requiredCapabilities: string[];
   setupNotes: string[];
@@ -63,6 +64,7 @@ const samples: SampleInfo[] = [
     id: "hello-ar",
     name: "Hello AR",
     description: "Minimal EasyAR scene for camera permission, ARSession startup, and device tracking validation.",
+    implementationStatus: "deferred",
     unityScenes: ["HelloAR", "HelloAR_SparseSpatialMap"],
     requiredCapabilities: ["Camera permission", "EasyAR Sense Unity plugin"],
     setupNotes: [
@@ -75,6 +77,7 @@ const samples: SampleInfo[] = [
     id: "image-tracking",
     name: "Image Tracking",
     description: "Detect and track planar image targets, then anchor Unity content to the target pose.",
+    implementationStatus: "focused",
     unityScenes: ["ImageTracking", "ImageTracker", "ImageTarget"],
     requiredCapabilities: ["Camera permission", "Image target assets", "EasyAR license key"],
     setupNotes: [
@@ -87,6 +90,7 @@ const samples: SampleInfo[] = [
     id: "surface-tracking",
     name: "Surface Tracking",
     description: "Place virtual content on detected surfaces using EasyAR motion tracking features.",
+    implementationStatus: "deferred",
     unityScenes: ["SurfaceTracking", "MotionTracking"],
     requiredCapabilities: ["Camera permission", "Motion tracking support", "Device sensors"],
     setupNotes: [
@@ -99,6 +103,7 @@ const samples: SampleInfo[] = [
     id: "cloud-recognition",
     name: "Cloud Recognition",
     description: "Recognize targets through EasyAR cloud services and use results to drive AR content.",
+    implementationStatus: "focused",
     unityScenes: ["CloudRecognition", "CloudRecognizer"],
     requiredCapabilities: ["Network access", "Cloud recognition credentials", "EasyAR license key"],
     setupNotes: [
@@ -136,13 +141,14 @@ const quickstartWorkflow = [
   "3. Configure `EASYAR_API_BASE_URL`, `EASYAR_API_TOKEN`, official validation endpoints, and optionally `EASYAR_UNITY_PATH` locally.",
   "4. Use `easyar_check_account` and `easyar_validate_license` after official EasyAR endpoints are configured.",
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
-  "6. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "7. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
-  "8. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
-  "9. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
-  "10. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "11. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
-  "12. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
+  "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
+  "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
+  "8. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
+  "9. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
+  "10. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
+  "11. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "12. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
+  "13. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -238,6 +244,8 @@ server.tool(
       },
       capabilities: {
         samples: samples.map((sample) => sample.id),
+        focusedSamples: focusedSamples().map((sample) => sample.id),
+        deferredSamples: deferredSamples().map((sample) => sample.id),
         tools: toolCatalog,
         resources: resourceCatalog,
         unityAutomation: [
@@ -383,10 +391,15 @@ server.tool(
   async ({ sampleId, unityVersion, platform }) => {
     const sample = findSample(sampleId);
     const auth = readAuthConfig();
+    const statusNote = sample.implementationStatus === "focused"
+      ? "This sample is in the current run-through focus set."
+      : "This sample is cataloged for later work; current run-through focus is image-tracking and cloud-recognition.";
     const plan = [
       `Sample: ${sample.name}`,
+      `Implementation status: ${sample.implementationStatus}`,
       `Unity version: ${unityVersion ?? "not specified"}`,
       `Target platform: ${platform}`,
+      statusNote,
       "",
       "Authorized access:",
       auth.hasToken
@@ -449,8 +462,16 @@ server.tool(
     const easyarSignals = await findFiles(root, ["Assets", "Packages"], /easyar/i, 120);
     const sampleScenes = await findFiles(root, ["Assets"], /\.(unity)$/i, 200);
     const matchingScenes = matchSampleScenes(sample, sampleScenes);
+    const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
 
     const checks = [
+      {
+        id: "sample-focus",
+        ok: sample.implementationStatus === "focused",
+        detail: sample.implementationStatus === "focused"
+          ? `${sample.name} is in the current focused run-through set.`
+          : `${sample.name} is deferred. Current focused samples are Image Tracking and Cloud Recognition.`
+      },
       {
         id: "unity-project",
         ok: await exists(path.join(root, "Assets")) && await exists(path.join(root, "ProjectSettings", "ProjectVersion.txt")),
@@ -499,7 +520,8 @@ server.tool(
         id: "mobile-settings-helper",
         ok: await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
         detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
-      }
+      },
+      ...sampleSpecificChecks
     ];
 
     const nextActions = checks
@@ -949,6 +971,14 @@ function findSample(sampleId: string): SampleInfo {
   return sample;
 }
 
+function focusedSamples(): SampleInfo[] {
+  return samples.filter((sample) => sample.implementationStatus === "focused");
+}
+
+function deferredSamples(): SampleInfo[] {
+  return samples.filter((sample) => sample.implementationStatus === "deferred");
+}
+
 function readAuthConfig() {
   return easyarApi.authStatus();
 }
@@ -1082,6 +1112,9 @@ function matchSampleScenes(sample: SampleInfo, scenePaths: string[]): string[] {
 }
 
 function readinessAction(checkId: string, sample: SampleInfo): string {
+  if (checkId === "sample-focus") {
+    return "Use sampleId \"image-tracking\" or \"cloud-recognition\" for the current run-through work.";
+  }
   if (checkId === "unity-project") {
     return "Open or create a Unity project before running EasyAR sample tools.";
   }
@@ -1100,7 +1133,54 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
   if (checkId === "local-config") {
     return "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json and fill it with official local credentials.";
   }
+  if (checkId === "image-target-assets") {
+    return "Import or create Image Tracking target assets/images before running the Image Tracking sample.";
+  }
+  if (checkId === "cloud-recognition-credentials") {
+    return "Fill easyar.cloudRecognition.appId, appKey, and appSecret in ProjectSettings/EasyAR/easyar.local.json.";
+  }
   return "Review the EasyAR Unity checklist and rerun readiness checks.";
+}
+
+async function buildSampleSpecificReadinessChecks(root: string, sample: SampleInfo) {
+  if (sample.id === "image-tracking") {
+    const targetAssets = await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, 80);
+    return [
+      {
+        id: "image-target-assets",
+        ok: targetAssets.length > 0,
+        detail: targetAssets.length > 0
+          ? `Found possible image target asset(s): ${targetAssets.slice(0, 8).join(", ")}.`
+          : "No image target asset hints were found under Assets. Import the official Image Tracking sample assets or add target images."
+      }
+    ];
+  }
+
+  if (sample.id === "cloud-recognition") {
+    const cloudConfig = await readCloudRecognitionConfig(root);
+    return [
+      {
+        id: "cloud-recognition-credentials",
+        ok: hasCompleteCloudRecognitionConfig(cloudConfig),
+        detail: hasCompleteCloudRecognitionConfig(cloudConfig)
+          ? "Cloud recognition appId, appKey, and appSecret are configured in local config."
+          : "Cloud recognition credentials are incomplete or missing in ProjectSettings/EasyAR/easyar.local.json."
+      }
+    ];
+  }
+
+  return [];
+}
+
+async function readCloudRecognitionConfig(root: string): Promise<Record<string, unknown>> {
+  const target = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
+  if (!await exists(target)) {
+    return {};
+  }
+  const parsed = await readJsonFile(target);
+  const value = isRecord(parsed) ? parsed : {};
+  const easyar = isRecord(value.easyar) ? value.easyar : {};
+  return isRecord(easyar.cloudRecognition) ? easyar.cloudRecognition : {};
 }
 
 async function readLogFile(logPath: string): Promise<string> {
@@ -1231,6 +1311,10 @@ function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
   const configuredCount = fields.filter(isNonPlaceholderString).length;
   const emptyCount = fields.filter((field) => typeof field === "string" && field.trim() === "").length;
   return configuredCount === fields.length || emptyCount === fields.length;
+}
+
+function hasCompleteCloudRecognitionConfig(value: Record<string, unknown>): boolean {
+  return [value.appId, value.appKey, value.appSecret].every(isNonPlaceholderString);
 }
 
 function summarizeLog(logText: string) {
