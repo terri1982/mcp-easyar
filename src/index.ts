@@ -83,6 +83,8 @@ const toolCatalog = [
   "easyar_deployment_readiness",
   "easyar_write_deployment_readiness",
   "easyar_generate_sample_plan",
+  "easyar_next_workflow_step",
+  "easyar_write_workflow_state",
   "easyar_generate_import_checklist",
   "easyar_write_import_checklist",
   "easyar_generate_run_sequence",
@@ -698,6 +700,66 @@ server.tool(
     ].join("\n");
 
     return markdownText(plan);
+  }
+);
+
+server.tool(
+  "easyar_next_workflow_step",
+  "Inspect the focused EasyAR workflow state and recommend the next MCP/Unity action.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, platform, outputPath, maxScriptIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    return jsonText(await buildWorkflowState(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_workflow_state",
+  "Write the focused workflow state and recommended next action as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+    relativePath: z.string().optional().describe("Optional workflow state path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/WORKFLOW_STATE.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing workflow state artifact.")
+  },
+  async ({ projectPath, sampleId, platform, outputPath, relativePath, maxScriptIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const defaultOutput = platform === "android"
+      ? `Builds/${sample.id}.apk`
+      : `Builds/iOS/${sample.id}`;
+    const state = await buildWorkflowState(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "WORKFLOW_STATE.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildWorkflowStateMarkdown(state), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      phase: state.phase,
+      blocked: state.blocked,
+      nextCall: state.nextCall,
+      note: "The workflow state artifact contains tool names and non-secret arguments only."
+    });
   }
 );
 
@@ -2587,6 +2649,328 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
   };
 }
 
+async function buildWorkflowState(
+  root: string,
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  outputPath: string,
+  maxScriptIssues: number
+) {
+  const importChecklist = await buildImportChecklist(root, sample);
+  const readiness = await buildSampleReadinessReport(root, sample);
+  const configValidation = await buildLocalConfigValidationReport(root);
+  const sceneAudit = await buildSampleSceneAudit(root, sample, 25);
+  const scriptReview = await buildScriptReviewReport(root, undefined, 80, maxScriptIssues);
+  const deviceValidation = await buildDeviceValidationChecklist(root, sample, platform, undefined, outputPath);
+  const artifactIndex = await buildArtifactIndex(root, sample);
+  const generatedDir = path.relative(root, focusedSampleGeneratedDir(root, sample));
+  const missingRequiredImportItems = importChecklist.items.filter((item) => item.required && !item.ok).map((item) => item.id);
+  const failingReadinessChecks = readiness.checks.filter((check) => !check.ok).map((check) => check.id);
+  const failingConfigChecks = configValidation.checks.filter((check) => !check.ok).map((check) => check.id);
+  const missingArtifacts = artifactIndex.missingArtifacts;
+  const generatedHelpersMissing = [
+    "sample-runner",
+    "build-settings-helper",
+    "mobile-settings-helper",
+    "sample-validation-helper",
+    "focused-sample-runbook"
+  ].some((id) => failingReadinessChecks.includes(id));
+  const state = chooseWorkflowNextState({
+    root,
+    sample,
+    platform,
+    outputPath,
+    importReady: importChecklist.readyForFocusedPreparation,
+    missingRequiredImportItems,
+    readinessReady: readiness.ready,
+    failingReadinessChecks,
+    configValid: configValidation.valid,
+    failingConfigChecks,
+    sceneReady: sceneAudit.readyForUnityValidation,
+    sceneBlockers: sceneAudit.blockers.map((blocker) => blocker.id),
+    scriptIssueCount: scriptReview.issueCount,
+    deviceReady: deviceValidation.readyForDeviceValidation,
+    deviceBlockers: deviceValidation.blockers.map((blocker) => blocker.id),
+    missingArtifacts,
+    generatedHelpersMissing
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    outputPath,
+    generatedDir,
+    phase: state.phase,
+    blocked: state.blocked,
+    reason: state.reason,
+    nextCall: state.nextCall,
+    summary: {
+      importReady: importChecklist.readyForFocusedPreparation,
+      missingRequiredImportItems,
+      readinessReady: readiness.ready,
+      failingReadinessChecks,
+      configValid: configValidation.valid,
+      failingConfigChecks,
+      sceneReady: sceneAudit.readyForUnityValidation,
+      sceneBlockers: sceneAudit.blockers.map((blocker) => blocker.id),
+      scriptIssueCount: scriptReview.issueCount,
+      deviceReady: deviceValidation.readyForDeviceValidation,
+      deviceBlockers: deviceValidation.blockers.map((blocker) => blocker.id),
+      missingArtifacts
+    },
+    recommendedSequence: state.recommendedSequence,
+    nextActions: state.nextActions,
+    security: "Workflow state does not include secret values. Keep license keys, account tokens, Cloud Recognition credentials, signing keys, and provisioning secrets in local secret storage."
+  };
+}
+
+function chooseWorkflowNextState(input: {
+  root: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  outputPath: string;
+  importReady: boolean;
+  missingRequiredImportItems: string[];
+  readinessReady: boolean;
+  failingReadinessChecks: string[];
+  configValid: boolean;
+  failingConfigChecks: string[];
+  sceneReady: boolean;
+  sceneBlockers: string[];
+  scriptIssueCount: number;
+  deviceReady: boolean;
+  deviceBlockers: string[];
+  missingArtifacts: string[];
+  generatedHelpersMissing: boolean;
+}) {
+  const baseArgs = {
+    projectPath: input.root,
+    sampleId: input.sample.id
+  };
+  if (input.sample.implementationStatus !== "focused") {
+    return workflowDecision(
+      "deferred-sample",
+      true,
+      "This sample is deferred. Current focused run-through scope is image-tracking and cloud-recognition.",
+      {
+        tool: "easyar_list_samples",
+        arguments: {}
+      },
+      ["Switch to sampleId image-tracking or cloud-recognition for current run-through work."]
+    );
+  }
+
+  if (!input.importReady) {
+    const needsDownloadDiscovery = input.missingRequiredImportItems.includes("official-unity-plugin-imported") || input.missingRequiredImportItems.includes("focused-sample-scene-imported");
+    return workflowDecision(
+      "import-official-assets",
+      true,
+      `Missing required official import item(s): ${input.missingRequiredImportItems.join(", ")}.`,
+      needsDownloadDiscovery
+        ? {
+            tool: "easyar_discover_downloads",
+            arguments: {
+              ...baseArgs,
+              packageKind: "unity-samples"
+            }
+          }
+        : {
+            tool: "easyar_write_import_checklist",
+            arguments: baseArgs
+          },
+      [
+        "Import the official EasyAR Unity Plugin and focused sample package from authorized EasyAR downloads.",
+        "Rerun easyar_generate_import_checklist after importing official assets.",
+        "Do not bypass EasyAR account download authorization."
+      ],
+      [
+        { tool: "easyar_write_import_checklist", arguments: baseArgs },
+        { tool: "easyar_check_sample_readiness", arguments: baseArgs }
+      ]
+    );
+  }
+
+  if (input.generatedHelpersMissing) {
+    return workflowDecision(
+      "prepare-project",
+      false,
+      `Generated helper/runbook check(s) missing: ${input.failingReadinessChecks.join(", ")}.`,
+      {
+        tool: "easyar_prepare_unity_project",
+        arguments: {
+          ...baseArgs,
+          overwrite: false
+        }
+      },
+      [
+        "Generate focused runbook, local config template, Editor runner, mobile settings helper, Build Settings helper, and validation helper.",
+        "Then copy easyar.local.json.example to easyar.local.json and fill official local credentials."
+      ],
+      [
+        { tool: "easyar_write_artifact_index", arguments: baseArgs },
+        { tool: "easyar_write_run_sequence", arguments: { ...baseArgs, platform: input.platform } }
+      ]
+    );
+  }
+
+  if (!input.configValid) {
+    return workflowDecision(
+      "configure-local-secrets",
+      true,
+      `Local config check(s) failing: ${input.failingConfigChecks.join(", ")}.`,
+      {
+        tool: "easyar_validate_local_config",
+        arguments: {
+          projectPath: input.root
+        }
+      },
+      [
+        "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json.",
+        "Fill official EasyAR license/account values locally without committing secrets.",
+        input.sample.id === "cloud-recognition"
+          ? "Fill Cloud Recognition appId, appKey, and appSecret from the official EasyAR account."
+          : "For Image Tracking, keep target assets under Assets and avoid secret values in scripts."
+      ]
+    );
+  }
+
+  if (!input.sceneReady) {
+    return workflowDecision(
+      "configure-unity-scene",
+      false,
+      `Scene or Build Settings blocker(s): ${input.sceneBlockers.join(", ")}.`,
+      {
+        tool: "easyar_create_build_settings_helper",
+        arguments: {
+          ...baseArgs,
+          platform: input.platform,
+          overwrite: true
+        }
+      },
+      [
+        "Run the generated Build Settings helper in Unity batch mode.",
+        "Run EasyARSampleValidationHelper.ValidateFocusedSample after Build Settings are configured.",
+        "Use easyar_write_scene_audit to preserve the latest scene/build state."
+      ],
+      [
+        { tool: "easyar_run_unity_method", arguments: { projectPath: input.root, executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings" } },
+        { tool: "easyar_write_scene_audit", arguments: baseArgs }
+      ]
+    );
+  }
+
+  if (input.scriptIssueCount > 0) {
+    return workflowDecision(
+      "fix-scripts",
+      true,
+      `Static script review found ${input.scriptIssueCount} issue(s).`,
+      {
+        tool: "easyar_review_csharp_scripts",
+        arguments: {
+          projectPath: input.root
+        }
+      },
+      [
+        "Fix static C# issues before Unity compilation.",
+        "Write CODE_CHANGE.md after script edits.",
+        "Run easyar_run_unity_compile_check once script review is clean."
+      ]
+    );
+  }
+
+  if (input.missingArtifacts.length > 0) {
+    return workflowDecision(
+      "write-handoff-artifacts",
+      false,
+      `Missing handoff artifact(s): ${input.missingArtifacts.join(", ")}.`,
+      {
+        tool: "easyar_write_artifact_index",
+        arguments: baseArgs
+      },
+      [
+        "Write the missing handoff artifacts so Codex, Claude, and humans can continue from the same state.",
+        "Start with RUN_SEQUENCE.md, RUN_REPORT.md, SCENE_AUDIT.md, SUPPORT_BUNDLE.md, DEVICE_VALIDATION.md, and ARTIFACT_INDEX.md."
+      ],
+      [
+        { tool: "easyar_write_run_sequence", arguments: { ...baseArgs, platform: input.platform, outputPath: input.outputPath } },
+        { tool: "easyar_write_run_report", arguments: baseArgs },
+        { tool: "easyar_write_support_bundle", arguments: { ...baseArgs, platform: input.platform, outputPath: input.outputPath } }
+      ]
+    );
+  }
+
+  if (!input.deviceReady) {
+    return workflowDecision(
+      "resolve-device-preflight",
+      true,
+      `Device validation blocker(s): ${input.deviceBlockers.join(", ")}.`,
+      {
+        tool: "easyar_write_device_validation_checklist",
+        arguments: {
+          ...baseArgs,
+          platform: input.platform,
+          buildOutputPath: input.outputPath
+        }
+      },
+      [
+        "Resolve every DEVICE_VALIDATION.md blocker before building to a real device.",
+        "Regenerate support bundle after fixes."
+      ]
+    );
+  }
+
+  return workflowDecision(
+    "build-and-run-device",
+    false,
+    "Focused sample preflight is ready for Unity compile, player build, and real-device validation.",
+    {
+      tool: "easyar_create_device_build_helper",
+      arguments: {
+        projectPath: input.root,
+        platform: input.platform,
+        outputPath: input.outputPath,
+        developmentBuild: true,
+        overwrite: true
+      }
+    },
+    [
+      "Run easyar_run_unity_compile_check.",
+      "Run EasyARDeviceBuildHelper.Build in Unity batch mode.",
+      "Install on a real Android/iOS device and follow DEVICE_VALIDATION.md.",
+      "Record the observed result with easyar_write_run_result."
+    ],
+    [
+      { tool: "easyar_run_unity_compile_check", arguments: { ...baseArgs, logPath: path.join("Logs", "mcp-easyar-CompileCheck.log") } },
+      { tool: "easyar_run_unity_method", arguments: { projectPath: input.root, executeMethod: "EasyAR.EditorTools.EasyARDeviceBuildHelper.Build", timeoutSeconds: 1800 } },
+      { tool: "easyar_write_run_result", arguments: { ...baseArgs, platform: input.platform, overallStatus: "not-run", buildOutputPath: input.outputPath, steps: [] } }
+    ]
+  );
+}
+
+function workflowDecision(
+  phase: string,
+  blocked: boolean,
+  reason: string,
+  nextCall: { tool: string; arguments: Record<string, unknown> },
+  nextActions: string[],
+  recommendedSequence: Array<{ tool: string; arguments: Record<string, unknown> }> = []
+) {
+  return {
+    phase,
+    blocked,
+    reason,
+    nextCall,
+    nextActions,
+    recommendedSequence: recommendedSequence.length > 0 ? recommendedSequence : [nextCall]
+  };
+}
+
 async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScriptIssues: number) {
   const readiness = await buildSampleReadinessReport(root, sample);
   const configValidation = await buildLocalConfigValidationReport(root);
@@ -2672,6 +3056,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "RUNBOOK.md"),
       purpose: "Human-readable focused sample checklist.",
       generateWith: `easyar_prepare_unity_project sampleId=${sample.id}`
+    },
+    {
+      name: "Workflow State",
+      relativePath: path.join(base, "WORKFLOW_STATE.md"),
+      purpose: "Current focused workflow phase, blockers, and next MCP call.",
+      generateWith: `easyar_write_workflow_state sampleId=${sample.id}`
     },
     {
       name: "Import Checklist",
@@ -4287,6 +4677,61 @@ function buildImportChecklistMarkdown(checklist: Awaited<ReturnType<typeof build
     "## Security",
     "",
     checklist.security,
+    ""
+  ].join("\n");
+}
+
+function buildWorkflowStateMarkdown(state: Awaited<ReturnType<typeof buildWorkflowState>>): string {
+  return [
+    `# EasyAR Workflow State - ${state.sample.name}`,
+    "",
+    `Generated at: ${state.generatedAt}`,
+    `Project: ${state.projectPath}`,
+    `Sample id: ${state.sample.id}`,
+    `Status: ${state.sample.implementationStatus}`,
+    `Platform: ${state.platform}`,
+    `Output path: ${state.outputPath}`,
+    `Phase: ${state.phase}`,
+    `Blocked: ${state.blocked ? "yes" : "no"}`,
+    "",
+    "## Reason",
+    "",
+    state.reason,
+    "",
+    "## Next Call",
+    "",
+    `Tool: \`${state.nextCall.tool}\``,
+    `Arguments: \`${JSON.stringify(state.nextCall.arguments)}\``,
+    "",
+    "## Summary",
+    "",
+    `Import ready: ${state.summary.importReady ? "yes" : "no"}`,
+    `Missing import items: ${state.summary.missingRequiredImportItems.length > 0 ? state.summary.missingRequiredImportItems.join(", ") : "none"}`,
+    `Readiness ready: ${state.summary.readinessReady ? "yes" : "no"}`,
+    `Failing readiness checks: ${state.summary.failingReadinessChecks.length > 0 ? state.summary.failingReadinessChecks.join(", ") : "none"}`,
+    `Local config valid: ${state.summary.configValid ? "yes" : "no"}`,
+    `Failing config checks: ${state.summary.failingConfigChecks.length > 0 ? state.summary.failingConfigChecks.join(", ") : "none"}`,
+    `Scene ready: ${state.summary.sceneReady ? "yes" : "no"}`,
+    `Scene blockers: ${state.summary.sceneBlockers.length > 0 ? state.summary.sceneBlockers.join(", ") : "none"}`,
+    `Script issue count: ${state.summary.scriptIssueCount}`,
+    `Device ready: ${state.summary.deviceReady ? "yes" : "no"}`,
+    `Device blockers: ${state.summary.deviceBlockers.length > 0 ? state.summary.deviceBlockers.join(", ") : "none"}`,
+    `Missing artifacts: ${state.summary.missingArtifacts.length > 0 ? state.summary.missingArtifacts.join(", ") : "none"}`,
+    "",
+    "## Recommended Sequence",
+    "",
+    ...state.recommendedSequence.flatMap((call, index) => [
+      `${index + 1}. \`${call.tool}\``,
+      `   - Arguments: \`${JSON.stringify(call.arguments)}\``
+    ]),
+    "",
+    "## Next Actions",
+    "",
+    ...state.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    state.security,
     ""
   ].join("\n");
 }

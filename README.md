@@ -46,6 +46,8 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - find and analyze the latest Unity log after a failed batch run
 - expose EasyAR workflow guidance as MCP resources
 - expose MCP prompts for Image Tracking, Cloud Recognition, and Unity programming assistance
+- recommend the next focused workflow step from current project evidence
+- write workflow state handoff artifacts for Codex/Claude continuation
 - check EasyAR account environment configuration without exposing secrets
 - call configured official EasyAR account/license validation endpoints without exposing secrets
 - generate MCP client configuration snippets for Codex and Claude
@@ -162,6 +164,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
 - `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.
+- `easyar_next_workflow_step`: inspect current focused project state and recommend the next MCP/Unity action.
+- `easyar_write_workflow_state`: write current workflow phase, blockers, and next call to `Assets/EasyARGenerated/<sampleId>/WORKFLOW_STATE.md`.
 - `easyar_generate_import_checklist`: generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.
 - `easyar_write_import_checklist`: write the official import checklist to `Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md`.
 - `easyar_generate_run_sequence`: generate an ordered MCP/Unity batch sequence for Image Tracking or Cloud Recognition.

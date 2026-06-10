@@ -152,6 +152,14 @@ try {
     "easyar_write_deployment_readiness should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_next_workflow_step"),
+    "easyar_next_workflow_step should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_workflow_state"),
+    "easyar_write_workflow_state should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_import_checklist"),
     "easyar_generate_import_checklist should be listed"
   );
@@ -249,6 +257,28 @@ try {
   assertTextIncludes(unityEnvironment, "\"pathCommand\": \"Unity\"");
 
   const projectPath = await createUnityProject();
+  const initialWorkflowState = await callTool("easyar_next_workflow_step", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(initialWorkflowState, "\"phase\": \"import-official-assets\"");
+  assertTextIncludes(initialWorkflowState, "\"blocked\": true");
+  assertTextIncludes(initialWorkflowState, "\"tool\": \"easyar_discover_downloads\"");
+
+  const writtenWorkflowState = await callTool("easyar_write_workflow_state", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(writtenWorkflowState, "WORKFLOW_STATE.md");
+  const workflowStateMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "WORKFLOW_STATE.md"),
+    "utf8"
+  );
+  assert(workflowStateMarkdown.includes("EasyAR Workflow State - Image Tracking"), "Workflow state markdown should include title");
+  assert(workflowStateMarkdown.includes("import-official-assets"), "Workflow state markdown should include phase");
+
   const initialImportChecklist = await callTool("easyar_generate_import_checklist", {
     projectPath,
     sampleId: "image-tracking"
@@ -502,6 +532,15 @@ try {
   assert(deviceValidationMarkdown.includes("EasyAR Device Validation - Image Tracking"), "Device validation markdown should include title");
   assert(deviceValidationMarkdown.includes("image-target-detection"), "Device validation markdown should include image target test step");
   assert(deviceValidationMarkdown.includes("Pixel test device"), "Device validation markdown should include device label");
+
+  const preparedWorkflowState = await callTool("easyar_next_workflow_step", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android",
+    outputPath: "Builds/image-tracking.apk"
+  });
+  assertTextIncludes(preparedWorkflowState, "\"phase\": \"write-handoff-artifacts\"");
+  assertTextIncludes(preparedWorkflowState, "easyar_write_artifact_index");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),
@@ -877,6 +916,7 @@ try {
     sampleId: "cloud-recognition"
   });
   assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
+  assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");

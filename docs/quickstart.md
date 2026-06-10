@@ -63,6 +63,8 @@ Call:
 ```text
 easyar_list_samples
 easyar_generate_sample_plan sampleId=image-tracking platform=android
+easyar_next_workflow_step projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
+easyar_write_workflow_state projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_generate_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 easyar_write_artifact_index projectPath=/path/to/UnityProject sampleId=image-tracking
@@ -78,6 +80,8 @@ easyar_write_run_result projectPath=/path/to/UnityProject sampleId=image-trackin
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId`, `appKey`, and `appSecret` in `ProjectSettings/EasyAR/easyar.local.json`.
 
 Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page before expecting a real device run to succeed.
+
+When unsure what to do next, call `easyar_next_workflow_step` again. It inspects import status, readiness, local config, scene/Build Settings state, script review, device validation blockers, and handoff artifacts, then returns the next recommended MCP call.
 
 ## 4. Prepare The Unity Project
 
