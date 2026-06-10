@@ -232,6 +232,17 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_focused_scope_status"),
     "easyar_write_focused_scope_status should be listed"
   );
+  for (const androidTool of [
+    "easyar_android_device_status",
+    "easyar_android_install_apk",
+    "easyar_android_start_app",
+    "easyar_android_collect_logcat"
+  ]) {
+    assert(
+      tools.result.tools.some((tool) => tool.name === androidTool),
+      `${androidTool} should be listed`
+    );
+  }
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_issue_report"),
     "easyar_generate_issue_report should be listed"
@@ -1520,6 +1531,73 @@ try {
   assert(deviceRunResultFormMarkdown.includes("overallStatus"), "Device run result form should include run result status field");
   assert(!deviceRunResultFormMarkdown.includes("env-test-account-token"), "Device run result form markdown should not include account token values");
   assert(!deviceRunResultFormMarkdown.includes("env-test-license-key"), "Device run result form markdown should not include license values");
+
+  const fakeAdbPath = path.join(projectPath, "fake-adb.sh");
+  await writeFile(
+    fakeAdbPath,
+    `#!/bin/sh
+if [ "$1" = "devices" ]; then
+  echo "List of devices attached"
+  echo "FAKE123 device product:test model:FakeAndroid device:fake transport_id:1"
+  exit 0
+fi
+if [ "$1" = "-s" ]; then
+  shift
+  shift
+fi
+if [ "$1" = "logcat" ] && [ "$2" = "-d" ]; then
+  echo "06-11 00:00:00.000 I/Unity: Runtime fixture password=secret-api-key-value"
+  echo "06-11 00:00:01.000 I/Unity: EasyAR ImageTarget detected"
+  exit 0
+fi
+if [ "$1" = "logcat" ] && [ "$2" = "-c" ]; then
+  exit 0
+fi
+echo "Success"
+exit 0
+`,
+    "utf8"
+  );
+  await chmod(fakeAdbPath, 0o755);
+  await mkdir(path.join(projectPath, "Builds"), { recursive: true });
+  await writeFile(path.join(projectPath, "Builds", "image-tracking.apk"), "fake-apk", "utf8");
+
+  const androidDeviceStatus = await callTool("easyar_android_device_status", {
+    adbPath: fakeAdbPath
+  });
+  assertTextIncludes(androidDeviceStatus, "\"readyForInstall\": true");
+  assertTextIncludes(androidDeviceStatus, "FAKE123");
+
+  const androidInstallDryRun = await callTool("easyar_android_install_apk", {
+    projectPath,
+    sampleId: "image-tracking",
+    adbPath: fakeAdbPath,
+    dryRun: true
+  });
+  assertTextIncludes(androidInstallDryRun, "\"dryRun\": true");
+  assertTextIncludes(androidInstallDryRun, "image-tracking.apk");
+
+  const androidStartDryRun = await callTool("easyar_android_start_app", {
+    projectPath,
+    sampleId: "image-tracking",
+    adbPath: fakeAdbPath,
+    bundleIdentifier: "com.easyar.testsample",
+    dryRun: true
+  });
+  assertTextIncludes(androidStartDryRun, "com.easyar.testsample");
+  assertTextIncludes(androidStartDryRun, "monkey");
+
+  const androidLogcat = await callTool("easyar_android_collect_logcat", {
+    projectPath,
+    sampleId: "image-tracking",
+    adbPath: fakeAdbPath,
+    deviceSerial: "FAKE123",
+    relativePath: "Logs/fake-device.log"
+  });
+  assertTextIncludes(androidLogcat, "fake-device.log");
+  const fakeDeviceLog = await readFile(path.join(projectPath, "Logs", "fake-device.log"), "utf8");
+  assert(fakeDeviceLog.includes("EasyAR ImageTarget detected"), "Device log should include filtered EasyAR evidence");
+  assert(!fakeDeviceLog.includes("secret-api-key-value"), "Device log should redact apiKey values");
 
   const notRunCompletionReport = await callTool("easyar_generate_completion_report", {
     projectPath,

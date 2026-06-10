@@ -269,6 +269,17 @@ easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=c
 
 `DEVICE_RUN_RESULT_FORM.md` contains required evidence prompts plus two `easyar_write_run_result` argument templates. Use the safe draft template for blocked or failed attempts. Use the passed template only after every required physical-device step passes, then replace placeholders with observed evidence.
 
+For Android device validation, use the adb helpers after the APK exists:
+
+```text
+easyar_android_device_status
+easyar_android_install_apk projectPath=/path/to/UnityProject sampleId=image-tracking apkPath=Builds/image-tracking.apk
+easyar_android_start_app projectPath=/path/to/UnityProject sampleId=image-tracking
+easyar_android_collect_logcat projectPath=/path/to/UnityProject sampleId=image-tracking relativePath=Logs/mcp-easyar-DeviceLog-image-tracking.log
+```
+
+Repeat the same sequence with `sampleId=cloud-recognition` and `apkPath=Builds/cloud-recognition.apk`. These helpers only prove install, launch, and log capture. The final `RUN_RESULT.md` should be marked `passed` only after the physical device also satisfies the visual sample criteria in `DEVICE_VALIDATION.md`.
+
 After `RUN_RESULT.md` is recorded, generate the final focused completion report:
 
 ```text

@@ -324,6 +324,10 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_unity_environment_report`: write Unity executable discovery, `EASYAR_UNITY_PATH`, and batch compile dry-run guidance to `Assets/EasyARGenerated/UNITY_ENVIRONMENT.md`.
 - `easyar_run_unity_compile_check`: open Unity in batch mode to force script import/compilation, analyze the generated log, and return a suggested `easyar_write_run_result` handoff when `sampleId` is provided.
 - `easyar_run_unity_method`: execute a Unity static editor method in batch mode, optionally writing a project-local Unity log with `logPath`; pass `sampleId` to receive focused log diagnostics and a suggested `RUN_RESULT.md` update.
+- `easyar_android_device_status`: inspect adb availability and connected Android devices before focused real-device validation.
+- `easyar_android_install_apk`: install a focused Android APK with adb and return a safe `RUN_RESULT.md` handoff step.
+- `easyar_android_start_app`: launch the focused Android app by package name with adb monkey.
+- `easyar_android_collect_logcat`: collect a filtered, redacted adb logcat snapshot into the Unity project for device evidence.
 - `easyar_analyze_unity_log`: analyze Unity Editor/build logs and suggest next debugging actions, with optional focused sample diagnostics.
 - `easyar_analyze_latest_unity_log`: locate the latest Unity Editor/project log and analyze its tail.
 

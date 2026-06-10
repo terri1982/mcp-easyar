@@ -176,7 +176,11 @@ const toolCatalog = [
   "easyar_unity_environment",
   "easyar_write_unity_environment_report",
   "easyar_run_unity_compile_check",
-  "easyar_run_unity_method"
+  "easyar_run_unity_method",
+  "easyar_android_device_status",
+  "easyar_android_install_apk",
+  "easyar_android_start_app",
+  "easyar_android_collect_logcat"
 ] as const;
 
 const resourceCatalog = [
@@ -3739,6 +3743,232 @@ server.tool(
         : result.exitCode === 0
           ? [unityMethodSuccessNextAction(executeMethod), "Record the outcome with easyar_write_run_result."]
           : ["Unity exited with a non-zero code. Inspect the returned log summary and record the outcome with easyar_write_run_result."]
+    });
+  }
+);
+
+server.tool(
+  "easyar_android_device_status",
+  "Inspect adb availability and connected Android devices for focused sample validation.",
+  {
+    adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
+    timeoutSeconds: z.number().int().positive().max(60).default(10)
+  },
+  async ({ adbPath, timeoutSeconds }) => {
+    const adb = adbPath ?? process.env.EASYAR_ADB_PATH ?? "adb";
+    const result = await runProcess(adb, ["devices", "-l"], timeoutSeconds);
+    const devices = parseAdbDevices(result.stdout);
+    return jsonText({
+      adb,
+      command: result.command,
+      adbAvailable: result.exitCode !== null,
+      exitCode: result.exitCode,
+      deviceCount: devices.filter((device) => device.state === "device").length,
+      devices,
+      stderr: redactSecretText(result.stderr),
+      readyForInstall: result.exitCode === 0 && devices.some((device) => device.state === "device"),
+      nextActions: buildAndroidDeviceStatusActions(result, devices),
+      security: "This tool does not read EasyAR credentials and returns adb device metadata only."
+    });
+  }
+);
+
+server.tool(
+  "easyar_android_install_apk",
+  "Install a focused sample Android APK on a connected device with adb.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    apkPath: z.string().optional().describe("APK path. Defaults to Builds/<sampleId>.apk inside the Unity project."),
+    adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
+    deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
+    reinstall: z.boolean().default(true).describe("Pass adb install -r to replace an existing install."),
+    allowDowngrade: z.boolean().default(true).describe("Pass adb install -d when reinstalling an older build."),
+    dryRun: z.boolean().default(false).describe("Return the adb command without installing."),
+    timeoutSeconds: z.number().int().positive().max(600).default(180)
+  },
+  async ({ projectPath, sampleId, apkPath, adbPath, deviceSerial, reinstall, allowDowngrade, dryRun, timeoutSeconds }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const adb = adbPath ?? process.env.EASYAR_ADB_PATH ?? "adb";
+    const resolvedApk = path.resolve(root, apkPath ?? path.join("Builds", `${sample.id}.apk`));
+    assertInside(root, resolvedApk);
+    const apkExists = await exists(resolvedApk);
+    const args = [
+      ...(deviceSerial ? ["-s", deviceSerial] : []),
+      "install",
+      ...(reinstall ? ["-r"] : []),
+      ...(allowDowngrade ? ["-d"] : []),
+      resolvedApk
+    ];
+    if (dryRun) {
+      return jsonText({
+        dryRun: true,
+        sample: sample.name,
+        apkPath: resolvedApk,
+        apkExists,
+        command: [adb, ...args].join(" "),
+        nextActions: apkExists
+          ? ["Connect a real Android device with USB debugging enabled, then run without dryRun."]
+          : ["Build the APK first with easyar_create_device_build_helper and easyar_run_unity_method."]
+      });
+    }
+    if (!apkExists) {
+      throw new Error(`APK does not exist: ${resolvedApk}`);
+    }
+    const result = await runProcess(adb, args, timeoutSeconds);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    const success = result.exitCode === 0 && /\bSuccess\b/i.test(combined);
+    return jsonText({
+      sample: sample.name,
+      apkPath: resolvedApk,
+      deviceSerial: deviceSerial ?? null,
+      command: result.command,
+      exitCode: result.exitCode,
+      success,
+      stdout: redactSecretText(result.stdout).slice(-12000),
+      stderr: redactSecretText(result.stderr).slice(-12000),
+      suggestedRunResultCall: buildSuggestedRunResultCall({
+        root,
+        sample,
+        platform: "android",
+        overallStatus: success ? "passed" : "blocked",
+        stepName: "Android APK install",
+        status: success ? "passed" : "blocked",
+        evidence: success ? `Installed ${path.relative(root, resolvedApk)} on ${deviceSerial ?? "connected Android device"}.` : `adb install exitCode=${result.exitCode ?? "unknown"}.`,
+        nextAction: success ? "Start the app and collect device logs with easyar_android_start_app and easyar_android_collect_logcat." : "Check adb device authorization, APK path, Android SDK platform tools, and install output."
+      }),
+      nextActions: success
+        ? ["Run easyar_android_start_app for this package, then perform the real sample validation steps."]
+        : ["Run easyar_android_device_status, authorize the device, and retry the install."]
+    });
+  }
+);
+
+server.tool(
+  "easyar_android_start_app",
+  "Start the focused sample Android app on a connected device with adb monkey.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    bundleIdentifier: z.string().optional().describe("Android package name. Defaults to unity.bundleIdentifier from local config or sample default."),
+    adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
+    deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
+    dryRun: z.boolean().default(false).describe("Return the adb command without launching."),
+    timeoutSeconds: z.number().int().positive().max(120).default(30)
+  },
+  async ({ projectPath, sampleId, bundleIdentifier, adbPath, deviceSerial, dryRun, timeoutSeconds }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const localConfig = await readLocalConfigForRemoteValidation(root);
+    const packageName = bundleIdentifier ?? localConfig.bundleIdentifier ?? defaultBundleIdentifier(sample);
+    const adb = adbPath ?? process.env.EASYAR_ADB_PATH ?? "adb";
+    const args = [
+      ...(deviceSerial ? ["-s", deviceSerial] : []),
+      "shell",
+      "monkey",
+      "-p",
+      packageName,
+      "-c",
+      "android.intent.category.LAUNCHER",
+      "1"
+    ];
+    if (dryRun) {
+      return jsonText({
+        dryRun: true,
+        sample: sample.name,
+        packageName,
+        command: [adb, ...args].join(" "),
+        nextActions: ["Run without dryRun after installing the APK, then validate camera permission and sample behavior on the device."]
+      });
+    }
+    const result = await runProcess(adb, args, timeoutSeconds);
+    const combined = `${result.stdout}\n${result.stderr}`;
+    const success = result.exitCode === 0 && !/Error|No activities found|monkey aborted/i.test(combined);
+    return jsonText({
+      sample: sample.name,
+      packageName,
+      deviceSerial: deviceSerial ?? null,
+      command: result.command,
+      exitCode: result.exitCode,
+      success,
+      stdout: redactSecretText(result.stdout).slice(-12000),
+      stderr: redactSecretText(result.stderr).slice(-12000),
+      suggestedRunResultCall: buildSuggestedRunResultCall({
+        root,
+        sample,
+        platform: "android",
+        overallStatus: success ? "passed" : "blocked",
+        stepName: "Android app launch",
+        status: success ? "passed" : "blocked",
+        evidence: success ? `Launched ${packageName} on ${deviceSerial ?? "connected Android device"}.` : `adb monkey exitCode=${result.exitCode ?? "unknown"}.`,
+        nextAction: success ? "Grant camera permission if prompted and perform the focused real-device validation checklist." : "Confirm the package name, install status, launcher activity, and adb output."
+      }),
+      nextActions: success
+        ? ["Perform the real sample validation steps, then collect logcat evidence."]
+        : ["Install the APK, confirm the package identifier, and retry app launch."]
+    });
+  }
+);
+
+server.tool(
+  "easyar_android_collect_logcat",
+  "Collect a redacted adb logcat snapshot for focused sample device validation.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
+    deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
+    relativePath: z.string().optional().describe("Optional log path inside the project. Defaults to Logs/mcp-easyar-DeviceLog-<sampleId>.log."),
+    filterPattern: z.string().optional().describe("Optional case-insensitive regex filter for log lines. Defaults to EasyAR/Unity/sample-relevant terms."),
+    clearFirst: z.boolean().default(false).describe("Run adb logcat -c before collecting. Use before launching when starting a fresh evidence capture."),
+    maxBytes: z.number().int().positive().max(2 * 1024 * 1024).default(300000),
+    timeoutSeconds: z.number().int().positive().max(120).default(30)
+  },
+  async ({ projectPath, sampleId, adbPath, deviceSerial, relativePath, filterPattern, clearFirst, maxBytes, timeoutSeconds }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const adb = adbPath ?? process.env.EASYAR_ADB_PATH ?? "adb";
+    if (clearFirst) {
+      await runProcess(adb, [...(deviceSerial ? ["-s", deviceSerial] : []), "logcat", "-c"], timeoutSeconds);
+    }
+    const result = await runProcess(adb, [...(deviceSerial ? ["-s", deviceSerial] : []), "logcat", "-d", "-v", "time"], timeoutSeconds);
+    const pattern = new RegExp(filterPattern ?? defaultAndroidLogcatFilter(sample), "i");
+    const raw = `${result.stdout}\n${result.stderr}`;
+    const filtered = raw.split(/\r?\n/).filter((line) => pattern.test(line)).join("\n");
+    const redacted = redactSecretText(filtered || raw).slice(-maxBytes);
+    const target = path.resolve(root, relativePath ?? path.join("Logs", `mcp-easyar-DeviceLog-${sample.id}.log`));
+    assertInside(root, target);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, redacted + (redacted.endsWith("\n") ? "" : "\n"), "utf8");
+    const issues = analyzeUnityLog(redacted, sample);
+    return jsonText({
+      sample: sample.name,
+      deviceSerial: deviceSerial ?? null,
+      command: result.command,
+      exitCode: result.exitCode,
+      written: target,
+      filteredLineCount: redacted.split(/\r?\n/).filter(Boolean).length,
+      summary: summarizeLog(redacted),
+      issueCount: issues.length,
+      issues,
+      suggestedRunResultCall: buildSuggestedRunResultCall({
+        root,
+        sample,
+        platform: "android",
+        overallStatus: result.exitCode === 0 && issues.length === 0 ? "passed" : "blocked",
+        stepName: "Android device logcat evidence",
+        status: result.exitCode === 0 && issues.length === 0 ? "passed" : "blocked",
+        evidence: `Collected redacted logcat snapshot at ${path.relative(root, target)}.`,
+        nextAction: "Use this log together with observed device behavior before writing a passed RUN_RESULT.md."
+      }),
+      nextActions: issues.length > 0
+        ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
+        : ["Review the written log and observed device behavior, then record RUN_RESULT.md with real-device evidence."],
+      security: "The written log is filtered and redacted for common EasyAR token, key, license, credential, password, and secret fields. Review before sharing publicly."
     });
   }
 );
@@ -14592,6 +14822,122 @@ function buildUnityArgs(projectPath: string, executeMethod: string | null, logPa
     args.push("-logFile", logPath);
   }
   return args;
+}
+
+type ProcessResult = {
+  command: string;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+};
+
+type AdbDevice = {
+  serial: string;
+  state: string;
+  detail: string;
+};
+
+async function runProcess(command: string, args: string[], timeoutSeconds: number): Promise<ProcessResult> {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const timeout = setTimeout(() => {
+      settled = true;
+      child.kill("SIGTERM");
+      resolve({
+        command: [command, ...args].join(" "),
+        exitCode: null,
+        stdout: stdout.slice(-12000),
+        stderr: `${stderr}\nCommand timed out after ${timeoutSeconds} seconds.`.slice(-12000),
+        timedOut: true
+      });
+    }, timeoutSeconds * 1000);
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      resolve({
+        command: [command, ...args].join(" "),
+        exitCode: null,
+        stdout: stdout.slice(-12000),
+        stderr: `${stderr}\n${error.message}`.slice(-12000),
+        timedOut: false
+      });
+    });
+    child.on("close", (exitCode) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      resolve({
+        command: [command, ...args].join(" "),
+        exitCode,
+        stdout: stdout.slice(-12000),
+        stderr: stderr.slice(-12000),
+        timedOut: false
+      });
+    });
+  });
+}
+
+function parseAdbDevices(stdout: string): AdbDevice[] {
+  return stdout
+    .split(/\r?\n/)
+    .slice(1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [serial = "", state = "", ...rest] = line.split(/\s+/);
+      return {
+        serial,
+        state,
+        detail: rest.join(" ")
+      };
+    })
+    .filter((device) => device.serial.length > 0);
+}
+
+function buildAndroidDeviceStatusActions(result: ProcessResult, devices: AdbDevice[]): string[] {
+  if (result.exitCode === null) {
+    return ["Install Android SDK Platform Tools or set EASYAR_ADB_PATH to the adb executable."];
+  }
+  if (result.exitCode !== 0) {
+    return ["Run adb devices manually and fix the reported adb error before device validation."];
+  }
+  if (devices.some((device) => device.state === "device")) {
+    return ["Install the focused APK with easyar_android_install_apk, then start it and collect logcat evidence."];
+  }
+  if (devices.some((device) => device.state === "unauthorized")) {
+    return ["Unlock the Android device and accept the USB debugging authorization prompt, then rerun easyar_android_device_status."];
+  }
+  return ["Connect a real Android device with USB debugging enabled. Emulators are useful for install checks but cannot prove camera-based EasyAR sample success."];
+}
+
+function defaultAndroidLogcatFilter(sample: SampleInfo): string {
+  const sampleTerms = sample.id === "cloud-recognition"
+    ? "Cloud|CloudRecognizer|Recognition|CRS|network|http|ssl|tls"
+    : "ImageTarget|ImageTracker|ImageTracking|target|camera";
+  return `EasyAR|Unity|AndroidRuntime|${sampleTerms}|permission|denied|exception|error|failed|unauthorized`;
+}
+
+function redactSecretText(text: string): string {
+  return text
+    .replace(/((?:license|licenseKey|accountToken|token|apiKey|apiSecret|appKey|appSecret|secret|credential|password)\s*[:=]\s*)("[^"]+"|'[^']+'|[^\s,;&]+)/gi, "$1<redacted>")
+    .replace(/([?&](?:token|apiKey|apiSecret|appKey|appSecret|secret|credential|password)=)[^&\s]+/gi, "$1<redacted>")
+    .replace(/\b[A-Za-z0-9+/]{80,}={0,2}\b/g, "<redacted>");
 }
 
 async function runUnity(unity: string, projectPath: string, executeMethod: string | null, timeoutSeconds: number, logPath: string | null) {
