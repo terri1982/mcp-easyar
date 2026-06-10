@@ -42,6 +42,8 @@ const toolCatalog = [
   "easyar_write_run_report",
   "easyar_audit_sample_scene",
   "easyar_write_scene_audit",
+  "easyar_generate_support_bundle",
+  "easyar_write_support_bundle",
   "easyar_inspect_unity_project",
   "easyar_check_sample_readiness",
   "easyar_validate_local_config",
@@ -152,7 +154,7 @@ const quickstartWorkflow = [
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads.",
-  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_generate_run_report` and `easyar_audit_sample_scene` for current project status.",
+  "8. Run `easyar_generate_run_sequence` or `easyar_write_run_sequence` for an ordered Codex/Claude execution plan, then `easyar_generate_run_report`, `easyar_audit_sample_scene`, and `easyar_write_support_bundle` for current project status.",
   "9. Run `easyar_inspect_unity_project`, `easyar_prepare_unity_project`, and `easyar_check_sample_readiness`.",
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
@@ -720,6 +722,89 @@ server.tool(
       blockerCount: audit.blockers.length,
       nextActions: audit.nextActions,
       note: "The scene audit does not include secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_support_bundle",
+  "Generate a focused sample support bundle summary across run sequence, run report, scene audit, and latest Unity log diagnostics.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
+    developmentBuild: z.boolean().default(true),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20)
+  },
+  async ({ projectPath, sampleId, platform, outputPath, developmentBuild, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildSupportBundle({
+      root,
+      sample,
+      platform,
+      outputPath,
+      developmentBuild,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_support_bundle",
+  "Write a focused sample support bundle Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
+    developmentBuild: z.boolean().default(true),
+    relativePath: z.string().optional().describe("Optional bundle path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/SUPPORT_BUNDLE.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    maxCandidates: z.number().int().positive().max(100).default(25),
+    maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().positive().max(50).default(20),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing support bundle artifact.")
+  },
+  async ({ projectPath, sampleId, platform, outputPath, developmentBuild, relativePath, maxScriptIssues, maxCandidates, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const bundle = await buildSupportBundle({
+      root,
+      sample,
+      platform,
+      outputPath,
+      developmentBuild,
+      maxScriptIssues,
+      maxCandidates,
+      maxLogBytes,
+      maxLogIssues
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "SUPPORT_BUNDLE.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildSupportBundleMarkdown(bundle), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      overallReady: bundle.runReport.overallReady,
+      readyForUnityValidation: bundle.sceneAudit.readyForUnityValidation,
+      logIssueCount: bundle.latestLog.issueCount,
+      nextActions: bundle.nextActions,
+      note: "The support bundle does not include secret values or full Unity log text."
     });
   }
 );
@@ -1746,6 +1831,101 @@ async function buildSampleSceneAudit(root: string, sample: SampleInfo, maxCandid
   };
 }
 
+async function buildSupportBundle(input: {
+  root: string;
+  sample: SampleInfo;
+  platform: typeof mobilePlatforms[number];
+  outputPath?: string;
+  developmentBuild: boolean;
+  maxScriptIssues: number;
+  maxCandidates: number;
+  maxLogBytes: number;
+  maxLogIssues: number;
+}) {
+  const defaultOutput = input.platform === "android"
+    ? `Builds/${input.sample.id}.apk`
+    : `Builds/iOS/${input.sample.id}`;
+  const runSequence = buildFocusedRunSequence({
+    projectPath: input.root,
+    sample: input.sample,
+    platform: input.platform,
+    outputPath: input.outputPath ?? defaultOutput,
+    developmentBuild: input.developmentBuild
+  });
+  const runReport = await buildFocusedRunReport(input.root, input.sample, input.maxScriptIssues);
+  const sceneAudit = await buildSampleSceneAudit(input.root, input.sample, input.maxCandidates);
+  const latestLog = await buildLatestLogDiagnostic(input.root, input.sample, input.maxLogBytes, input.maxLogIssues);
+  const generatedArtifacts = {
+    runbook: path.relative(input.root, focusedSampleRunbookPath(input.root, input.sample)),
+    runSequence: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_SEQUENCE.md")),
+    runReport: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_REPORT.md")),
+    sceneAudit: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SCENE_AUDIT.md")),
+    supportBundle: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SUPPORT_BUNDLE.md"))
+  };
+  const nextActions = Array.from(new Set([
+    runReport.nextRecommendedPhase,
+    ...sceneAudit.nextActions,
+    ...latestLog.nextActions
+  ]));
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample: runReport.sample,
+    platform: input.platform,
+    outputPath: runSequence.outputPath,
+    developmentBuild: input.developmentBuild,
+    generatedArtifacts,
+    runSequenceSummary: runSequence.phases.map((phase) => ({
+      name: phase.name,
+      stepCount: phase.steps.length
+    })),
+    runReport,
+    sceneAudit,
+    latestLog,
+    nextActions,
+    security: "Secret values and full Unity log text are not included. This bundle reports presence, status, excerpts, and recommended actions only."
+  };
+}
+
+async function buildLatestLogDiagnostic(root: string, sample: SampleInfo, maxLogBytes: number, maxLogIssues: number) {
+  const candidates = await findUnityLogCandidates(root);
+  const latest = candidates.find((candidate) => candidate.exists);
+  if (!latest) {
+    return {
+      analyzed: false,
+      logPath: null,
+      logSizeBytes: null,
+      logModifiedAt: null,
+      summary: null,
+      issueCount: 0,
+      issues: [],
+      candidates: candidates.slice(0, 8),
+      nextActions: [
+        "Run Unity once, then regenerate the support bundle.",
+        "If you already have a log file, call easyar_analyze_unity_log with logPath."
+      ]
+    };
+  }
+
+  const text = await readLogTail(latest.path, maxLogBytes);
+  const issues = analyzeUnityLog(text, sample).slice(0, maxLogIssues);
+  return {
+    analyzed: true,
+    logPath: latest.path,
+    logSizeBytes: latest.size,
+    logModifiedAt: latest.modifiedAt,
+    bytesRead: Buffer.byteLength(text, "utf8"),
+    summary: summarizeLog(text),
+    issueCount: issues.length,
+    issues,
+    candidates: candidates.slice(0, 8),
+    nextActions: issues.length > 0
+      ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
+      : ["No known EasyAR/Unity issue patterns were detected in the latest log tail."]
+  };
+}
+
 function uniqueBlockers<T extends { id: string }>(blockers: T[]): T[] {
   const seen = new Set<string>();
   return blockers.filter((blocker) => {
@@ -2739,6 +2919,78 @@ function buildSceneAuditMarkdown(audit: Awaited<ReturnType<typeof buildSampleSce
     "## Security",
     "",
     audit.security,
+    ""
+  ].join("\n");
+}
+
+function buildSupportBundleMarkdown(bundle: Awaited<ReturnType<typeof buildSupportBundle>>): string {
+  return [
+    `# EasyAR Focused Support Bundle - ${bundle.sample.name}`,
+    "",
+    `Generated at: ${bundle.generatedAt}`,
+    `Project: ${bundle.projectPath}`,
+    `Sample id: ${bundle.sample.id}`,
+    `Status: ${bundle.sample.implementationStatus}`,
+    `Platform: ${bundle.platform}`,
+    `Output path: ${bundle.outputPath}`,
+    `Development build: ${bundle.developmentBuild ? "yes" : "no"}`,
+    "",
+    "## Current State",
+    "",
+    `Overall ready: ${bundle.runReport.overallReady ? "yes" : "no"}`,
+    `Ready for Unity validation: ${bundle.sceneAudit.readyForUnityValidation ? "yes" : "no"}`,
+    `Latest log analyzed: ${bundle.latestLog.analyzed ? "yes" : "no"}`,
+    `Latest log issue count: ${bundle.latestLog.issueCount}`,
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(bundle.nextActions, "Run the focused Unity validator."),
+    "",
+    "## Generated Artifacts",
+    "",
+    ...Object.entries(bundle.generatedArtifacts).map(([name, artifactPath]) => `- ${name}: ${artifactPath}`),
+    "",
+    "## Run Sequence Summary",
+    "",
+    ...bundle.runSequenceSummary.map((phase) => `- ${phase.name}: ${phase.stepCount} step(s)`),
+    "",
+    "## Run Report",
+    "",
+    `Next recommended phase: ${bundle.runReport.nextRecommendedPhase}`,
+    `Readiness ready: ${bundle.runReport.readiness.ready ? "yes" : "no"}`,
+    `Local config valid: ${bundle.runReport.configValidation.valid ? "yes" : "no"}`,
+    `Script issue count: ${bundle.runReport.scriptReview.issueCount}`,
+    "",
+    "## Scene Audit",
+    "",
+    `Matching scenes: ${bundle.sceneAudit.matchingScenes.length}`,
+    `EasyAR import signals: ${bundle.sceneAudit.easyarSignals.length}`,
+    `Scene audit blockers: ${bundle.sceneAudit.blockers.length}`,
+    `First Build Settings scene: ${bundle.sceneAudit.buildSettingsHints.firstEnabledScene ?? "none"}`,
+    `First scene matches sample: ${bundle.sceneAudit.buildSettingsHints.firstEnabledSceneMatches ? "yes" : "no"}`,
+    "",
+    ...markdownIssueList(bundle.sceneAudit.blockers.map((blocker) => `${blocker.id}: ${blocker.detail}`), "No scene audit blockers."),
+    "",
+    "## Latest Unity Log",
+    "",
+    `Log path: ${bundle.latestLog.logPath ?? "none"}`,
+    `Modified at: ${bundle.latestLog.logModifiedAt ?? "unknown"}`,
+    `Size bytes: ${bundle.latestLog.logSizeBytes ?? "unknown"}`,
+    "",
+    ...(bundle.latestLog.summary
+      ? [
+          `Total lines: ${bundle.latestLog.summary.totalLines}`,
+          `Error lines: ${bundle.latestLog.summary.errorLines}`,
+          `Warning lines: ${bundle.latestLog.summary.warningLines}`,
+          `Mentions EasyAR: ${bundle.latestLog.summary.mentionsEasyAR ? "yes" : "no"}`
+        ]
+      : ["No log summary available."]),
+    "",
+    ...markdownIssueList(bundle.latestLog.issues.map((issue) => `${issue.severity} ${issue.id}: ${issue.title}${issue.evidence ? ` (${issue.evidence})` : ""}`), "No known log issue patterns detected."),
+    "",
+    "## Security",
+    "",
+    bundle.security,
     ""
   ].join("\n");
 }

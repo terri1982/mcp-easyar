@@ -85,6 +85,14 @@ try {
     tools.result.tools.some((tool) => tool.name === "easyar_write_scene_audit"),
     "easyar_write_scene_audit should be listed"
   );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_support_bundle"),
+    "easyar_generate_support_bundle should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_support_bundle"),
+    "easyar_write_support_bundle should be listed"
+  );
 
   const prompts = await request("prompts/list", {});
   assert(
@@ -569,6 +577,30 @@ try {
   assertTextIncludes(latestLogAnalysis, "\"analyzed\": true");
   assertTextIncludes(latestLogAnalysis, "cloud-recognition-network");
   assertTextIncludes(latestLogAnalysis, "Editor.log");
+
+  const supportBundle = await callTool("easyar_generate_support_bundle", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(supportBundle, "\"sample\"");
+  assertTextIncludes(supportBundle, "\"latestLog\"");
+  assertTextIncludes(supportBundle, "cloud-recognition-network");
+  assertTextIncludes(supportBundle, "SUPPORT_BUNDLE.md");
+
+  const writtenSupportBundle = await callTool("easyar_write_support_bundle", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  assertTextIncludes(writtenSupportBundle, "SUPPORT_BUNDLE.md");
+  const supportBundleMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "SUPPORT_BUNDLE.md"),
+    "utf8"
+  );
+  assert(supportBundleMarkdown.includes("EasyAR Focused Support Bundle - Cloud Recognition"), "Support bundle markdown should include title");
+  assert(supportBundleMarkdown.includes("Latest Unity Log"), "Support bundle markdown should include latest log section");
+  assert(supportBundleMarkdown.includes("cloud-recognition-network"), "Support bundle markdown should include focused log issue");
 
   await rm(projectPath, { recursive: true, force: true });
   child.kill();
