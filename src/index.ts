@@ -5724,6 +5724,7 @@ async function buildCodePlan(root: string, sample: SampleInfo, goal: string, tar
   const scriptReview = await buildScriptReviewReport(root, normalizedTargets.length > 0 ? normalizedTargets : undefined, 80, maxScriptIssues);
   const readiness = await buildSampleReadinessReport(root, sample);
   const implementationSteps = buildCodePlanImplementationSteps(sample, suggestedPrimaryFile, suggestedClassName, defaultKind);
+  const verificationCalls = buildCodePlanVerificationCalls(root, sample);
   const riskChecks = [
     "Do not hardcode EasyAR license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets.",
     "Keep generated code scoped to target files and avoid unrelated scene/prefab rewrites.",
@@ -5762,9 +5763,11 @@ async function buildCodePlan(root: string, sample: SampleInfo, goal: string, tar
     },
     implementationSteps,
     riskChecks,
+    verificationCalls,
     verificationSteps: [
       "Call easyar_review_csharp_scripts for changed scripts.",
-      "Call easyar_run_unity_compile_check with the focused sampleId.",
+      "Call easyar_run_unity_compile_check with sampleId, platform, and a project-local logPath.",
+      "Use the returned suggestedRunResultCall to update RUN_RESULT.md.",
       "Regenerate easyar_write_support_bundle after Unity compilation or build attempts.",
       "Record outcome with easyar_write_run_result."
     ],
@@ -5979,6 +5982,48 @@ function buildCodePlanImplementationSteps(
     ];
   }
   return common;
+}
+
+function buildCodePlanVerificationCalls(root: string, sample: SampleInfo) {
+  return [
+    {
+      tool: "easyar_review_csharp_scripts",
+      arguments: {
+        projectPath: root
+      },
+      purpose: "Run static EasyAR-focused script review before opening Unity."
+    },
+    {
+      tool: "easyar_run_unity_compile_check",
+      arguments: {
+        projectPath: root,
+        sampleId: sample.id,
+        platform: "android",
+        logPath: path.join("Logs", "mcp-easyar-CodeCompileCheck.log")
+      },
+      purpose: "Force Unity script import/compilation and receive suggestedRunResultCall for RUN_RESULT.md."
+    },
+    {
+      tool: "easyar_write_support_bundle",
+      arguments: {
+        projectPath: root,
+        sampleId: sample.id,
+        platform: "android"
+      },
+      purpose: "Refresh SUPPORT_BUNDLE.md after compile/build attempts."
+    },
+    {
+      tool: "easyar_write_run_result",
+      arguments: {
+        projectPath: root,
+        sampleId: sample.id,
+        platform: "android",
+        overallStatus: "not-run",
+        steps: []
+      },
+      purpose: "Replace the placeholder arguments with the suggestedRunResultCall returned by Unity batch tools."
+    }
+  ];
 }
 
 async function buildLatestLogDiagnostic(root: string, sample: SampleInfo, maxLogBytes: number, maxLogIssues: number) {
@@ -7888,6 +7933,14 @@ function buildCodePlanMarkdown(plan: Awaited<ReturnType<typeof buildCodePlan>>):
     "## Verification Steps",
     "",
     ...plan.verificationSteps.map((step) => `- ${step}`),
+    "",
+    "## Verification Calls",
+    "",
+    ...plan.verificationCalls.flatMap((call) => [
+      `- Tool: \`${call.tool}\``,
+      `  Arguments: \`${JSON.stringify(call.arguments)}\``,
+      `  Purpose: ${call.purpose}`
+    ]),
     "",
     "## Next Actions",
     "",

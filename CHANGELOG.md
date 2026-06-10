@@ -31,7 +31,7 @@ Initial public MVP for `mcp-easyar`.
 - Redacted GitHub issue report and `ISSUE_REPORT.md` artifact generation for focused sample failures.
 - GitHub issue template and focused Image Tracking / Cloud Recognition troubleshooting guide.
 - Focused Unity programming context and `PROGRAMMING_CONTEXT.md` artifact generation before C# planning or edits.
-- Focused Unity C# code planning and `CODE_PLAN.md` artifact generation before sample script edits.
+- Focused Unity C# code planning and `CODE_PLAN.md` artifact generation before sample script edits, including structured verification calls for review, compile, support bundle, and run result handoff.
 - Focused Unity C# change summary and `CODE_CHANGE.md` artifact generation after sample script edits.
 - Focused sample runbooks and support directories generated under `Assets/EasyARGenerated/<sampleId>/`.
 - Unity-side focused sample validation filters generated MCP helper files and verifies the matching sample scene is first in Build Settings.

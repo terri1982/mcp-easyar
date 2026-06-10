@@ -250,8 +250,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_create_sample_runner`: create `Assets/Editor/EasyARSampleRunner.cs`.
 - `easyar_generate_programming_context`: generate a focused Unity C# script inventory, generated helper summary, static review, and recommended programming workflow before editing scripts.
 - `easyar_write_programming_context`: write the focused programming context to `Assets/EasyARGenerated/<sampleId>/PROGRAMMING_CONTEXT.md`.
-- `easyar_generate_code_plan`: generate a focused Unity C# implementation plan before editing sample code.
-- `easyar_write_code_plan`: write the focused C# implementation plan to `Assets/EasyARGenerated/<sampleId>/CODE_PLAN.md`.
+- `easyar_generate_code_plan`: generate a focused Unity C# implementation plan before editing sample code, including verification calls for script review, Unity compile, support bundle, and run result handoff.
+- `easyar_write_code_plan`: write the focused C# implementation plan and verification calls to `Assets/EasyARGenerated/<sampleId>/CODE_PLAN.md`.
 - `easyar_create_mono_behaviour`: create a Unity C# MonoBehaviour template for EasyAR sample development.
 - `easyar_write_csharp_file`: create or replace a `.cs` file inside a Unity project.
 - `easyar_generate_code_change_summary`: generate a focused C# change summary after script edits.

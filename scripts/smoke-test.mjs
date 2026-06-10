@@ -1161,6 +1161,9 @@ try {
   assertTextIncludes(codePlan, "easyar_create_mono_behaviour");
   assertTextIncludes(codePlan, "ImageTargetContentController.cs");
   assertTextIncludes(codePlan, "Run static script review before opening Unity batch compilation");
+  assertTextIncludes(codePlan, "\"verificationCalls\"");
+  assertTextIncludes(codePlan, "mcp-easyar-CodeCompileCheck.log");
+  assertTextIncludes(codePlan, "suggestedRunResultCall");
 
   const writtenCodePlan = await callTool("easyar_write_code_plan", {
     projectPath,
@@ -1175,6 +1178,9 @@ try {
   );
   assert(codePlanMarkdown.includes("EasyAR Focused Code Plan - Cloud Recognition"), "Code plan markdown should include title");
   assert(codePlanMarkdown.includes("never embed appKey or appSecret"), "Code plan should include Cloud Recognition secret guidance");
+  assert(codePlanMarkdown.includes("Verification Calls"), "Code plan markdown should include verification calls");
+  assert(codePlanMarkdown.includes("easyar_run_unity_compile_check"), "Code plan markdown should include compile verification call");
+  assert(codePlanMarkdown.includes("suggestedRunResultCall"), "Code plan markdown should mention run result handoff");
 
   await writeFile(
     path.join(projectPath, "Assets", "Scripts", "RiskyEasyARController.cs"),

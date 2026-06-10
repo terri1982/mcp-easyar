@@ -217,6 +217,8 @@ easyar_create_mono_behaviour projectPath=/path/to/UnityProject relativePath=Asse
 
 Read `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md` when another AI tool or human developer is taking over script work.
 
+`CODE_PLAN.md` includes structured verification calls. After script edits, run the listed `easyar_review_csharp_scripts` and `easyar_run_unity_compile_check` call, then use the compile tool's `suggestedRunResultCall` to update `RUN_RESULT.md`.
+
 For custom code, use:
 
 ```text
@@ -228,7 +230,7 @@ Review generated or edited scripts before compiling:
 ```text
 easyar_review_csharp_scripts projectPath=/path/to/UnityProject
 easyar_write_code_change_summary projectPath=/path/to/UnityProject sampleId=image-tracking goal="Summarize script changes" targetFiles='["Assets/Scripts/ImageTargetContentController.cs"]'
-easyar_run_unity_compile_check projectPath=/path/to/UnityProject sampleId=image-tracking
+easyar_run_unity_compile_check projectPath=/path/to/UnityProject sampleId=image-tracking platform=android logPath=Logs/mcp-easyar-CodeCompileCheck.log
 ```
 
 ## 7. Final Readiness Check
