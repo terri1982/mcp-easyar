@@ -126,6 +126,7 @@ The validator ignores generated MCP helper files when checking for official Easy
 For common sample logic, call:
 
 ```text
+easyar_write_code_plan projectPath=/path/to/UnityProject sampleId=image-tracking goal="Show content when an image target is found"
 easyar_create_mono_behaviour projectPath=/path/to/UnityProject relativePath=Assets/Scripts/ImageTargetContentController.cs className=ImageTargetContentController kind=image-tracking
 ```
 

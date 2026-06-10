@@ -58,6 +58,8 @@ const toolCatalog = [
   "easyar_create_build_settings_helper",
   "easyar_create_device_build_helper",
   "easyar_create_sample_runner",
+  "easyar_generate_code_plan",
+  "easyar_write_code_plan",
   "easyar_create_mono_behaviour",
   "easyar_write_csharp_file",
   "easyar_review_csharp_scripts",
@@ -162,7 +164,7 @@ const quickstartWorkflow = [
   "10. Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `easyar.local.json` and fill official local credentials.",
   "11. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
   "12. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "13. Use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
+  "13. Use `easyar_write_code_plan`, `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, and `easyar_review_csharp_scripts` for project code.",
   "14. Run `easyar_check_sample_readiness` again, then build to a real Android or iOS device for tracking validation.",
   "15. Use `easyar_write_run_result` after compile, build, or device attempts to preserve handoff evidence and next actions.",
   "",
@@ -1264,6 +1266,60 @@ server.tool(
 );
 
 server.tool(
+  "easyar_generate_code_plan",
+  "Generate a focused Unity C# implementation plan before editing Image Tracking or Cloud Recognition sample code.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    goal: z.string().describe("Requested code change goal, for example add target found UI or handle cloud recognition timeout."),
+    targetFiles: z.array(z.string()).default([]).describe("Optional relative .cs files expected to be created or changed."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25)
+  },
+  async ({ projectPath, sampleId, goal, targetFiles, maxScriptIssues }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildCodePlan(root, sample, goal, targetFiles, maxScriptIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_code_plan",
+  "Write a focused Unity C# implementation plan Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    goal: z.string().describe("Requested code change goal, for example add target found UI or handle cloud recognition timeout."),
+    targetFiles: z.array(z.string()).default([]).describe("Optional relative .cs files expected to be created or changed."),
+    relativePath: z.string().optional().describe("Optional plan path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/CODE_PLAN.md."),
+    maxScriptIssues: z.number().int().positive().max(100).default(25),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing code plan artifact.")
+  },
+  async ({ projectPath, sampleId, goal, targetFiles, relativePath, maxScriptIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const plan = await buildCodePlan(root, sample, goal, targetFiles, maxScriptIssues);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "CODE_PLAN.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildCodePlanMarkdown(plan), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      goal,
+      targetFileCount: plan.targetFiles.length,
+      nextActions: plan.nextActions,
+      note: "Review the code plan before calling easyar_write_csharp_file or easyar_create_mono_behaviour."
+    });
+  }
+);
+
+server.tool(
   "easyar_create_mono_behaviour",
   "Create a Unity C# MonoBehaviour template for common EasyAR sample development tasks.",
   {
@@ -1966,7 +2022,8 @@ async function buildSupportBundle(input: {
     runReport: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_REPORT.md")),
     sceneAudit: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SCENE_AUDIT.md")),
     supportBundle: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "SUPPORT_BUNDLE.md")),
-    runResult: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_RESULT.md"))
+    runResult: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_RESULT.md")),
+    codePlan: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "CODE_PLAN.md"))
   };
   const nextActions = Array.from(new Set([
     runReport.nextRecommendedPhase,
@@ -2053,6 +2110,110 @@ async function buildRunResult(input: {
     nextActions: recommendedNextActions,
     security: "Secret values are not returned. Do not include license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets in run result notes or evidence."
   };
+}
+
+async function buildCodePlan(root: string, sample: SampleInfo, goal: string, targetFiles: string[], maxScriptIssues: number) {
+  const normalizedTargets = targetFiles.map((relativePath) => normalizeProjectRelativePath(root, relativePath));
+  const defaultKind = sample.id === "cloud-recognition" ? "cloud-recognition" : "image-tracking";
+  const suggestedClassName = sample.id === "cloud-recognition"
+    ? "CloudRecognitionResultController"
+    : "ImageTargetContentController";
+  const suggestedPrimaryFile = normalizedTargets[0] ?? `Assets/Scripts/${suggestedClassName}.cs`;
+  const scriptReview = await buildScriptReviewReport(root, normalizedTargets.length > 0 ? normalizedTargets : undefined, 80, maxScriptIssues);
+  const readiness = await buildSampleReadinessReport(root, sample);
+  const implementationSteps = buildCodePlanImplementationSteps(sample, suggestedPrimaryFile, suggestedClassName, defaultKind);
+  const riskChecks = [
+    "Do not hardcode EasyAR license keys, account tokens, appKey, appSecret, signing keys, or provisioning secrets.",
+    "Keep generated code scoped to target files and avoid unrelated scene/prefab rewrites.",
+    "Use serialized fields for scene references so users can wire objects in the Unity Inspector.",
+    "Run easyar_review_csharp_scripts before Unity compilation.",
+    "Run easyar_run_unity_compile_check after writing scripts."
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    goal,
+    targetFiles: normalizedTargets.length > 0 ? normalizedTargets : [suggestedPrimaryFile],
+    suggestedTemplate: {
+      tool: "easyar_create_mono_behaviour",
+      arguments: {
+        projectPath: root,
+        relativePath: suggestedPrimaryFile,
+        className: suggestedClassName,
+        kind: defaultKind
+      }
+    },
+    readinessSummary: {
+      ready: readiness.ready,
+      failingChecks: readiness.checks.filter((check) => !check.ok).map((check) => check.id)
+    },
+    scriptReviewSummary: {
+      reviewedFileCount: scriptReview.reviewedFileCount,
+      issueCount: scriptReview.issueCount,
+      issues: scriptReview.issues
+    },
+    implementationSteps,
+    riskChecks,
+    verificationSteps: [
+      "Call easyar_review_csharp_scripts for changed scripts.",
+      "Call easyar_run_unity_compile_check with the focused sampleId.",
+      "Regenerate easyar_write_support_bundle after Unity compilation or build attempts.",
+      "Record outcome with easyar_write_run_result."
+    ],
+    nextActions: [
+      "Review CODE_PLAN.md before editing scripts.",
+      normalizedTargets.length > 0
+        ? "Patch only the listed target files with easyar_write_csharp_file."
+        : "Create the suggested MonoBehaviour template with easyar_create_mono_behaviour, then patch only the generated script.",
+      "Run static script review before opening Unity batch compilation."
+    ],
+    security: "This code plan does not include secret values. Keep official EasyAR credentials in local config or environment-backed storage."
+  };
+}
+
+function normalizeProjectRelativePath(root: string, relativePath: string): string {
+  const target = path.resolve(root, relativePath);
+  assertInside(root, target);
+  const normalized = path.relative(root, target);
+  if (!normalized.endsWith(".cs")) {
+    throw new Error("Code plan targetFiles must point to .cs files.");
+  }
+  return normalized;
+}
+
+function buildCodePlanImplementationSteps(
+  sample: SampleInfo,
+  primaryFile: string,
+  className: string,
+  kind: typeof monoBehaviourKinds[number]
+): string[] {
+  const common = [
+    `Use ${primaryFile} as the primary implementation file.`,
+    `Prefer easyar_create_mono_behaviour with className=${className} and kind=${kind} when starting from a new script.`,
+    "Expose GameObject, Text, Renderer, or event references with [SerializeField] fields instead of searching every frame.",
+    "Keep Update lightweight; use EasyAR callbacks, UnityEvents, or explicit methods for state changes."
+  ];
+  if (sample.id === "image-tracking") {
+    return [
+      ...common,
+      "Represent target found/lost transitions with explicit methods such as OnTargetFound and OnTargetLost.",
+      "Keep target physical-size, target database, and target asset setup in the official EasyAR workflow rather than hardcoding it in gameplay scripts."
+    ];
+  }
+  if (sample.id === "cloud-recognition") {
+    return [
+      ...common,
+      "Represent cloud success, timeout, unauthorized, and network failure states separately.",
+      "Read cloud credentials from local config or the official sample wiring; never embed appKey or appSecret in scripts."
+    ];
+  }
+  return common;
 }
 
 async function buildLatestLogDiagnostic(root: string, sample: SampleInfo, maxLogBytes: number, maxLogIssues: number) {
@@ -3208,6 +3369,62 @@ function buildRunResultMarkdown(result: Awaited<ReturnType<typeof buildRunResult
     "## Security",
     "",
     result.security,
+    ""
+  ].join("\n");
+}
+
+function buildCodePlanMarkdown(plan: Awaited<ReturnType<typeof buildCodePlan>>): string {
+  return [
+    `# EasyAR Focused Code Plan - ${plan.sample.name}`,
+    "",
+    `Generated at: ${plan.generatedAt}`,
+    `Project: ${plan.projectPath}`,
+    `Sample id: ${plan.sample.id}`,
+    `Status: ${plan.sample.implementationStatus}`,
+    "",
+    "## Goal",
+    "",
+    plan.goal,
+    "",
+    "## Target Files",
+    "",
+    ...markdownIssueList(plan.targetFiles, "No target files listed."),
+    "",
+    "## Suggested Starting Tool",
+    "",
+    `Tool: ${plan.suggestedTemplate.tool}`,
+    `Arguments: ${JSON.stringify(plan.suggestedTemplate.arguments)}`,
+    "",
+    "## Readiness Summary",
+    "",
+    `Ready: ${plan.readinessSummary.ready ? "yes" : "no"}`,
+    ...markdownIssueList(plan.readinessSummary.failingChecks, "No failing readiness checks."),
+    "",
+    "## Existing Script Review",
+    "",
+    `Reviewed files: ${plan.scriptReviewSummary.reviewedFileCount}`,
+    `Issue count: ${plan.scriptReviewSummary.issueCount}`,
+    ...markdownIssueList(plan.scriptReviewSummary.issues.map((issue) => `${issue.severity} ${issue.file}${issue.line ? `:${issue.line}` : ""} - ${issue.title}`), "No static script issues detected."),
+    "",
+    "## Implementation Steps",
+    "",
+    ...plan.implementationSteps.map((step) => `- ${step}`),
+    "",
+    "## Risk Checks",
+    "",
+    ...plan.riskChecks.map((check) => `- ${check}`),
+    "",
+    "## Verification Steps",
+    "",
+    ...plan.verificationSteps.map((step) => `- ${step}`),
+    "",
+    "## Next Actions",
+    "",
+    ...plan.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    plan.security,
     ""
   ].join("\n");
 }

@@ -17,6 +17,7 @@ Initial public MVP for `mcp-easyar`.
 - Focused sample scene audit and `SCENE_AUDIT.md` artifact generation for scene candidates, Build Settings hints, and sample blockers.
 - Focused support bundle and `SUPPORT_BUNDLE.md` artifact generation across run sequence, run report, scene audit, and latest Unity log diagnostics.
 - Focused run result and `RUN_RESULT.md` artifact generation for compile, build, and device validation handoff.
+- Focused Unity C# code planning and `CODE_PLAN.md` artifact generation before sample script edits.
 - Focused sample runbooks and support directories generated under `Assets/EasyARGenerated/<sampleId>/`.
 - Unity-side focused sample validation filters generated MCP helper files and verifies the matching sample scene is first in Build Settings.
 - Client configuration helpers for Codex, Claude Desktop, and generic stdio MCP clients.

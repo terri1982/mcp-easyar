@@ -70,6 +70,14 @@ try {
     "easyar_review_csharp_scripts should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_code_plan"),
+    "easyar_generate_code_plan should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_code_plan"),
+    "easyar_write_code_plan should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_run_unity_compile_check"),
     "easyar_run_unity_compile_check should be listed"
   );
@@ -509,6 +517,30 @@ try {
     "utf8"
   );
   assert(generatedScript.includes("OnTargetFound"), "Generated script should include OnTargetFound");
+
+  const codePlan = await callTool("easyar_generate_code_plan", {
+    projectPath,
+    sampleId: "image-tracking",
+    goal: "Show content when an image target is found and hide it when tracking is lost.",
+    targetFiles: ["Assets/Scripts/ImageTargetContentController.cs"]
+  });
+  assertTextIncludes(codePlan, "easyar_create_mono_behaviour");
+  assertTextIncludes(codePlan, "ImageTargetContentController.cs");
+  assertTextIncludes(codePlan, "Run static script review before opening Unity batch compilation");
+
+  const writtenCodePlan = await callTool("easyar_write_code_plan", {
+    projectPath,
+    sampleId: "cloud-recognition",
+    goal: "Handle cloud recognition timeout and unauthorized states without hardcoded secrets.",
+    targetFiles: ["Assets/Scripts/CloudRecognitionResultController.cs"]
+  });
+  assertTextIncludes(writtenCodePlan, "CODE_PLAN.md");
+  const codePlanMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "cloud-recognition", "CODE_PLAN.md"),
+    "utf8"
+  );
+  assert(codePlanMarkdown.includes("EasyAR Focused Code Plan - Cloud Recognition"), "Code plan markdown should include title");
+  assert(codePlanMarkdown.includes("never embed appKey or appSecret"), "Code plan should include Cloud Recognition secret guidance");
 
   await writeFile(
     path.join(projectPath, "Assets", "Scripts", "RiskyEasyARController.cs"),
