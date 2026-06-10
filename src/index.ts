@@ -4889,6 +4889,28 @@ async function buildAccountMaterialsReport(
             storeIn: localConfigPath,
             sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
             mcpCheck: "easyar_validate_local_config"
+          },
+          {
+            id: "cloud-target-library",
+            label: "Cloud Recognition target library",
+            required: false,
+            requiredForDeviceRun: true,
+            present: false,
+            source: "EasyAR development center Cloud Recognition management page. Create a cloud recognition image library, upload at least one target image, and make sure the target is enabled for the selected AppId/API KEY.",
+            storeIn: "EasyAR official account; optionally record only the non-secret library name or dashboard URL in run evidence.",
+            sharePolicy: "Do not share API keys or secrets. A library name, target count, or dashboard URL is usually acceptable for private support artifacts; review before posting publicly.",
+            mcpCheck: "easyar_discover_cloud_credentials targetLibraryCount or manual account-page confirmation"
+          },
+          {
+            id: "cloud-test-target-image",
+            label: "Cloud Recognition test target image",
+            required: false,
+            requiredForDeviceRun: true,
+            present: false,
+            source: "A printed or screen-displayed image that has already been uploaded to the EasyAR Cloud Recognition target library.",
+            storeIn: "Physical test setup or local private test assets; do not commit private customer target images unless they are intended test fixtures.",
+            sharePolicy: "Share only non-sensitive target names or screenshots cleared for support. Do not attach private customer imagery to public issues.",
+            mcpCheck: "DEVICE_VALIDATION.md real-device evidence"
           }
         ]
       : [])
@@ -4937,6 +4959,12 @@ function accountMaterialNextAction(
   }
   if (item.id === "license-key") {
     return `Create or locate the EasyAR Sense license in the official account and fill easyar.licenseKey in ${localConfigPath}.`;
+  }
+  if (item.id === "cloud-target-library") {
+    return "Create a Cloud Recognition image library in the EasyAR development center, upload at least one target image, and keep a non-secret library name or dashboard URL for device evidence.";
+  }
+  if (item.id === "cloud-test-target-image") {
+    return "Prepare a physical or screen-displayed target image that is already uploaded to the Cloud Recognition library before running the device test.";
   }
   if (item.id.startsWith("cloud-")) {
     return `Create or locate the Cloud Recognition/CRS credentials in the official account and fill the required cloud fields in ${localConfigPath}.`;
@@ -9254,6 +9282,12 @@ function sampleSpecificDeviceValidationSteps(sample: SampleInfo) {
         expected: "No unauthorized, timeout, DNS, TLS, or region mismatch errors appear in app/device logs."
       },
       {
+        id: "cloud-target-library-ready",
+        title: "Verify Cloud Recognition target library",
+        action: "Confirm the official EasyAR Cloud Recognition library for this AppId has at least one uploaded and enabled target image.",
+        expected: "A non-secret library name, dashboard URL, or target count can be recorded for evidence, and no API KEY/API Secret values are exposed."
+      },
+      {
         id: "cloud-recognition-result",
         title: "Verify cloud recognition result",
         action: "Present a target configured in the official EasyAR Cloud Recognition library.",
@@ -9284,6 +9318,7 @@ function sampleDevicePassCriteria(sample: SampleInfo): string[] {
       "App launches on a physical device with camera permission granted.",
       "EasyAR initializes without license or plugin import errors.",
       "Cloud Recognition credentials are accepted by the official service.",
+      "The selected Cloud Recognition library contains at least one uploaded target image for this test.",
       "A configured cloud target is recognized and produces the expected sample response.",
       "No secret values are printed in Unity, device, or support logs."
     ];
@@ -9302,6 +9337,7 @@ function sampleDeviceEvidencePrompts(sample: SampleInfo): string[] {
   if (sample.id === "cloud-recognition") {
     return [
       "Cloud target/library name or non-secret identifier.",
+      "Target library count or account-page confirmation that at least one test target image is uploaded.",
       "Recognition response status without appKey/appSecret values.",
       "Network/service-region observations."
     ];
@@ -10589,7 +10625,15 @@ async function buildLocalConfigForm(
     jsonSkeleton,
     envBackedWrite,
     validationChain,
-    nextActions: Array.from(new Set(nextActions)),
+    nextActions: Array.from(new Set([
+      ...nextActions,
+      ...(needsCloudRecognition
+        ? [
+            "Before real-device Cloud Recognition validation, create a Cloud Recognition image library in the EasyAR development center and upload at least one test target image.",
+            "Keep a non-secret target library name, target count, or dashboard URL for RUN_RESULT.md evidence; never record API Key/API Secret values."
+          ]
+        : [])
+    ])),
     security: "This form returns only field names, placeholders, presence status, and validation calls. Actual account tokens, license keys, API keys, appKey, and appSecret must stay in local files or local environment variables."
   };
 }
@@ -10636,7 +10680,10 @@ async function buildLocalConfigHandoffReport(
     "Open https://www.easyar.cn/ in a browser and register or log in with the user's EasyAR account.",
     `Create or locate the EasyAR Sense license for ${platform} and the Unity bundle/package identifier.`,
     ...(needsCloudRecognition
-      ? ["Create or locate the Cloud Recognition/CRS application and copy CRS AppId plus API KEY locally. Keep API Secret local if the account page exposes it."]
+      ? [
+          "Create or locate the Cloud Recognition/CRS application and copy CRS AppId plus API KEY locally. Keep API Secret local if the account page exposes it.",
+          "Create or locate a Cloud Recognition image library, upload at least one test target image, and keep only a non-secret library name, target count, or dashboard URL for run evidence."
+        ]
       : ["Cloud Recognition credentials are not required for Image Tracking, but can remain empty as a complete empty group."]),
     "Run easyar_prepare_unity_project if easyar.local.json.example is missing.",
     `Copy ${path.relative(root, examplePath)} to ${path.relative(root, configPath)}.`,
@@ -10675,7 +10722,7 @@ async function buildLocalConfigHandoffReport(
       : []),
     `Use either the manual file steps or ${envBackedWrite.command}; then run ${validationChain[0]}.`,
     needsCloudRecognition
-      ? "For Cloud Recognition, appId and apiKey must be filled before the sample can be considered ready. Legacy appKey/appSecret fields are still accepted."
+      ? "For Cloud Recognition, appId and apiKey must be filled before the sample can be considered ready. A cloud target library with at least one uploaded target image is also required before real-device validation can pass. Legacy appKey/appSecret fields are still accepted."
       : "For Image Tracking, leave Cloud Recognition credentials empty unless the project also needs Cloud Recognition."
   ]));
 
@@ -12848,6 +12895,7 @@ function buildAccountMaterialsMarkdown(report: Awaited<ReturnType<typeof buildAc
       `Present: ${item.present ? "yes" : "no"}`,
       `Source: ${item.source}`,
       `Store in: ${item.storeIn}`,
+      ...("requiredForDeviceRun" in item ? [`Required before device run: ${item.requiredForDeviceRun ? "yes" : "no"}`] : []),
       `Share policy: ${item.sharePolicy}`,
       `MCP check: ${item.mcpCheck}`,
       ""
@@ -14477,12 +14525,14 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
       "",
       "1. Fill `easyar.cloudRecognition.appId` and `apiKey` in local config. Legacy `appKey`/`appSecret` aliases are still accepted.",
       "2. Confirm network access is allowed on the target platform.",
-      "3. Verify the cloud database/target library is configured in the official EasyAR account.",
-      "4. Test on a real device with a network path to the selected EasyAR cloud recognition service.",
+      "3. Create or verify the cloud database/target library in the official EasyAR account.",
+      "4. Upload at least one test target image to the Cloud Recognition library and keep a non-secret library name, target count, or dashboard URL for evidence.",
+      "5. Test on a real device with a network path to the selected EasyAR cloud recognition service.",
       "",
       "Expected readiness checks:",
       "",
       "- `cloud-recognition-credentials` should report CRS AppId + API Key configured.",
+      "- The EasyAR account should show at least one uploaded Cloud Recognition target image for the selected AppId/API KEY.",
       "- `sample-scene` should find an official Cloud Recognition scene."
     ].join("\n") + "\n";
   }
@@ -14521,6 +14571,8 @@ async function writeFocusedSampleSupportFiles(root: string, sample: SampleInfo, 
         "# Cloud Recognition Credentials",
         "",
         "Fill `ProjectSettings/EasyAR/easyar.local.json` with official CRS `appId` and API `apiKey` values from the registered EasyAR account. Keep `apiSecret` local if the account page exposes it.",
+        "",
+        "Before marking the sample as passed, create or locate a Cloud Recognition image library in the EasyAR development center, upload at least one test target image, and record only a non-secret library name, target count, or dashboard URL in `RUN_RESULT.md`.",
         "",
         "Do not commit cloud recognition credentials. The generated `.gitignore` protects the local config file."
       ].join("\n") + "\n",

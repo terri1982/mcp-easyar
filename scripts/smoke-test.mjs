@@ -558,6 +558,9 @@ try {
     sampleId: "cloud-recognition"
   });
   assertTextIncludes(accountMaterials, "easyar.cloudRecognition.appSecret");
+  assertTextIncludes(accountMaterials, "cloud-target-library");
+  assertTextIncludes(accountMaterials, "cloud-test-target-image");
+  assertTextIncludes(accountMaterials, "\"requiredForDeviceRun\": true");
   assertTextIncludes(accountMaterials, "Never paste into chat");
   assertTextIncludes(accountMaterials, "\"missingRequired\"");
 
@@ -885,6 +888,8 @@ try {
   );
   assert(accountMaterialsMarkdown.includes("EasyAR Account Materials"), "Account materials markdown should include title");
   assert(accountMaterialsMarkdown.includes("easyar.cloudRecognition.appSecret"), "Account materials markdown should list cloud secret field name");
+  assert(accountMaterialsMarkdown.includes("Cloud Recognition target library"), "Account materials markdown should list cloud target library prerequisite");
+  assert(accountMaterialsMarkdown.includes("Required before device run: yes"), "Account materials markdown should mark cloud target library as device prerequisite");
   assert(accountMaterialsMarkdown.includes("Secret. Never paste into chat"), "Account materials markdown should include sharing policy");
   assert(!accountMaterialsMarkdown.includes("test-cloud-app-secret"), "Account materials markdown should not include secret values");
 
@@ -2313,6 +2318,7 @@ exit 0
   });
   assertTextIncludes(cloudDeviceValidation, "\"readyForDeviceValidation\"");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-network");
+  assertTextIncludes(cloudDeviceValidation, "cloud-target-library-ready");
   assertTextIncludes(cloudDeviceValidation, "cloud-recognition-result");
 
   const focusedHandoffPackPlan = await callTool("easyar_generate_focused_handoff_pack", {

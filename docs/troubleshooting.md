@@ -53,6 +53,7 @@ easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=image-track
 Common blockers:
 
 - `cloud-recognition-credentials`: `ProjectSettings/EasyAR/easyar.local.json` does not contain non-placeholder `appId` plus `apiKey` for Sense 4.1+, or a complete legacy `appId`/`appKey`/`appSecret` set.
+- `cloud-target-library-ready`: the EasyAR account has no Cloud Recognition image library, or the selected library has no uploaded/enabled test target image.
 - `focused-sample-scene-imported`: the Cloud Recognition sample exists in the EasyAR package cache but has not been imported into `Assets/Samples`.
 - `package-cache-sample-available`: the MCP server found a candidate under `Library/PackageCache/**/Samples~`; import it through Unity Package Manager Samples.
 - `cloud-recognition-network`: Unity or device logs indicate timeout, unreachable host, TLS, DNS, or service connectivity problems.
@@ -62,6 +63,10 @@ Common blockers:
 Package cache note:
 
 EasyAR package samples can appear under `Library/PackageCache/.../Samples~/ImageTracking/ImageTracking_CloudRecognition` before they are imported into the project. The MCP server reports these paths as import candidates, but Unity must still import the sample into `Assets/Samples` before Build Settings and scene validation can succeed.
+
+Cloud Recognition device pass note:
+
+`easyar_android_install_apk`, `easyar_android_start_app`, and `easyar_android_collect_logcat` prove only install, launch, and log capture. A passed Cloud Recognition `RUN_RESULT.md` also needs a configured EasyAR Cloud Recognition target library, at least one uploaded test target image, a real device network path to the service, and observed recognition of that target.
 
 Recommended flow:
 

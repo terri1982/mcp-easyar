@@ -40,9 +40,10 @@ For a user who has not registered yet, the MCP flow is:
 6. Write `LOCAL_CONFIG_HANDOFF.md`; it gives the user both manual-file and env-backed ways to fill the local config without pasting secrets into chat.
 7. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
 8. For Cloud Recognition, guide them to create or locate the CRS/Cloud Recognition AppId plus API KEY. Sense 4.1+ uses `appId` + `apiKey`; legacy `appKey`/`appSecret` fields remain accepted for compatibility.
-9. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
-10. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
-11. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`; compile/build success alone is not enough.
+9. For Cloud Recognition real-device validation, also guide them to create a cloud recognition image library, upload at least one test target image, and keep only a non-secret library name, target count, or dashboard URL for evidence.
+10. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
+11. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
+12. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`; compile/build success alone is not enough.
 
 The MCP should never turn registration into a chat form. Login, email activation, password reset, and verification codes stay in the official browser session. MCP only records account stage and local evidence.
 
@@ -160,7 +161,7 @@ easyar_write_remaining_work_report projectPath=/path/to/UnityProject platform=an
 
 After writing artifacts, read `FIRST_RUN.md` first for new users or new MCP clients, then `PROJECT_HANDOFF.md` when resuming the whole Unity project, then `REMAINING_WORK.md` for the evidence-weighted gap estimate, then `PREFLIGHT.md` for the active sample. The project handoff gives a single top next call plus per-sample workflow state; `PREFLIGHT.md` is the focused gate that tells Codex, Claude, or a human operator which blocker must be cleared before Unity batch automation or device builds.
 
-For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId` plus `apiKey` in `ProjectSettings/EasyAR/easyar.local.json`. Legacy `appKey`/`appSecret` fields are still accepted for compatibility.
+For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId` plus `apiKey` in `ProjectSettings/EasyAR/easyar.local.json`. Legacy `appKey`/`appSecret` fields are still accepted for compatibility. A passed device result also requires an EasyAR Cloud Recognition target library with at least one uploaded test target image.
 
 Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page or Unity Package Manager Samples before expecting a real device run to succeed. If `easyar_generate_import_checklist` reports a PackageCache `Samples~` candidate but no imported scene, run `easyar_generate_sample_import_guide`; for Cloud Recognition this guide points users to import `ImageTracking_CloudRecognition` from Package Manager into `Assets/Samples`.
 
@@ -278,7 +279,7 @@ easyar_android_start_app projectPath=/path/to/UnityProject sampleId=image-tracki
 easyar_android_collect_logcat projectPath=/path/to/UnityProject sampleId=image-tracking relativePath=Logs/mcp-easyar-DeviceLog-image-tracking.log
 ```
 
-Repeat the same sequence with `sampleId=cloud-recognition` and `apkPath=Builds/cloud-recognition.apk`. These helpers only prove install, launch, and log capture. The final `RUN_RESULT.md` should be marked `passed` only after the physical device also satisfies the visual sample criteria in `DEVICE_VALIDATION.md`.
+Repeat the same sequence with `sampleId=cloud-recognition` and `apkPath=Builds/cloud-recognition.apk`. These helpers only prove install, launch, and log capture. The final `RUN_RESULT.md` should be marked `passed` only after the physical device also satisfies the visual sample criteria in `DEVICE_VALIDATION.md`, including recognition of a target already uploaded to the EasyAR Cloud Recognition library.
 
 After `RUN_RESULT.md` is recorded, generate the final focused completion report:
 
