@@ -434,6 +434,9 @@ try {
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
   assertTextIncludes(deploymentReadiness, "\"ready\": false");
+  assertTextIncludes(deploymentReadiness, "package-files-dist");
+  assertTextIncludes(deploymentReadiness, "bin-target");
+  assertTextIncludes(deploymentReadiness, "release-manifest-install-profiles");
   assertTextIncludes(deploymentReadiness, "account-status-endpoint");
   assertTextIncludes(deploymentReadiness, "cloud-credentials-endpoint");
   assertTextIncludes(deploymentReadiness, "\"focusedSamples\"");
@@ -628,6 +631,8 @@ try {
   );
   assert(deploymentReadinessMarkdown.includes("mcp-easyar Deployment Readiness"), "Deployment readiness markdown should include title");
   assert(deploymentReadinessMarkdown.includes("account-status-endpoint"), "Deployment readiness markdown should include endpoint blockers");
+  assert(deploymentReadinessMarkdown.includes("Bin: easyar-mcp -> dist/index.js"), "Deployment readiness markdown should include bin target");
+  assert(deploymentReadinessMarkdown.includes("Package files: dist"), "Deployment readiness markdown should include package files");
 
   const imageRunSequence = await callTool("easyar_generate_run_sequence", {
     projectPath,

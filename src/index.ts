@@ -33,6 +33,8 @@ type DeploymentReadinessReport = {
     packageName: string | null;
     repository: string | null;
     binName: string | null;
+    binPath: string | null;
+    packageFiles: string[];
   };
   ready: boolean;
   blockers: ReadinessCheck[];
@@ -2790,9 +2792,16 @@ async function buildDeploymentReadiness(projectPath: string | null, unityPath?: 
       check("package-name", packageJson.name === serverName, "blocker", `package.json name is ${packageJson.name ?? "missing"}; expected ${serverName}.`),
       check("server-version", packageJson.version === serverVersion, "warning", `package.json version is ${packageJson.version ?? "missing"}; server reports ${serverVersion}.`),
       check("bin-name", packageJson.binName === "easyar-mcp", "blocker", `CLI bin is ${packageJson.binName ?? "missing"}; expected easyar-mcp.`),
+      check("bin-target", packageJson.binPath === "dist/index.js", "blocker", `CLI bin target is ${packageJson.binPath ?? "missing"}; expected dist/index.js.`),
       check("repository-url", packageJson.repository?.includes("github.com/terri1982/mcp-easyar") ?? false, "blocker", `repository URL is ${packageJson.repository ?? "missing"}.`),
+      check("package-public", packageJson.private !== true, "blocker", packageJson.private === true ? "package.json is private and cannot be published to npm." : "package.json is publishable; private is not true."),
+      check("package-files-dist", packageJson.files.includes("dist"), "blocker", "package.json files includes dist."),
+      check("package-files-docs", packageJson.files.includes("docs"), "warning", "package.json files includes docs."),
+      check("package-files-logo", packageJson.files.includes("assets/easyar-icon.png"), "warning", "package.json files includes assets/easyar-icon.png."),
       check("ci-workflow", await exists(path.join(process.cwd(), ".github", "workflows", "ci.yml")), "blocker", "GitHub Actions CI workflow .github/workflows/ci.yml exists."),
       check("readme", await fileContains(path.join(process.cwd(), "README.md"), "mcp-easyar"), "blocker", "README.md uses the mcp-easyar project name."),
+      check("readme-install-profiles", await fileContains(path.join(process.cwd(), "README.md"), "entrypointMode=package-bin") && await fileContains(path.join(process.cwd(), "README.md"), "entrypointMode=npx"), "warning", "README.md documents package-bin and npx client entrypoint modes."),
+      check("release-manifest-install-profiles", await fileContains(path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"), "Install Profiles") && await fileContains(path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"), "npm install -g mcp-easyar"), "warning", "docs/RELEASE_MANIFEST.md documents local, package-bin, and npx install profiles."),
       check("license", await exists(path.join(process.cwd(), "LICENSE")), "blocker", "LICENSE exists."),
       check("security-policy", await exists(path.join(process.cwd(), "SECURITY.md")), "warning", "SECURITY.md exists."),
       check("logo", await exists(path.join(process.cwd(), "assets", "easyar-icon.png")), "warning", "assets/easyar-icon.png exists.")
@@ -2832,7 +2841,9 @@ async function buildDeploymentReadiness(projectPath: string | null, unityPath?: 
       version: serverVersion,
       packageName: packageJson.name,
       repository: packageJson.repository,
-      binName: packageJson.binName
+      binName: packageJson.binName,
+      binPath: packageJson.binPath,
+      packageFiles: packageJson.files
     },
     ready: blockers.length === 0,
     blockers,
@@ -2859,7 +2870,15 @@ async function buildDeploymentReadiness(projectPath: string | null, unityPath?: 
   };
 }
 
-async function readPackageMetadata(): Promise<{ name: string | null; version: string | null; repository: string | null; binName: string | null }> {
+async function readPackageMetadata(): Promise<{
+  name: string | null;
+  version: string | null;
+  repository: string | null;
+  binName: string | null;
+  binPath: string | null;
+  files: string[];
+  private: boolean | null;
+}> {
   try {
     const text = await readFile(path.join(process.cwd(), "package.json"), "utf8");
     const parsed = JSON.parse(text) as {
@@ -2867,19 +2886,28 @@ async function readPackageMetadata(): Promise<{ name: string | null; version: st
       version?: string;
       repository?: string | { url?: string };
       bin?: Record<string, string>;
+      files?: string[];
+      private?: boolean;
     };
+    const binName = parsed.bin ? Object.keys(parsed.bin)[0] ?? null : null;
     return {
       name: parsed.name ?? null,
       version: parsed.version ?? null,
       repository: typeof parsed.repository === "string" ? parsed.repository : parsed.repository?.url ?? null,
-      binName: parsed.bin ? Object.keys(parsed.bin)[0] ?? null : null
+      binName,
+      binPath: binName ? parsed.bin?.[binName] ?? null : null,
+      files: parsed.files ?? [],
+      private: parsed.private ?? null
     };
   } catch {
     return {
       name: null,
       version: null,
       repository: null,
-      binName: null
+      binName: null,
+      binPath: null,
+      files: [],
+      private: null
     };
   }
 }
@@ -8125,6 +8153,8 @@ function buildDeploymentReadinessMarkdown(report: DeploymentReadinessReport): st
     `Server: ${report.server.name} ${report.server.version}`,
     `Package: ${report.server.packageName ?? "unknown"}`,
     `Repository: ${report.server.repository ?? "unknown"}`,
+    `Bin: ${report.server.binName ?? "unknown"} -> ${report.server.binPath ?? "unknown"}`,
+    `Package files: ${report.server.packageFiles.length > 0 ? report.server.packageFiles.join(", ") : "unknown"}`,
     "",
     "## Focused Scope",
     "",
