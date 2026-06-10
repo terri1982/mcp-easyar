@@ -100,6 +100,14 @@ try {
     "easyar_discover_cloud_credentials should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_check_official_access"),
+    "easyar_check_official_access should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_official_access_report"),
+    "easyar_write_official_access_report should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_run_sequence"),
     "easyar_write_run_sequence should be listed"
   );
@@ -239,6 +247,19 @@ try {
   assertTextIncludes(cloudCredentialDiscovery, "EASYAR_CLOUD_CREDENTIALS_ENDPOINT is not configured");
   assertTextIncludes(cloudCredentialDiscovery, "\"sampleId\": \"cloud-recognition\"");
 
+  const officialAccessProjectPath = await createUnityProject();
+  const officialAccessNoProject = await callTool("easyar_check_official_access", {
+    projectPath: officialAccessProjectPath,
+    sampleId: "cloud-recognition",
+    platform: "android"
+  });
+  await rm(officialAccessProjectPath, { recursive: true, force: true });
+  assertTextIncludes(officialAccessNoProject, "\"readyForOfficialContent\": false");
+  assertTextIncludes(officialAccessNoProject, "account-status");
+  assertTextIncludes(officialAccessNoProject, "license-validation");
+  assertTextIncludes(officialAccessNoProject, "downloads-discovery");
+  assertTextIncludes(officialAccessNoProject, "cloud-credentials-discovery");
+
   const clientConfig = await callTool("easyar_generate_client_config", {
     client: "claude-desktop",
     serverPath: "/tmp/mcp-easyar/dist/index.js"
@@ -262,9 +283,9 @@ try {
     sampleId: "image-tracking",
     platform: "android"
   });
-  assertTextIncludes(initialWorkflowState, "\"phase\": \"import-official-assets\"");
+  assertTextIncludes(initialWorkflowState, "\"phase\": \"check-official-access\"");
   assertTextIncludes(initialWorkflowState, "\"blocked\": true");
-  assertTextIncludes(initialWorkflowState, "\"tool\": \"easyar_discover_downloads\"");
+  assertTextIncludes(initialWorkflowState, "\"tool\": \"easyar_check_official_access\"");
 
   const writtenWorkflowState = await callTool("easyar_write_workflow_state", {
     projectPath,
@@ -277,7 +298,20 @@ try {
     "utf8"
   );
   assert(workflowStateMarkdown.includes("EasyAR Workflow State - Image Tracking"), "Workflow state markdown should include title");
-  assert(workflowStateMarkdown.includes("import-official-assets"), "Workflow state markdown should include phase");
+  assert(workflowStateMarkdown.includes("check-official-access"), "Workflow state markdown should include phase");
+
+  const writtenOfficialAccess = await callTool("easyar_write_official_access_report", {
+    projectPath,
+    sampleId: "image-tracking",
+    platform: "android"
+  });
+  assertTextIncludes(writtenOfficialAccess, "OFFICIAL_ACCESS.md");
+  const officialAccessMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "OFFICIAL_ACCESS.md"),
+    "utf8"
+  );
+  assert(officialAccessMarkdown.includes("EasyAR Official Access - Image Tracking"), "Official access markdown should include title");
+  assert(officialAccessMarkdown.includes("downloads-discovery"), "Official access markdown should include downloads check");
 
   const initialImportChecklist = await callTool("easyar_generate_import_checklist", {
     projectPath,
@@ -539,8 +573,8 @@ try {
     platform: "android",
     outputPath: "Builds/image-tracking.apk"
   });
-  assertTextIncludes(preparedWorkflowState, "\"phase\": \"write-handoff-artifacts\"");
-  assertTextIncludes(preparedWorkflowState, "easyar_write_artifact_index");
+  assertTextIncludes(preparedWorkflowState, "\"phase\": \"check-official-access\"");
+  assertTextIncludes(preparedWorkflowState, "easyar_check_official_access");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),
@@ -917,6 +951,7 @@ try {
   });
   assertTextIncludes(artifactIndex, "SUPPORT_BUNDLE.md");
   assertTextIncludes(artifactIndex, "WORKFLOW_STATE.md");
+  assertTextIncludes(artifactIndex, "OFFICIAL_ACCESS.md");
   assertTextIncludes(artifactIndex, "IMPORT_CHECKLIST.md");
   assertTextIncludes(artifactIndex, "DEVICE_VALIDATION.md");
   assertTextIncludes(artifactIndex, "CODE_PLAN.md");

@@ -50,6 +50,8 @@ This MVP focuses on local Unity project assistance. The current sample run-throu
 - write workflow state handoff artifacts for Codex/Claude continuation
 - check EasyAR account environment configuration without exposing secrets
 - call configured official EasyAR account/license validation endpoints without exposing secrets
+- run focused official access checks across account, license, downloads, and Cloud Recognition endpoints
+- write official access reports into Unity projects as Markdown artifacts
 - generate MCP client configuration snippets for Codex and Claude
 - generate and write deployment readiness reports for GitHub release, official endpoint, Unity path, and security checks
 
@@ -161,6 +163,8 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - `easyar_validate_license`: call a configured official EasyAR license-validation endpoint using local config or explicit input without returning secrets.
 - `easyar_discover_downloads`: call a configured official downloads endpoint for account-scoped SDK/sample package discovery without returning tokens.
 - `easyar_discover_cloud_credentials`: call a configured official Cloud Recognition endpoint for account-scoped credential metadata without returning secrets.
+- `easyar_check_official_access`: run a focused official account, license, downloads, and sample-specific access check without exposing secrets.
+- `easyar_write_official_access_report`: write the official access check to `Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md`.
 - `easyar_generate_client_config`: generate Codex, Claude Desktop, or generic MCP stdio configuration.
 - `easyar_deployment_readiness`: generate a deployment readiness report across package metadata, GitHub release files, official endpoint environment, Unity path, focused scope, and security checks.
 - `easyar_write_deployment_readiness`: write the deployment readiness report as Markdown inside a project or workspace directory.

@@ -45,6 +45,8 @@ easyar_check_account
 easyar_validate_license projectPath=/path/to/UnityProject platform=android
 easyar_discover_downloads projectPath=/path/to/UnityProject sampleId=image-tracking packageKind=unity-samples
 easyar_discover_cloud_credentials projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
+easyar_check_official_access projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
+easyar_write_official_access_report projectPath=/path/to/UnityProject sampleId=image-tracking platform=android
 ```
 
 ## 3. Choose A Sample

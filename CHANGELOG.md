@@ -29,6 +29,7 @@ Initial public MVP for `mcp-easyar`.
 - Configurable official EasyAR account-status and license-validation endpoint calls.
 - Configurable official EasyAR downloads endpoint calls for account-scoped SDK/sample package discovery.
 - Configurable official EasyAR Cloud Recognition credential metadata endpoint calls without returning secrets.
+- Focused official access aggregation and `OFFICIAL_ACCESS.md` artifact generation across account, license, downloads, and Cloud Recognition endpoints.
 - Deployment readiness report generation and `DEPLOYMENT_READINESS.md` artifact writing for release files, official endpoints, Unity path, focused scope, and security checks.
 - Official EasyAR Unity Plugin and focused sample import checklist generation with `IMPORT_CHECKLIST.md` artifacts.
 - Unity project inspection and sample readiness diagnostics.

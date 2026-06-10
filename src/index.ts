@@ -79,6 +79,8 @@ const toolCatalog = [
   "easyar_validate_license",
   "easyar_discover_downloads",
   "easyar_discover_cloud_credentials",
+  "easyar_check_official_access",
+  "easyar_write_official_access_report",
   "easyar_generate_client_config",
   "easyar_deployment_readiness",
   "easyar_write_deployment_readiness",
@@ -574,6 +576,58 @@ server.tool(
         platform
       },
       security: "EASYAR_API_TOKEN, appKey, appSecret, and credential values are never returned. This tool only calls configured official EasyAR endpoints."
+    });
+  }
+);
+
+server.tool(
+  "easyar_check_official_access",
+  "Run a focused official EasyAR account, license, downloads, and Cloud Recognition access check without exposing secrets.",
+  {
+    projectPath: z.string().describe("Unity project path used for Unity version, bundle identifier, and local license metadata."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    packageKind: z.enum(["unity-plugin", "unity-samples", "native-sdk", "xr-extension", "unknown"]).default("unity-samples")
+  },
+  async ({ projectPath, sampleId, platform, packageKind }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildOfficialAccessReport(root, sample, platform, packageKind));
+  }
+);
+
+server.tool(
+  "easyar_write_official_access_report",
+  "Write the focused official EasyAR access check as a Markdown artifact inside the Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path used for Unity version, bundle identifier, and local license metadata."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    packageKind: z.enum(["unity-plugin", "unity-samples", "native-sdk", "xr-extension", "unknown"]).default("unity-samples"),
+    relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing official access report.")
+  },
+  async ({ projectPath, sampleId, platform, packageKind, relativePath, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const report = await buildOfficialAccessReport(root, sample, platform, packageKind);
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "OFFICIAL_ACCESS.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildOfficialAccessMarkdown(report), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      readyForOfficialContent: report.readyForOfficialContent,
+      blockerCount: report.blockers.length,
+      nextActions: report.nextActions,
+      note: "The official access report includes endpoint status and redacted metadata only."
     });
   }
 );
@@ -2125,6 +2179,117 @@ function deploymentNextActions(
   return Array.from(actions);
 }
 
+async function buildOfficialAccessReport(
+  root: string,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  packageKind: "unity-plugin" | "unity-samples" | "native-sdk" | "xr-extension" | "unknown"
+) {
+  const auth = readAuthConfig();
+  const unityVersion = await readUnityVersion(root);
+  const localConfig = await readLocalConfigForRemoteValidation(root);
+  const [account, license, downloads, cloudCredentials] = await Promise.all([
+    easyarApi.checkAccount(),
+    easyarApi.validateLicense({
+      licenseKey: localConfig.licenseKey,
+      bundleIdentifier: localConfig.bundleIdentifier,
+      platform
+    }),
+    easyarApi.discoverDownloads({
+      sampleId: sample.id,
+      packageKind,
+      unityVersion
+    }),
+    sample.id === "cloud-recognition"
+      ? easyarApi.discoverCloudCredentials({
+          sampleId: sample.id,
+          bundleIdentifier: localConfig.bundleIdentifier,
+          platform
+        })
+      : Promise.resolve(null)
+  ]);
+  const checks = [
+    officialAccessCheck("api-token", auth.hasToken, true, "EASYAR_API_TOKEN is configured for official account-scoped requests.", auth.hasToken ? "Token is present and redacted." : "EASYAR_API_TOKEN is missing."),
+    officialAccessRemoteCheck("account-status", true, account),
+    officialAccessRemoteCheck("license-validation", true, license),
+    officialAccessRemoteCheck("downloads-discovery", true, downloads),
+    ...(cloudCredentials
+      ? [officialAccessRemoteCheck("cloud-credentials-discovery", true, cloudCredentials)]
+      : [officialAccessCheck("cloud-credentials-discovery", true, false, "Cloud Recognition credential discovery is not required for Image Tracking.", "Skipped for this sample.")])
+  ];
+  const blockers = checks.filter((check) => check.required && !check.ok);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      implementationStatus: sample.implementationStatus
+    },
+    platform,
+    packageKind,
+    unityVersion,
+    input: {
+      hasLicenseKey: Boolean(localConfig.licenseKey),
+      bundleIdentifier: localConfig.bundleIdentifier ?? null
+    },
+    auth: {
+      apiBaseUrl: auth.apiBaseUrl,
+      hasToken: auth.hasToken,
+      accountStatusEndpointConfigured: auth.accountStatusEndpointConfigured,
+      licenseValidationEndpointConfigured: auth.licenseValidationEndpointConfigured,
+      downloadsEndpointConfigured: auth.downloadsEndpointConfigured,
+      cloudCredentialsEndpointConfigured: auth.cloudCredentialsEndpointConfigured
+    },
+    readyForOfficialContent: blockers.length === 0,
+    checks,
+    blockers,
+    remoteResults: {
+      account,
+      license,
+      downloads,
+      cloudCredentials
+    },
+    nextActions: blockers.length > 0
+      ? Array.from(new Set(blockers.flatMap((blocker) => blocker.nextActions)))
+      : [
+          "Official account, license, downloads, and sample-specific official access checks passed.",
+          "Continue with easyar_generate_import_checklist after importing official packages into Unity."
+        ],
+    security: "EASYAR_API_TOKEN, licenseKey, appKey, appSecret, and credential values are never returned. This report only calls configured official EasyAR endpoints and does not bypass authorization."
+  };
+}
+
+function officialAccessCheck(id: string, ok: boolean, required: boolean, summary: string, detail: string) {
+  return {
+    id,
+    ok,
+    required,
+    configured: ok,
+    statusCode: null as number | null,
+    summary,
+    detail,
+    nextActions: ok
+      ? ["Continue with focused EasyAR workflow checks."]
+      : ["Configure the official EasyAR endpoint/token environment for this MCP server."]
+  };
+}
+
+function officialAccessRemoteCheck(id: string, required: boolean, result: Awaited<ReturnType<typeof easyarApi.checkAccount>>) {
+  const ok = result.configured && result.ok === true;
+  return {
+    id,
+    ok,
+    required,
+    configured: result.configured,
+    statusCode: result.statusCode,
+    summary: result.summary,
+    detail: result.endpoint ? `Endpoint: ${result.endpoint}` : "Endpoint is not configured.",
+    nextActions: result.nextActions
+  };
+}
+
 function buildClientConfig(client: typeof clientKinds[number], entrypoint: string, env: Record<string, string>) {
   if (client === "codex") {
     return {
@@ -2657,6 +2822,7 @@ async function buildWorkflowState(
   maxScriptIssues: number
 ) {
   const importChecklist = await buildImportChecklist(root, sample);
+  const officialAccess = await buildOfficialAccessReport(root, sample, platform, "unity-samples");
   const readiness = await buildSampleReadinessReport(root, sample);
   const configValidation = await buildLocalConfigValidationReport(root);
   const sceneAudit = await buildSampleSceneAudit(root, sample, 25);
@@ -2681,6 +2847,8 @@ async function buildWorkflowState(
     platform,
     outputPath,
     importReady: importChecklist.readyForFocusedPreparation,
+    officialAccessReady: officialAccess.readyForOfficialContent,
+    officialAccessBlockers: officialAccess.blockers.map((blocker) => blocker.id),
     missingRequiredImportItems,
     readinessReady: readiness.ready,
     failingReadinessChecks,
@@ -2712,6 +2880,8 @@ async function buildWorkflowState(
     nextCall: state.nextCall,
     summary: {
       importReady: importChecklist.readyForFocusedPreparation,
+      officialAccessReady: officialAccess.readyForOfficialContent,
+      officialAccessBlockers: officialAccess.blockers.map((blocker) => blocker.id),
       missingRequiredImportItems,
       readinessReady: readiness.ready,
       failingReadinessChecks,
@@ -2736,6 +2906,8 @@ function chooseWorkflowNextState(input: {
   platform: typeof mobilePlatforms[number];
   outputPath: string;
   importReady: boolean;
+  officialAccessReady: boolean;
+  officialAccessBlockers: string[];
   missingRequiredImportItems: string[];
   readinessReady: boolean;
   failingReadinessChecks: string[];
@@ -2763,6 +2935,31 @@ function chooseWorkflowNextState(input: {
         arguments: {}
       },
       ["Switch to sampleId image-tracking or cloud-recognition for current run-through work."]
+    );
+  }
+
+  if (!input.officialAccessReady) {
+    return workflowDecision(
+      "check-official-access",
+      true,
+      `Official EasyAR access blocker(s): ${input.officialAccessBlockers.join(", ")}.`,
+      {
+        tool: "easyar_check_official_access",
+        arguments: {
+          ...baseArgs,
+          platform: input.platform,
+          packageKind: "unity-samples"
+        }
+      },
+      [
+        "Configure EASYAR_API_TOKEN and official EasyAR account/license/download/cloud endpoint environment variables.",
+        "Run easyar_check_official_access before expecting account-scoped downloads or Cloud Recognition credentials through MCP.",
+        "Use only authorized official EasyAR account APIs; do not bypass login, license, or download gates."
+      ],
+      [
+        { tool: "easyar_write_official_access_report", arguments: { ...baseArgs, platform: input.platform, packageKind: "unity-samples" } },
+        { tool: "easyar_auth_status", arguments: {} }
+      ]
     );
   }
 
@@ -3062,6 +3259,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "WORKFLOW_STATE.md"),
       purpose: "Current focused workflow phase, blockers, and next MCP call.",
       generateWith: `easyar_write_workflow_state sampleId=${sample.id}`
+    },
+    {
+      name: "Official Access",
+      relativePath: path.join(base, "OFFICIAL_ACCESS.md"),
+      purpose: "Official account, license, downloads, and sample-specific access checks.",
+      generateWith: `easyar_write_official_access_report sampleId=${sample.id}`
     },
     {
       name: "Import Checklist",
@@ -4705,6 +4908,8 @@ function buildWorkflowStateMarkdown(state: Awaited<ReturnType<typeof buildWorkfl
     "",
     "## Summary",
     "",
+    `Official access ready: ${state.summary.officialAccessReady ? "yes" : "no"}`,
+    `Official access blockers: ${state.summary.officialAccessBlockers.length > 0 ? state.summary.officialAccessBlockers.join(", ") : "none"}`,
     `Import ready: ${state.summary.importReady ? "yes" : "no"}`,
     `Missing import items: ${state.summary.missingRequiredImportItems.length > 0 ? state.summary.missingRequiredImportItems.join(", ") : "none"}`,
     `Readiness ready: ${state.summary.readinessReady ? "yes" : "no"}`,
@@ -5208,6 +5413,57 @@ function buildDeploymentReadinessMarkdown(report: DeploymentReadinessReport): st
     "## Security",
     "",
     ...report.security.map((item) => `- ${item}`),
+    ""
+  ].join("\n");
+}
+
+function buildOfficialAccessMarkdown(report: Awaited<ReturnType<typeof buildOfficialAccessReport>>): string {
+  return [
+    `# EasyAR Official Access - ${report.sample.name}`,
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath}`,
+    `Sample id: ${report.sample.id}`,
+    `Status: ${report.sample.implementationStatus}`,
+    `Platform: ${report.platform}`,
+    `Package kind: ${report.packageKind}`,
+    `Unity version: ${report.unityVersion ?? "unknown"}`,
+    `Ready for official content: ${report.readyForOfficialContent ? "yes" : "no"}`,
+    "",
+    "## Input Metadata",
+    "",
+    `License key present: ${report.input.hasLicenseKey ? "yes" : "no"}`,
+    `Bundle identifier: ${report.input.bundleIdentifier ?? "not configured"}`,
+    "",
+    "## Endpoint Configuration",
+    "",
+    `API base URL: ${report.auth.apiBaseUrl}`,
+    `Token configured: ${report.auth.hasToken ? "yes" : "no"}`,
+    `Account endpoint: ${report.auth.accountStatusEndpointConfigured ? "yes" : "no"}`,
+    `License endpoint: ${report.auth.licenseValidationEndpointConfigured ? "yes" : "no"}`,
+    `Downloads endpoint: ${report.auth.downloadsEndpointConfigured ? "yes" : "no"}`,
+    `Cloud credentials endpoint: ${report.auth.cloudCredentialsEndpointConfigured ? "yes" : "no"}`,
+    "",
+    "## Checks",
+    "",
+    ...report.checks.flatMap((check) => [
+      `- ${check.ok ? "OK" : "BLOCKED"} ${check.required ? "[required]" : "[optional]"} ${check.id}`,
+      `  Summary: ${check.summary}`,
+      `  Detail: ${check.detail}`,
+      `  Status code: ${check.statusCode ?? "none"}`
+    ]),
+    "",
+    "## Blockers",
+    "",
+    ...markdownIssueList(report.blockers.map((blocker) => `${blocker.id}: ${blocker.summary}`), "No official access blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...report.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    report.security,
     ""
   ].join("\n");
 }
