@@ -951,13 +951,26 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.30"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.31"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
   assert(committedClientSetupGuide.includes("easyar-mcp-check"), "Client setup guide should include install check bin");
   assert(committedClientSetupGuide.includes("easyar://acceptance/fresh-project"), "Client setup guide should include fresh project acceptance resource");
   assert(committedClientSetupGuide.includes("Never paste these values into chat"), "Client setup guide should include secret handling");
+
+  const committedChineseReadme = await readFile(
+    path.join(process.cwd(), "README.zh-CN.md"),
+    "utf8"
+  );
+  const committedChineseDocsIndex = await readFile(
+    path.join(process.cwd(), "docs", "zh-CN", "README.md"),
+    "utf8"
+  );
+  assert(committedChineseReadme.includes("完整中文文档"), "Chinese README should link to the full Chinese docs index");
+  assert(committedChineseDocsIndex.includes("mcp-easyar 中文文档"), "Chinese docs index should include title");
+  assert(committedChineseDocsIndex.includes("Image Tracking"), "Chinese docs index should include focused Image Tracking scope");
+  assert(committedChineseDocsIndex.includes("CRS"), "Chinese docs index should include focused CRS scope");
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");

@@ -4,7 +4,7 @@
 
 # mcp-easyar
 
-English | [简体中文](README.zh-CN.md)
+English | [简体中文](README.zh-CN.md) | [完整中文文档](docs/zh-CN/README.md)
 
 [![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
 
@@ -112,7 +112,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.30/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

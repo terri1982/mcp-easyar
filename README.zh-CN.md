@@ -4,7 +4,7 @@
 
 # mcp-easyar
 
-[English](README.md) | 简体中文
+[English](README.md) | 简体中文 | [完整中文文档](docs/zh-CN/README.md)
 
 `mcp-easyar` 帮助 EasyAR 注册用户通过 Codex、Claude 等 AI 工具，安全地完成 EasyAR Unity Sample 的配置、构建、真机验证和项目编程辅助。
 
@@ -12,7 +12,7 @@
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.30`
+- 当前 GitHub 预发布版：`v0.1.0-local-key.31`
 - 当前已跑通并发布验证的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
@@ -28,7 +28,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.30/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

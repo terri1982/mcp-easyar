@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.30/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.30";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.31";
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Current scoped objective: about 90%"
@@ -16,6 +16,14 @@ const expectedLocalKeyProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_LOCA
     ? "Local-key MVP public usability: about 93%"
     : "Local-key MVP public usability: about 95%");
 const expectFullGoalPlan = !["v0.1.0-local-key.25", "v0.1.0-local-key.26"].includes(expectedReleaseTag);
+const expectChineseDocs = ![
+  "v0.1.0-local-key.25",
+  "v0.1.0-local-key.26",
+  "v0.1.0-local-key.27",
+  "v0.1.0-local-key.28",
+  "v0.1.0-local-key.29",
+  "v0.1.0-local-key.30"
+].includes(expectedReleaseTag);
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -65,6 +73,8 @@ try {
   const remainingWork = await readFile(path.join(packageRoot, "docs", "REMAINING_WORK.md"), "utf8");
   const fullGoalPlan = expectFullGoalPlan ? await readFile(path.join(packageRoot, "docs", "FULL_GOAL_PLAN.md"), "utf8") : "";
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
+  const chineseReadme = expectChineseDocs ? await readFile(path.join(packageRoot, "README.zh-CN.md"), "utf8") : "";
+  const chineseDocsIndex = expectChineseDocs ? await readFile(path.join(packageRoot, "docs", "zh-CN", "README.md"), "utf8") : "";
   const codexConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
     client: "codex",
     entrypointMode: "package-bin",
@@ -112,6 +122,12 @@ try {
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");
+  if (expectChineseDocs) {
+    assert(chineseReadme.includes("完整中文文档"), "Package should include Chinese README with full docs link.");
+    assert(chineseDocsIndex.includes("mcp-easyar 中文文档"), "Package should include full Chinese docs index.");
+    assert(chineseDocsIndex.includes("Image Tracking"), "Chinese docs should include Image Tracking scope.");
+    assert(chineseDocsIndex.includes("CRS"), "Chinese docs should include CRS scope.");
+  }
   assert(codexConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Codex package-bin config.");
   assert(codexConfig.includes("\"client\": \"codex\""), "Installed MCP should identify Codex config.");
   assert(claudeConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Claude package-bin config.");

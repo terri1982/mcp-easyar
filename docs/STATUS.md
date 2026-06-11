@@ -6,12 +6,12 @@ It is not a completion claim for every EasyAR sample. The current goal has been 
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.30`
+Current GitHub prerelease: `v0.1.0-local-key.31`
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.30/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
