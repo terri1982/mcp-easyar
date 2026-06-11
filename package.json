@@ -1,7 +1,7 @@
 {
   "name": "mcp-easyar",
   "version": "0.1.0",
-  "description": "Official EasyAR MCP server for registered users building EasyAR Unity samples and projects.",
+  "description": "mcp-easyar helps registered EasyAR users build EasyAR Unity samples and projects with AI tools.",
   "type": "module",
   "bin": {
     "easyar-mcp": "dist/index.js",
