@@ -339,6 +339,8 @@ EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject EASYAR_CANARY_PLATFORM=android 
 
 The canary uses the same endpoint env vars as the MCP server, checks both focused samples, and prints only safe blocker ids.
 
+For local endpoint-contract wiring before real backend services exist, run `npm run official-api:stub` in one shell, export the endpoint variables it prints in another shell, then run `npm run official-api:canary`. The stub returns fixture metadata only and must not be used as a production account service.
+
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
 ```text

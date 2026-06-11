@@ -867,6 +867,7 @@ try {
   assertTextIncludes(releaseManifest, "npm run install:check");
   assertTextIncludes(releaseManifest, "npm run package:smoke");
   assertTextIncludes(releaseManifest, "official-api:canary");
+  assertTextIncludes(releaseManifest, "official-api:stub");
   assertTextIncludes(releaseManifest, "npm run release:check");
   assertTextIncludes(releaseManifest, "npm run security:check");
   assertTextIncludes(releaseManifest, "easyar-mcp-check");
@@ -893,6 +894,7 @@ try {
   assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
   assert(committedReleaseManifest.includes("npm run package:smoke"), "Committed release manifest should include package install smoke");
   assert(committedReleaseManifest.includes("official-api:canary"), "Committed release manifest should include official API canary");
+  assert(committedReleaseManifest.includes("official-api:stub"), "Committed release manifest should include official API stub");
   assert(committedReleaseManifest.includes("npm run release:check"), "Committed release manifest should include release check");
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
@@ -908,6 +910,9 @@ try {
   const officialApiCanaryScript = await readFile(path.join(process.cwd(), "scripts", "official-api-canary.mjs"), "utf8");
   assert(officialApiCanaryScript.includes("easyar_check_official_access"), "Official API canary should check focused sample official access");
   assert(officialApiCanaryScript.includes("easyar_production_validation"), "Official API canary should check production validation");
+  const officialApiStubScript = await readFile(path.join(process.cwd(), "scripts", "official-api-stub.mjs"), "utf8");
+  assert(officialApiStubScript.includes("/mcp/account/status"), "Official API stub should serve account status route");
+  assert(officialApiStubScript.includes("/mcp/cloud-recognition/credentials"), "Official API stub should serve cloud credentials route");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {

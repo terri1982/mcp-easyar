@@ -1,6 +1,6 @@
 # mcp-easyar Release Manifest
 
-Generated at: 2026-06-11T02:40:18.134Z
+Generated at: 2026-06-11T02:44:46.174Z
 Package: mcp-easyar 0.1.0
 Bin: easyar-mcp
 Node: >=20
@@ -125,6 +125,7 @@ Entrypoint mode: `npx`
 - docs/troubleshooting.md
 - assets/easyar-icon.png
 - scripts/official-api-canary.mjs
+- scripts/official-api-stub.mjs
 - .env.example
 - README.md
 - CHANGELOG.md
@@ -138,6 +139,7 @@ Entrypoint mode: `npx`
 - `dev`: `tsx src/index.ts`
 - `install:check`: `npm run build && node dist/install-check.js`
 - `official-api:canary`: `npm run build && node scripts/official-api-canary.mjs`
+- `official-api:stub`: `node scripts/official-api-stub.mjs`
 - `package:smoke`: `npm run build && node scripts/package-install-smoke.mjs`
 - `pack:check`: `npm run build && npm pack --dry-run`
 - `postbuild`: `chmod +x dist/index.js dist/install-check.js`

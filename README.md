@@ -200,6 +200,8 @@ Npm publishing should use the manual GitHub Actions `Release` workflow. It runs 
 
 After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with `EASYAR_API_TOKEN`, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
 
+When backend routing is still being wired, run `npm run official-api:stub` to start a local contract-compatible endpoint stub. Use it only for local gateway/canary validation; production must connect to real EasyAR account, license, downloads, and Cloud Recognition services.
+
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## First-Time EasyAR Users

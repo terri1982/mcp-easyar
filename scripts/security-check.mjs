@@ -27,6 +27,7 @@ const forbiddenTrackedPatterns = [
 const fixtureAllowlist = [
   "scripts/smoke-test.mjs",
   "scripts/official-api-canary.mjs",
+  "scripts/official-api-stub.mjs",
   ".env.example",
   "README.md",
   "docs/quickstart.md",
@@ -55,7 +56,8 @@ try {
   const tarList = await run("tar", ["-tzf", tarballPath], { cwd: root });
   const packageFiles = tarList.stdout.split(/\r?\n/).filter(Boolean);
   const allowedPackagedScripts = new Set([
-    "package/scripts/official-api-canary.mjs"
+    "package/scripts/official-api-canary.mjs",
+    "package/scripts/official-api-stub.mjs"
   ]);
   const forbiddenPackaged = packageFiles.filter((entry) => !allowedPackagedScripts.has(entry) && forbiddenPackagePatterns.some((pattern) => pattern.test(entry)));
   assert(forbiddenPackaged.length === 0, `Forbidden packaged file(s): ${forbiddenPackaged.join(", ")}`);
