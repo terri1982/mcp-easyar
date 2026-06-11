@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.23";
+const currentGitHubReleaseTag = "v0.1.0-local-key.24";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -618,6 +618,8 @@ server.prompt(
       `Use the mcp-easyar tools to run the Image Tracking sample for project: ${projectPath}`,
       `Target platform: ${platform}`,
       "",
+      "Read `easyar://acceptance/fresh-project` first, then keep the run inside the current focused scope.",
+      "",
       "Start by calling:",
       `1. easyar_write_account_onboarding projectPath=${projectPath} sampleId=image-tracking`,
       `2. easyar_write_account_materials projectPath=${projectPath} sampleId=image-tracking`,
@@ -644,6 +646,8 @@ server.prompt(
     [
       `Use the mcp-easyar tools to run the Cloud Recognition sample for project: ${projectPath}`,
       `Target platform: ${platform}`,
+      "",
+      "Read `easyar://acceptance/fresh-project` first, then keep the run inside the current focused scope.",
       "",
       "Start by calling:",
       `1. easyar_write_account_onboarding projectPath=${projectPath} sampleId=cloud-recognition`,
@@ -699,7 +703,7 @@ server.prompt(
       `Close out the current focused EasyAR sample scope for project: ${projectPath}`,
       `Target platform: ${platform}`,
       "",
-      "Read `easyar://workflow/focused-scope` first.",
+      "Read `easyar://acceptance/fresh-project` and `easyar://workflow/focused-scope` first.",
       "",
       "Then call:",
       `1. easyar_write_completion_report projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,

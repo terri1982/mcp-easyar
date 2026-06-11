@@ -443,8 +443,21 @@ try {
     }
   });
   assertPromptIncludes(imageTrackingPrompt, "easyar_write_focused_preflight");
+  assertPromptIncludes(imageTrackingPrompt, "easyar://acceptance/fresh-project");
   assertPromptIncludes(imageTrackingPrompt, "PREFLIGHT.md");
   assertPromptIncludes(imageTrackingPrompt, "sampleId=image-tracking");
+
+  const cloudRecognitionPrompt = await request("prompts/get", {
+    name: "easyar-run-cloud-recognition",
+    arguments: {
+      projectPath: "/tmp/EasyARProject",
+      platform: "android"
+    }
+  });
+  assertPromptIncludes(cloudRecognitionPrompt, "easyar_write_focused_preflight");
+  assertPromptIncludes(cloudRecognitionPrompt, "easyar://acceptance/fresh-project");
+  assertPromptIncludes(cloudRecognitionPrompt, "PREFLIGHT.md");
+  assertPromptIncludes(cloudRecognitionPrompt, "sampleId=cloud-recognition");
 
   const programmingPrompt = await request("prompts/get", {
     name: "easyar-unity-programming-assistant",
@@ -474,6 +487,7 @@ try {
       platform: "android"
     }
   });
+  assertPromptIncludes(focusedScopePrompt, "easyar://acceptance/fresh-project");
   assertPromptIncludes(focusedScopePrompt, "easyar://workflow/focused-scope");
   assertPromptIncludes(focusedScopePrompt, "easyar_write_focused_scope_status");
 
@@ -921,7 +935,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.23"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.24"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");

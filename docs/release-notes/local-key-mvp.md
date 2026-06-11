@@ -13,6 +13,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
   - Image Tracking
   - CRS/Cloud Recognition
 - Includes committed safe Android release evidence for the focused scope.
+- Prompts for Image Tracking, CRS/Cloud Recognition, and focused close-out now tell clients to read `easyar://acceptance/fresh-project` first.
 - Provides Unity project assistance tools for local config, preflight, import guidance, build/run sequencing, log diagnostics, C# planning, script writing, and support bundles.
 
 ## Install
@@ -20,7 +21,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 Use Node.js 20 or newer:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.23/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.24/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
