@@ -331,6 +331,14 @@ EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
 
 For the npm package, use the manual GitHub Actions `Release` workflow after configuring the protected `npm-publish` environment. The workflow runs the strict gate before `npm publish --provenance`, so package publishing cannot bypass official endpoint and real-device evidence. Set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project containing the passed focused sample artifacts, and set `EASYAR_RELEASE_PLATFORM` to `android` or `ios` so `release:check` can pass that evidence into `easyar_production_validation`.
 
+After official EasyAR staging or production endpoints are configured, run the official API canary:
+
+```bash
+EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject EASYAR_CANARY_PLATFORM=android npm run official-api:canary
+```
+
+The canary uses the same endpoint env vars as the MCP server, checks both focused samples, and prints only safe blocker ids.
+
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 
 ```text

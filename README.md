@@ -198,6 +198,8 @@ npm run release:check
 
 Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_PROJECT_PATH`/`EASYAR_RELEASE_PLATFORM` so the gate can verify both account APIs and focused sample evidence.
 
+After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with `EASYAR_API_TOKEN`, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
+
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## First-Time EasyAR Users

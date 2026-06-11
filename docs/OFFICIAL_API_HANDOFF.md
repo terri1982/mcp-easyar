@@ -180,6 +180,14 @@ curl -fsS -X POST -H "Authorization: Bearer ${EASYAR_API_TOKEN}" -H "Content-Typ
 5. Run easyar_check_official_access for image-tracking and cloud-recognition.
 6. Only after staging passes, configure production env vars for the published MCP deployment.
 
+Repository canary:
+
+```bash
+EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject EASYAR_CANARY_PLATFORM=android npm run official-api:canary
+```
+
+The canary starts the MCP server locally, uses the configured bearer token and endpoint env vars, checks account status, verifies Image Tracking and Cloud Recognition official access, then runs production validation. It prints pass/blocker status only and must not print tokens, license keys, API KEY/API Secret, appKey, or appSecret values.
+
 ## Acceptance Gates
 
 - All required endpoint environment variables are set in the MCP runtime environment.
@@ -214,7 +222,7 @@ curl -fsS -X POST -H "Authorization: Bearer ${EASYAR_API_TOKEN}" -H "Content-Typ
 
 - Assign backend owners for account-status, license-validation, downloads-discovery, and cloud-credentials-discovery.
 - Populate EASYAR_ACCOUNT_STATUS_ENDPOINT, EASYAR_LICENSE_VALIDATE_ENDPOINT, EASYAR_DOWNLOADS_ENDPOINT, and EASYAR_CLOUD_CREDENTIALS_ENDPOINT in a staging MCP environment.
-- Run node scripts/official-api-fixture-smoke.mjs, then run real endpoint canaries with a registered EasyAR test account.
+- Run node scripts/official-api-fixture-smoke.mjs, then run npm run official-api:canary with a registered EasyAR test account.
 - Run easyar_write_official_access_report for image-tracking and cloud-recognition after endpoints are configured.
 
 ## Security
