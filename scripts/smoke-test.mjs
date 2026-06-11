@@ -514,6 +514,20 @@ try {
   assertResourceIncludes(officialOpenApiResource, "\"/mcp/cloud-recognition/credentials\"");
   assertResourceIncludes(officialOpenApiResource, "\"EasyARBearerAuth\"");
 
+  const githubReleaseInstallResource = await request("resources/read", {
+    uri: "easyar://install/github-release"
+  });
+  assertResourceIncludes(githubReleaseInstallResource, "Install mcp-easyar From GitHub Release");
+  assertResourceIncludes(githubReleaseInstallResource, "easyar-mcp-check");
+  assertResourceIncludes(githubReleaseInstallResource, "For Codex:");
+
+  const localKeyReleaseResource = await request("resources/read", {
+    uri: "easyar://release/local-key-mvp"
+  });
+  assertResourceIncludes(localKeyReleaseResource, "mcp-easyar local-key MVP");
+  assertResourceIncludes(localKeyReleaseResource, "Local-key MVP ready: yes");
+  assertResourceIncludes(localKeyReleaseResource, "Production official API ready: no");
+
   const focusedScopeResource = await request("resources/read", {
     uri: "easyar://workflow/focused-scope"
   });
@@ -867,7 +881,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.9"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.10"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");

@@ -201,6 +201,8 @@ const resourceCatalog = [
   "easyar://official/info",
   "easyar://official/api-contract",
   "easyar://official/openapi",
+  "easyar://install/github-release",
+  "easyar://release/local-key-mvp",
   "easyar://unity/checklist",
   "easyar://workflow/quickstart",
   "easyar://workflow/focused-scope",
@@ -374,6 +376,34 @@ server.resource(
         uri: uri.href,
         mimeType: "application/json",
         text: await readFile(officialOpenApiPath, "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-install-github-release",
+  "easyar://install/github-release",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "install-from-github-release.md"), "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-release-local-key-mvp",
+  "easyar://release/local-key-mvp",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8")
       }
     ]
   })

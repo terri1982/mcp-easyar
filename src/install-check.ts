@@ -36,6 +36,8 @@ const requiredPrompts = [
 const requiredResources = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
+  "easyar://install/github-release",
+  "easyar://release/local-key-mvp",
   "easyar://workflow/focused-scope",
   "easyar://workflow/programming",
   "easyar://workflow/quickstart"
@@ -132,6 +134,16 @@ try {
       "official-openapi-contract",
       resourceTexts.get("easyar://official/openapi")?.includes("\"openapi\": \"3.1.0\"") ?? false,
       "Official OpenAPI contract resource is readable."
+    ),
+    check(
+      "github-release-install",
+      resourceTexts.get("easyar://install/github-release")?.includes("Install mcp-easyar From GitHub Release") ?? false,
+      "GitHub Release install guide resource is readable."
+    ),
+    check(
+      "local-key-release-notes",
+      resourceTexts.get("easyar://release/local-key-mvp")?.includes("mcp-easyar local-key MVP") ?? false,
+      "Local-key MVP release notes resource is readable."
     ),
     check(
       "focused-scope-workflow",
