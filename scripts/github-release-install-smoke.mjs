@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.22/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.22";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.23/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.23";
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -37,6 +37,7 @@ try {
   assert(check.stdout.includes("OK prompts"), "Release check bin should verify prompts.");
   assert(check.stdout.includes("OK resources"), "Release check bin should verify resources.");
   assert(check.stdout.includes("OK client-acceptance"), "Release check bin should verify client acceptance resource.");
+  assert(check.stdout.includes("OK fresh-project-acceptance"), "Release check bin should verify fresh project acceptance resource.");
   assert(check.stdout.includes("OK current-status"), "Release check bin should verify current status resource.");
   assert(check.stdout.includes("OK remaining-work-status"), "Release check bin should verify remaining work status resource.");
   assert(check.stdout.includes("OK github-release-install"), "Release check bin should verify GitHub Release install resource.");
@@ -47,6 +48,7 @@ try {
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");
   const installGuide = await readFile(path.join(packageRoot, "docs", "install-from-github-release.md"), "utf8");
   const clientAcceptance = await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8");
+  const freshProjectAcceptance = await readFile(path.join(packageRoot, "docs", "FRESH_PROJECT_ACCEPTANCE.md"), "utf8");
   const currentStatus = await readFile(path.join(packageRoot, "docs", "STATUS.md"), "utf8");
   const remainingWork = await readFile(path.join(packageRoot, "docs", "REMAINING_WORK.md"), "utf8");
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
@@ -76,6 +78,11 @@ try {
   assert(clientAcceptance.includes("mcp-easyar Client Acceptance Checklist"), "Package should include client acceptance checklist.");
   assert(clientAcceptance.includes("Package-Bin Client Config"), "Client acceptance checklist should include package-bin config acceptance.");
   assert(clientAcceptance.includes("First Client Calls"), "Client acceptance checklist should include first client calls.");
+  assert(freshProjectAcceptance.includes("mcp-easyar Fresh Project Acceptance"), "Package should include fresh project acceptance guide.");
+  assert(freshProjectAcceptance.includes("Image Tracking"), "Fresh project guide should include Image Tracking.");
+  assert(freshProjectAcceptance.includes("CRS/Cloud Recognition"), "Fresh project guide should include CRS/Cloud Recognition.");
+  assert(freshProjectAcceptance.includes("ProjectSettings/EasyAR/easyar.local.json"), "Fresh project guide should include local config path.");
+  assert(freshProjectAcceptance.includes("allFocusedSamplesComplete=true"), "Fresh project guide should include focused completion criterion.");
   assert(currentStatus.includes("mcp-easyar Current Status"), "Package should include current status guide.");
   assert(currentStatus.includes("Current scoped objective: about 90%"), "Current status guide should include scoped objective progress.");
   assert(currentStatus.includes("Local-key MVP public usability: about 93%"), "Current status guide should include local-key MVP progress.");

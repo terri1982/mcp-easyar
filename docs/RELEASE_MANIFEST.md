@@ -40,7 +40,7 @@ Availability: development checkout
 Entrypoint mode: `package-bin`
 Availability: current public prerelease path
 
-- `npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.22/mcp-easyar-0.1.0.tgz`
+- `npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.23/mcp-easyar-0.1.0.tgz`
 - `easyar-mcp-check`
 - Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=package-bin`
 
@@ -150,6 +150,7 @@ Availability: post-npm-publish only
 - OK docs/release-evidence/focused-scope.android.json
 - OK docs/release-notes/local-key-mvp.md
 - OK docs/CLIENT_ACCEPTANCE.md
+- OK docs/FRESH_PROJECT_ACCEPTANCE.md
 - OK docs/client-setup.md
 - OK docs/install-from-github-release.md
 - OK docs/ROADMAP.md
@@ -173,6 +174,7 @@ Availability: post-npm-publish only
 - docs/release-evidence
 - docs/release-notes
 - docs/CLIENT_ACCEPTANCE.md
+- docs/FRESH_PROJECT_ACCEPTANCE.md
 - docs/client-setup.md
 - docs/install-from-github-release.md
 - docs/ROADMAP.md

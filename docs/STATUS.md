@@ -6,12 +6,12 @@ It is not a completion claim for every EasyAR sample. The current goal has been 
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.22`
+Current GitHub prerelease: `v0.1.0-local-key.23`
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.22/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.23/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -28,6 +28,7 @@ These percentages are evidence-weighted estimates. They are based on published p
 - `easyar-mcp` and `easyar-mcp-check` package binaries are available.
 - Codex, Claude Desktop, and generic MCP client config generation are implemented.
 - Client acceptance guidance is available through `docs/CLIENT_ACCEPTANCE.md` and `easyar://client/acceptance`.
+- Fresh Unity project acceptance guidance is available through `docs/FRESH_PROJECT_ACCEPTANCE.md` and `easyar://acceptance/fresh-project`.
 - Local-key onboarding is implemented without collecting EasyAR website passwords or secret keys in chat.
 - Focused Image Tracking and CRS/Cloud Recognition workflows are implemented.
 - Safe committed Android evidence exists for the Image Tracking and CRS/Cloud Recognition target scope.
@@ -48,7 +49,7 @@ Out of scope for the current goal:
 
 ## Known Remaining Work
 
-- Keep Image Tracking and CRS/Cloud Recognition evidence, docs, and release smoke tests aligned with the latest GitHub Release.
+- Keep Image Tracking and CRS/Cloud Recognition evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
 - Add more real-device and platform evidence if supported Unity versions or target platforms expand for the two target samples.
 - Continue hardening Unity programming workflows with more real project cases.
@@ -67,6 +68,6 @@ MCP must not ask users to paste EasyAR website passwords, verification codes, li
 ## Best Next Actions
 
 1. Keep the GitHub Release tarball and docs aligned with every public prerelease.
-2. Test a fresh Codex and Claude Desktop setup using `docs/CLIENT_ACCEPTANCE.md`.
+2. Test a fresh Codex and Claude Desktop setup using `docs/CLIENT_ACCEPTANCE.md` and `docs/FRESH_PROJECT_ACCEPTANCE.md`.
 3. Run another clean install/build/device pass only for Image Tracking and CRS/Cloud Recognition when the Unity project changes.
 4. Decide whether npm publication is needed for this scoped local-key MVP.

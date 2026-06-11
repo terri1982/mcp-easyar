@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.22";
+const currentGitHubReleaseTag = "v0.1.0-local-key.23";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -203,6 +203,7 @@ const resourceCatalog = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://client/acceptance",
+  "easyar://acceptance/fresh-project",
   "easyar://status/current",
   "easyar://status/remaining-work",
   "easyar://install/github-release",
@@ -395,6 +396,20 @@ server.resource(
         uri: uri.href,
         mimeType: "text/markdown",
         text: await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-fresh-project-acceptance",
+  "easyar://acceptance/fresh-project",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "FRESH_PROJECT_ACCEPTANCE.md"), "utf8")
       }
     ]
   })
@@ -6585,6 +6600,7 @@ async function buildReleaseManifest() {
     "docs/release-evidence/focused-scope.android.json",
     "docs/release-notes/local-key-mvp.md",
     "docs/CLIENT_ACCEPTANCE.md",
+    "docs/FRESH_PROJECT_ACCEPTANCE.md",
     "docs/client-setup.md",
     "docs/install-from-github-release.md",
     "docs/REMAINING_WORK.md",

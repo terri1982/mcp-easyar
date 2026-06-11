@@ -13,19 +13,19 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 
 ## Current Evidence
 
-- Current public prerelease: `v0.1.0-local-key.22`
+- Current public prerelease: `v0.1.0-local-key.23`
 - Current scoped objective: about 90%
 - Local-key MVP public usability: about 93%
 - Android real-device evidence exists for Image Tracking and CRS/Cloud Recognition.
 - GitHub Release tarball install smoke passes, including Codex and Claude Desktop `package-bin` client setup checks.
+- Fresh Unity project acceptance guidance exists in `docs/FRESH_PROJECT_ACCEPTANCE.md` and `easyar://acceptance/fresh-project`.
 - `npx -y mcp-easyar` is reserved for a future npm publish; the current public prerelease install path is the GitHub Release tarball.
 - Security checks pass without committed local config secrets, runtime secrets, APKs, Unity packages, or obvious secret-like values.
 
 ## Remaining For Current Scoped Target
 
-- Keep release links, status docs, install checks, and GitHub Release smoke tests aligned with each new prerelease.
+- Keep release links, status docs, fresh project acceptance guidance, install checks, and GitHub Release smoke tests aligned with each new prerelease.
 - Re-run Image Tracking and CRS/Cloud Recognition device evidence when the Unity project, EasyAR Sense Unity Plugin version, supported Unity version, or target platform changes.
-- Keep onboarding text clear for users who have not registered on www.easyar.cn yet.
 - Continue hardening Unity programming workflows with real Image Tracking and CRS project cases.
 
 ## Not Required For Current Scoped Target
@@ -55,6 +55,8 @@ easyar_check_client_setup client=codex entrypointMode=package-bin includeTokenPl
 easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition platform=android
 ```
+
+Also read MCP resource `easyar://acceptance/fresh-project`.
 
 For a Unity project:
 

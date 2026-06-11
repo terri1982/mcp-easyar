@@ -37,6 +37,7 @@ const requiredResources = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://client/acceptance",
+  "easyar://acceptance/fresh-project",
   "easyar://status/current",
   "easyar://status/remaining-work",
   "easyar://install/github-release",
@@ -143,6 +144,11 @@ try {
       "client-acceptance",
       resourceTexts.get("easyar://client/acceptance")?.includes("mcp-easyar Client Acceptance Checklist") ?? false,
       "Client acceptance checklist resource is readable."
+    ),
+    check(
+      "fresh-project-acceptance",
+      resourceTexts.get("easyar://acceptance/fresh-project")?.includes("mcp-easyar Fresh Project Acceptance") ?? false,
+      "Fresh Unity project acceptance resource is readable."
     ),
     check(
       "current-status",
