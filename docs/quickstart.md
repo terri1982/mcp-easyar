@@ -169,7 +169,7 @@ After writing artifacts, read `FIRST_RUN.md` first for new users or new MCP clie
 
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId` plus `apiKey` in `ProjectSettings/EasyAR/easyar.local.json`. Legacy `appKey`/`appSecret` fields are still accepted for compatibility. A passed device result also requires an EasyAR Cloud Recognition target library with at least one uploaded test target image.
 
-Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page or Unity Package Manager Samples before expecting a real device run to succeed. If `easyar_generate_import_checklist` reports a PackageCache `Samples~` candidate but no imported scene, run `easyar_generate_sample_import_guide`; for Cloud Recognition this guide points users to import `ImageTracking_CloudRecognition` from Package Manager into `Assets/Samples`.
+Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page or Unity Package Manager Samples before expecting a real device run to succeed. If `easyar_generate_import_checklist` reports a PackageCache `Samples~` candidate but no imported scene, run `easyar_generate_sample_import_guide`; for Image Tracking this guide also checks the official `Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage` import so device builds can load `Assets/StreamingAssets/EasyARSamples/ImageTargets/namecard.jpg`, `namecard.etd`, and `idback.etd`. For Cloud Recognition this guide points users to import `ImageTracking_CloudRecognition` from Package Manager into `Assets/Samples`.
 
 `SAMPLE_IMPORT_GUIDE.md` lists expected `Assets/Samples/...` import locations and post-import verification calls. If the matching sample is already present under local `Library/PackageCache/**/Samples~`, `easyar_import_sample_from_package_cache` can copy it into `Assets/Samples` for the focused sample. After importing, run the listed import checklist, readiness, and focused preflight calls before continuing to Unity batch automation.
 
@@ -286,7 +286,7 @@ easyar_android_start_app projectPath=/path/to/UnityProject sampleId=image-tracki
 easyar_android_collect_logcat projectPath=/path/to/UnityProject sampleId=image-tracking relativePath=Logs/mcp-easyar-DeviceLog-image-tracking.log
 ```
 
-Repeat the same sequence with `sampleId=cloud-recognition` and `apkPath=Builds/cloud-recognition.apk`. These helpers only prove install, launch, and log capture. The final `RUN_RESULT.md` should be marked `passed` only after the physical device also satisfies the visual sample criteria in `DEVICE_VALIDATION.md`, including recognition of a target already uploaded to the EasyAR Cloud Recognition library.
+Repeat the same sequence with `sampleId=cloud-recognition` and `apkPath=Builds/cloud-recognition.apk`. These helpers only prove install, launch, and log capture. The final `RUN_RESULT.md` should be marked `passed` only after the physical device also satisfies the visual sample criteria in `DEVICE_VALIDATION.md`. For Image Tracking, a practical repeatable check is to display a known target image on the computer screen and point the connected phone at it until the sample reports the expected target. For Cloud Recognition, the recognized target must already be uploaded to the EasyAR Cloud Recognition library.
 
 After `RUN_RESULT.md` is recorded, generate the final focused completion report:
 

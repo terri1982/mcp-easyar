@@ -23,12 +23,17 @@ Common blockers:
 - `easyar-official-import`: the official EasyAR Unity Plugin is not visible under `Assets` or `Packages`.
 - `sample-scene`: no Image Tracking scene candidate was found, or the matching scene is not enabled in Build Settings.
 - `image-target-assets`: target image or target metadata assets are missing.
+- `image-target-streaming-assets`: the official `Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage` target data has not been imported into `Assets/StreamingAssets/EasyARSamples/ImageTargets`.
 - `image-tracking-target-load`: Unity logs indicate the target file cannot be loaded.
 - `image-tracking-no-detection`: the app opens camera but never detects the target.
 
 Custom scene note:
 
 The MCP server recognizes Image Tracking scenes by official sample naming hints and by scene content markers such as `ImageTarget`, `ImageTracker`, and `TargetDataFileSource`. This allows custom scenes such as an RMB recognition scene to be treated as Image Tracking candidates even when the filename does not contain `ImageTracking`.
+
+Official sample target data note:
+
+If the device log reports missing files such as `EasyARSamples/ImageTargets/namecard.jpg`, `namecard.etd`, or `idback.etd`, import `Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage` from the EasyAR Sense Unity Plugin package, refresh Unity, rebuild, and retest. A stable visual validation loop is to display the target image on the computer screen and point the connected phone at it until the sample reports the found target.
 
 Recommended flow:
 

@@ -1194,6 +1194,8 @@ try {
   assertTextIncludes(initialImportChecklist, "\"readyForFocusedPreparation\": false");
   assertTextIncludes(initialImportChecklist, "official-unity-plugin-imported");
   assertTextIncludes(initialImportChecklist, "image-tracking-target-assets-imported");
+  assertTextIncludes(initialImportChecklist, "image-tracking-streaming-assets-imported");
+  assertTextIncludes(initialImportChecklist, "ImageTargets.unitypackage");
 
   const writtenImportChecklist = await callTool("easyar_write_import_checklist", {
     projectPath,
@@ -1350,6 +1352,7 @@ try {
   assertTextIncludes(initialReadiness, "\"ready\": false");
   assertTextIncludes(initialReadiness, "Import the official EasyAR Unity Plugin package");
   assertTextIncludes(initialReadiness, "image-target-assets");
+  assertTextIncludes(initialReadiness, "image-target-streaming-assets");
 
   const compileDryRun = await callTool("easyar_run_unity_compile_check", {
     projectPath,
@@ -1601,6 +1604,10 @@ try {
     ].join("\n"),
     "utf8"
   );
+  await mkdir(path.join(projectPath, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets"), { recursive: true });
+  await writeFile(path.join(projectPath, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.jpg"), "fixture", "utf8");
+  await writeFile(path.join(projectPath, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.etd"), "fixture", "utf8");
+  await writeFile(path.join(projectPath, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "idback.etd"), "fixture", "utf8");
 
   const readyImportChecklist = await callTool("easyar_generate_import_checklist", {
     projectPath,
@@ -1901,6 +1908,14 @@ exit 0
     validationHelper.includes("IsImageTrackingTargetAsset"),
     "Image Tracking validation helper should filter target assets"
   );
+  assert(
+    validationHelper.includes("HasOfficialImageTargetsStreamingAssets"),
+    "Image Tracking validation helper should require official ImageTargets StreamingAssets"
+  );
+  assert(
+    validationHelper.includes("ImageTargets.unitypackage"),
+    "Image Tracking validation helper should tell users to import ImageTargets.unitypackage"
+  );
 
   const explicitValidationHelper = await callTool("easyar_create_sample_validation_helper", {
     projectPath,
@@ -1958,11 +1973,28 @@ exit 0
     path.join(projectPath, "Library", "PackageCache", "com.easyar.sense@4002.0.0", "Samples~", "ImageTracking", "ImageTracking_CloudRecognition", "Scenes"),
     { recursive: true }
   );
+  await mkdir(
+    path.join(projectPath, "Library", "PackageCache", "com.easyar.sense@4002.0.0", "Samples~", "StreamingAssets", "ImageTargets"),
+    { recursive: true }
+  );
   await writeFile(
     path.join(projectPath, "Library", "PackageCache", "com.easyar.sense@4002.0.0", "Samples~", "ImageTracking", "ImageTracking_CloudRecognition", "Scenes", "ImageTracking_CloudRecognition.unity"),
     "%YAML 1.1\nm_Name: CloudRecognizer\nCloudRecognizerFrameFilter:\n",
     "utf8"
   );
+  await writeFile(
+    path.join(projectPath, "Library", "PackageCache", "com.easyar.sense@4002.0.0", "Samples~", "StreamingAssets", "ImageTargets", "ImageTargets.unitypackage"),
+    "dummy unitypackage fixture",
+    "utf8"
+  );
+
+  const imageImportGuide = await callTool("easyar_generate_sample_import_guide", {
+    projectPath,
+    sampleId: "image-tracking"
+  });
+  assertTextIncludes(imageImportGuide, "ImageTargets.unitypackage");
+  assertTextIncludes(imageImportGuide, "imageTargetsStreamingPackageCandidates");
+  assertTextIncludes(imageImportGuide, "Prepare visual target validation");
 
   const missingCloudReadiness = await callTool("easyar_check_sample_readiness", {
     projectPath,

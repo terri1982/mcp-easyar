@@ -7401,8 +7401,14 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
   const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
   const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
   const targetAssets = sample.id === "image-tracking"
-    ? await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, 80)
+    ? await findImageTrackingTargetAssets(root, 80)
     : [];
+  const imageTargetsStreamingPackageCandidates = sample.id === "image-tracking"
+    ? await findImageTargetsStreamingPackageCandidates(root, 20)
+    : [];
+  const imageTargetsStreamingAssetsImported = sample.id === "image-tracking"
+    ? await hasOfficialImageTargetsStreamingAssets(root)
+    : false;
   const cloudConfigPath = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
   const cloudConfig = sample.id === "cloud-recognition" ? await readCloudRecognitionConfig(root) : null;
   const items = [
@@ -7477,6 +7483,17 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
               ? `Possible target asset(s): ${targetAssets.slice(0, 10).join(", ")}`
               : "No Image Tracking target images/database assets were found.",
             action: "Import the official Image Tracking target assets or add real target images/database files under Assets."
+          },
+          {
+            id: "image-tracking-streaming-assets-imported",
+            required: true,
+            ok: imageTargetsStreamingAssetsImported,
+            evidence: imageTargetsStreamingAssetsImported
+              ? "Assets/StreamingAssets/EasyARSamples/ImageTargets contains the official Image Tracking .jpg/.etd files."
+              : imageTargetsStreamingPackageCandidates.length > 0
+                ? `Found ImageTargets.unitypackage candidate(s): ${imageTargetsStreamingPackageCandidates.join(", ")}`
+                : "No imported official Image Tracking StreamingAssets files or ImageTargets.unitypackage candidate were found.",
+            action: "Import the official Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage so device builds can load EasyARSamples/ImageTargets/namecard.jpg, namecard.etd, and idback.etd."
           }
         ]
       : [
@@ -7521,8 +7538,15 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
   const checklist = await buildImportChecklist(root, sample);
   const sceneItem = checklist.items.find((item) => item.id === "focused-sample-scene-imported");
   const packageCacheItem = checklist.items.find((item) => item.id === "package-cache-sample-available");
+  const imageTargetsStreamingItem = checklist.items.find((item) => item.id === "image-tracking-streaming-assets-imported");
   const matchingScenes = checklist.matchingScenes ?? [];
   const packageCacheSamples = checklist.packageCacheSamples ?? [];
+  const imageTargetsStreamingPackageCandidates = sample.id === "image-tracking"
+    ? await findImageTargetsStreamingPackageCandidates(root, 20)
+    : [];
+  const imageTargetsStreamingAssetsImported = sample.id === "image-tracking"
+    ? await hasOfficialImageTargetsStreamingAssets(root)
+    : false;
   const importedScenes = matchingScenes.filter((scenePath) => scenePath.startsWith("Assets" + path.sep) || scenePath.startsWith("Assets/"));
   const unityPackageSampleName = sample.id === "cloud-recognition"
     ? "ImageTracking_CloudRecognition"
@@ -7558,6 +7582,22 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
       expected: "PREFLIGHT.md advances from import blockers to the next real blocker or Unity batch step."
     }
   ];
+  const imageTrackingStreamingAssetSteps = sample.id === "image-tracking"
+    ? [
+        {
+          order: 5,
+          title: "Import ImageTargets StreamingAssets",
+          action: "Import Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage from the EasyAR package so Assets/StreamingAssets/EasyARSamples/ImageTargets contains namecard.jpg, namecard.etd, and idback.etd.",
+          doneWhen: "The three official ImageTargets files exist under Assets/StreamingAssets/EasyARSamples/ImageTargets and Unity has refreshed the AssetDatabase."
+        },
+        {
+          order: 6,
+          title: "Prepare visual target validation",
+          action: "Display or print a known target image, then point the connected phone at it after the APK launches.",
+          doneWhen: "The device screen shows the Image Tracking sample found the expected target, for example FirstTarget/ImageTarget-argame01 or another imported target."
+        }
+      ]
+    : [];
   const steps = [
     {
       order: 1,
@@ -7583,11 +7623,14 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
       action: `Open the Samples section and import ${unityPackageSampleName} into Assets/Samples.`,
       doneWhen: `A matching scene for ${sample.name} exists under Assets/Samples or another Assets folder.`
     },
+    ...imageTrackingStreamingAssetSteps,
     {
-      order: 5,
+      order: sample.id === "image-tracking" ? 7 : 5,
       title: "Return to MCP validation",
       action: `Run easyar_generate_import_checklist projectPath=${root} sampleId=${sample.id}, then easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}.`,
-      doneWhen: "The focused sample scene import check is OK."
+      doneWhen: sample.id === "image-tracking"
+        ? "The focused sample scene import and image-target-streaming-assets checks are OK."
+        : "The focused sample scene import check is OK."
     }
   ];
 
@@ -7602,9 +7645,12 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
     expectedImportLocations,
     importedScenes,
     packageCacheSamples,
+    imageTargetsStreamingPackageCandidates,
+    imageTargetsStreamingAssetsImported,
     evidence: {
       focusedSampleScene: sceneItem?.evidence ?? "No focused sample scene evidence found.",
-      packageCacheSample: packageCacheItem?.evidence ?? "No PackageCache sample evidence found."
+      packageCacheSample: packageCacheItem?.evidence ?? "No PackageCache sample evidence found.",
+      imageTargetsStreamingAssets: imageTargetsStreamingItem?.evidence ?? "Not applicable for this sample."
     },
     steps,
     mcpAfterImport: postImportVerification.map((call) => ({ tool: call.tool, arguments: call.arguments })),
@@ -7612,6 +7658,9 @@ async function buildSampleImportGuide(root: string, sample: SampleInfo) {
     nextActions: matchingScenes.length > 0
       ? [
           "Focused sample scene is already imported. Continue with easyar_prepare_unity_project and easyar_next_workflow_step.",
+          ...(sample.id === "image-tracking" && !imageTargetsStreamingAssetsImported
+            ? ["Import Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage before the Android/iOS device build."]
+            : []),
           `Optionally write this guide with easyar_write_sample_import_guide projectPath=${root} sampleId=${sample.id} for handoff history.`
         ]
       : packageCacheSamples.length > 0
@@ -10816,12 +10865,45 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
     return "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json and fill it with official local credentials.";
   }
   if (checkId === "image-target-assets") {
-    return "Import or create Image Tracking target assets/images before running the Image Tracking sample.";
+    return "Import or create Image Tracking target assets/images before running the Image Tracking sample. For the official sample, also import Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage so Assets/StreamingAssets/EasyARSamples/ImageTargets contains the required .etd/.jpg files.";
   }
   if (checkId === "cloud-recognition-credentials") {
     return "Fill easyar.cloudRecognition.appId and apiKey in ProjectSettings/EasyAR/easyar.local.json. Legacy appKey/appSecret fields are still accepted.";
   }
   return "Review the EasyAR Unity checklist and rerun readiness checks.";
+}
+
+async function findImageTrackingTargetAssets(root: string, limit: number): Promise<string[]> {
+  const candidates = await findFiles(root, ["Assets"], /\.(?:jpg|jpeg|png|json|xml|etd)$/i, limit * 3);
+  return candidates
+    .filter((candidatePath) => {
+      const normalized = candidatePath.replace(/\\/g, "/");
+      return /(?:^|\/)(?:ImageTargets?|Targets?)(?:\/|$)/i.test(normalized)
+        || /(?:imagetarget|image-target|target)/i.test(normalized)
+        || /^Assets\/StreamingAssets\/EasyARSamples\/ImageTargets\//i.test(normalized);
+    })
+    .slice(0, limit);
+}
+
+async function findImageTargetsStreamingPackageCandidates(root: string, limit: number): Promise<string[]> {
+  const candidates = await findFiles(root, ["Library/PackageCache"], /ImageTargets\.unitypackage$/i, limit * 2);
+  return candidates
+    .filter((candidatePath) => candidatePath.replace(/\\/g, "/").includes("/Samples~/StreamingAssets/ImageTargets/"))
+    .slice(0, limit);
+}
+
+async function hasOfficialImageTargetsStreamingAssets(root: string): Promise<boolean> {
+  const requiredPaths = [
+    path.join(root, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.jpg"),
+    path.join(root, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.etd"),
+    path.join(root, "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "idback.etd")
+  ];
+  for (const requiredPath of requiredPaths) {
+    if (!await exists(requiredPath)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function focusedSampleGeneratedDir(root: string, sample: SampleInfo): string {
@@ -10834,7 +10916,9 @@ function focusedSampleRunbookPath(root: string, sample: SampleInfo): string {
 
 async function buildSampleSpecificReadinessChecks(root: string, sample: SampleInfo) {
   if (sample.id === "image-tracking") {
-    const targetAssets = await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, 80);
+    const targetAssets = await findImageTrackingTargetAssets(root, 80);
+    const streamingPackageCandidates = await findImageTargetsStreamingPackageCandidates(root, 20);
+    const streamingAssetsImported = await hasOfficialImageTargetsStreamingAssets(root);
     return [
       {
         id: "image-target-assets",
@@ -10842,6 +10926,15 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
         detail: targetAssets.length > 0
           ? `Found possible image target asset(s): ${targetAssets.slice(0, 8).join(", ")}.`
           : "No image target asset hints were found under Assets. Import the official Image Tracking sample assets or add target images."
+      },
+      {
+        id: "image-target-streaming-assets",
+        ok: streamingAssetsImported,
+        detail: streamingAssetsImported
+          ? "Official Image Tracking StreamingAssets target files are imported under Assets/StreamingAssets/EasyARSamples/ImageTargets."
+          : streamingPackageCandidates.length > 0
+            ? `Official ImageTargets StreamingAssets package candidate(s): ${streamingPackageCandidates.join(", ")}. Import ImageTargets.unitypackage before building the official Image Tracking sample.`
+            : "Official ImageTargets StreamingAssets package was not found in local PackageCache. Open/import the EasyAR Sense Unity Plugin package samples first."
       }
     ];
   }
@@ -10912,7 +11005,7 @@ async function readBuildSettingsSceneHints(root: string, sample: SampleInfo) {
 
 async function buildSampleSceneAuditSpecifics(root: string, sample: SampleInfo, maxCandidates: number) {
   if (sample.id === "image-tracking") {
-    const targetAssets = await findFiles(root, ["Assets"], /(imagetarget|image-target|target.*\.(jpg|jpeg|png|json)|targets?\.(json|xml)|\.etd$)/i, maxCandidates);
+    const targetAssets = await findImageTrackingTargetAssets(root, maxCandidates);
     return {
       kind: "image-tracking",
       targetAssets,
@@ -12366,6 +12459,7 @@ function buildSampleImportGuideMarkdown(guide: Awaited<ReturnType<typeof buildSa
     "",
     `Focused sample scene: ${guide.evidence.focusedSampleScene}`,
     `PackageCache sample: ${guide.evidence.packageCacheSample}`,
+    `ImageTargets StreamingAssets: ${guide.evidence.imageTargetsStreamingAssets}`,
     "",
     "## Imported Scenes",
     "",
@@ -12378,6 +12472,18 @@ function buildSampleImportGuideMarkdown(guide: Awaited<ReturnType<typeof buildSa
     "## PackageCache Candidates",
     "",
     ...markdownIssueList(guide.packageCacheSamples, "No matching PackageCache Samples~ candidates were found."),
+    ...(guide.sample.id === "image-tracking"
+      ? [
+          "",
+          "## ImageTargets StreamingAssets",
+          "",
+          `Imported: ${guide.imageTargetsStreamingAssetsImported ? "yes" : "no"}`,
+          "",
+          ...markdownIssueList(guide.imageTargetsStreamingPackageCandidates, "No ImageTargets.unitypackage candidates were found in Library/PackageCache."),
+          "",
+          "Import `Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage` before building to a device so the official Image Tracking sample can load its `.jpg` and `.etd` target files."
+        ]
+      : []),
     "",
     "## Unity Steps",
     "",
@@ -14888,13 +14994,17 @@ ${switchTarget}
 function buildSampleValidationHelper(sample: SampleInfo): string {
   const sceneNames = sample.unityScenes.map((scene) => `            "${escapeCsharp(scene)}"`).join(",\n");
   const sampleValidation = sample.id === "image-tracking"
-    ? `            var targetAssets = AssetDatabase.FindAssets("ImageTarget OR ImageTracker OR target")
+    ? `            var targetAssets = AssetDatabase.FindAssets("")
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(IsImageTrackingTargetAsset)
                 .ToArray();
             if (targetAssets.Length == 0)
             {
                 throw new InvalidOperationException("No Image Tracking target asset hints found. Add target images, target data, or official Image Tracking sample assets under Assets.");
+            }
+            if (!HasOfficialImageTargetsStreamingAssets())
+            {
+                throw new InvalidOperationException("Official Image Tracking StreamingAssets are missing. Import Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage so Assets/StreamingAssets/EasyARSamples/ImageTargets contains namecard.jpg, namecard.etd, and idback.etd.");
             }
             UnityEngine.Debug.Log("Validated Image Tracking target asset hints: " + string.Join(", ", targetAssets.Take(5)));
 `
@@ -14989,6 +15099,7 @@ ${sampleValidation}
                 return false;
             }
 
+            var normalized = path.Replace('\\\\', '/');
             var extension = Path.GetExtension(path);
             var hasTargetExtension = string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase)
@@ -14996,7 +15107,17 @@ ${sampleValidation}
                 || string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(extension, ".xml", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(extension, ".etd", StringComparison.OrdinalIgnoreCase);
-            return hasTargetExtension && path.IndexOf("target", StringComparison.OrdinalIgnoreCase) >= 0;
+            return hasTargetExtension
+                && (normalized.IndexOf("/ImageTargets/", StringComparison.OrdinalIgnoreCase) >= 0
+                    || normalized.IndexOf("/Targets/", StringComparison.OrdinalIgnoreCase) >= 0
+                    || normalized.IndexOf("target", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private static bool HasOfficialImageTargetsStreamingAssets()
+        {
+            return File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.jpg"))
+                && File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.etd"))
+                && File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "idback.etd"));
         }
 
         private static bool IsGeneratedSupportAsset(string path)
