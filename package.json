@@ -32,6 +32,7 @@
     "bin:smoke": "npm run build && MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs",
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "github-release:smoke": "node scripts/github-release-install-smoke.mjs",
     "install:check": "npm run build && node dist/install-check.js",
     "official-api:canary": "npm run build && node scripts/official-api-canary.mjs",
     "official-api:stub": "node scripts/official-api-stub.mjs",

@@ -75,6 +75,12 @@ The release gate requires:
 - repository security check
 - local-key MVP evidence for focused Image Tracking and Cloud Recognition
 
+Additional published-asset check:
+
+```bash
+npm run github-release:smoke
+```
+
 Current readiness model:
 
 - Local-key MVP ready: yes

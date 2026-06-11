@@ -69,6 +69,10 @@ Entrypoint mode: `npx`
 - `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json EASYAR_RELEASE_PLATFORM=android npm run release:check`
 - `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check`
 
+## Published Asset Verification
+
+- `npm run github-release:smoke`
+
 ## Release Workflows
 
 - GitHub-only local-key MVP: run the manual `GitHub Release` workflow with `gate=local-key-mvp`; it validates focused evidence and uploads an npm-compatible tarball to GitHub Releases.
@@ -172,6 +176,7 @@ Entrypoint mode: `npx`
 - `bin:smoke`: `npm run build && MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs`
 - `build`: `tsc`
 - `dev`: `tsx src/index.ts`
+- `github-release:smoke`: `node scripts/github-release-install-smoke.mjs`
 - `install:check`: `npm run build && node dist/install-check.js`
 - `official-api:canary`: `npm run build && node scripts/official-api-canary.mjs`
 - `official-api:stub`: `node scripts/official-api-stub.mjs`

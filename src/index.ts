@@ -6606,6 +6606,9 @@ async function buildReleaseManifest() {
     installCommands,
     installProfiles,
     verificationCommands,
+    publishedAssetVerification: [
+      "npm run github-release:smoke"
+    ],
     mcpEntrypoints,
     clientSetupTools: [
       "easyar_generate_client_config",
@@ -15143,6 +15146,10 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
     "## Verification Commands",
     "",
     ...manifest.verificationCommands.map((command) => `- \`${command}\``),
+    "",
+    "## Published Asset Verification",
+    "",
+    ...manifest.publishedAssetVerification.map((command) => `- \`${command}\``),
     "",
     "## Release Workflows",
     "",

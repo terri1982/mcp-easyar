@@ -104,6 +104,12 @@ easyar-mcp-check
 
 See [docs/install-from-github-release.md](docs/install-from-github-release.md) for the user-facing GitHub Release install and first-run flow.
 
+To verify the published GitHub Release tarball from a fresh temporary consumer project:
+
+```bash
+npm run github-release:smoke
+```
+
 After installing the package, verify the MCP entrypoint without exposing account secrets:
 
 ```bash

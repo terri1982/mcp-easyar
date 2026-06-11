@@ -916,6 +916,7 @@ try {
   assertTextIncludes(releaseManifest, "official-api:stub-smoke");
   assertTextIncludes(releaseManifest, "npm run release:check");
   assertTextIncludes(releaseManifest, "EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1");
+  assertTextIncludes(releaseManifest, "npm run github-release:smoke");
   assertTextIncludes(releaseManifest, "npm run security:check");
   assertTextIncludes(releaseManifest, ".github/workflows/github-release.yml");
   assertTextIncludes(releaseManifest, "\"workflow\": \"GitHub Release\"");
@@ -948,6 +949,7 @@ try {
   assert(committedReleaseManifest.includes("official-api:stub"), "Committed release manifest should include official API stub");
   assert(committedReleaseManifest.includes("official-api:stub-smoke"), "Committed release manifest should include official API stub smoke");
   assert(committedReleaseManifest.includes("npm run release:check"), "Committed release manifest should include release check");
+  assert(committedReleaseManifest.includes("npm run github-release:smoke"), "Committed release manifest should include GitHub Release tarball smoke check");
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1"), "Committed release manifest should include strict local-key MVP gate");
