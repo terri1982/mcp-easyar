@@ -197,7 +197,7 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-t
 
 Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials, or write the local file from environment-backed secrets:
 
-The generated example is valid JSON with an `_instructions` block. It tells first-time users which values come from EasyAR registration/login, that Cloud Recognition/CRS needs AppId + API KEY for Sense 4.1+, which values must never be pasted into chat, and which environment variables can be used with `easyar_write_local_config_from_env`.
+The generated example is valid JSON with an `_instructions` block. It tells first-time users which values come from EasyAR registration/login, that Cloud Recognition/CRS needs AppId, Client-end Target Recognition URL, API KEY, and API Secret for Unity CloudRecognizer API Key access, which values must never be pasted into chat, and which environment variables can be used with `easyar_write_local_config_from_env`.
 
 For a handoff document that another AI tool or teammate can resume from:
 
@@ -213,8 +213,9 @@ export EASYAR_API_TOKEN=your_registered_user_token
 export EASYAR_LICENSE_KEY=your_easyar_sense_license_key
 export EASYAR_BUNDLE_IDENTIFIER=com.company.easyarsample
 export EASYAR_CLOUD_APP_ID=your_cloud_recognition_app_id
+export EASYAR_CLOUD_SERVER_ADDRESS=https://your_crs_client_target_recognition_url
 export EASYAR_CLOUD_API_KEY=your_cloud_recognition_api_key
-export EASYAR_CLOUD_API_SECRET=your_cloud_recognition_api_secret_if_available
+export EASYAR_CLOUD_API_SECRET=your_cloud_recognition_api_secret
 ```
 
 ```text
@@ -236,7 +237,7 @@ easyar_create_local_config_bridge projectPath=/path/to/UnityProject sampleId=clo
 easyar_run_unity_method projectPath=/path/to/UnityProject executeMethod=EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig
 ```
 
-The bridge writes a minimized runtime copy to `Assets/StreamingAssets/EasyAR/easyar.runtime.json` after validating required fields. The runtime file is ignored by git and is intended only for local device builds. It includes only the fields a mobile sample needs at runtime, such as the EasyAR license key, Cloud Recognition `appId`/`apiKey`, and Unity identifiers; it does not export EasyAR account tokens, website passwords, `apiSecret`, or legacy `appSecret` values.
+The bridge writes a minimized runtime copy to `Assets/StreamingAssets/EasyAR/easyar.runtime.json` after validating required fields and applies the EasyAR global Cloud Recognizer service config for official samples that use GlobalConfig. The runtime file is ignored by git and is intended only for local device builds. It includes only the fields a mobile sample needs at runtime, such as the EasyAR license key, Cloud Recognition `appId`/`serverAddress`/`apiKey`/`apiSecret`, and Unity identifiers; it does not export EasyAR account tokens, website passwords, or legacy `appSecret` values.
 
 Before any Unity batch command, write the Unity executable setup report:
 

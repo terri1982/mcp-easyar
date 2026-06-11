@@ -1448,7 +1448,9 @@ try {
   });
   assertTextIncludes(missingEnvConfig, "\"canWrite\": false");
   assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.appId");
+  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.serverAddress");
   assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.apiKey");
+  assertTextIncludes(missingEnvConfig, "easyar.cloudRecognition.apiSecret");
   assertTextExcludes(missingEnvConfig, "Set local environment variable(s) for easyar.cloudRecognition.appSecret");
 
   const envWrittenConfig = await callTool("easyar_write_local_config_from_env", {
@@ -1512,18 +1514,21 @@ try {
     "utf8"
   );
   assert(cloudBridgeEditor.includes("Cloud Recognition apiKey"), "Cloud bridge editor should validate cloud apiKey presence");
+  assert(cloudBridgeEditor.includes("Cloud Recognition serverAddress"), "Cloud bridge editor should validate cloud serverAddress presence");
+  assert(cloudBridgeEditor.includes("Cloud Recognition apiSecret"), "Cloud bridge editor should validate cloud apiSecret presence");
   assert(cloudBridgeEditor.includes("BuildRuntimeJson(json)"), "Cloud bridge editor should export a minimized runtime json");
   assert(!cloudBridgeEditor.includes("cloudRecognition\\\": {\\\\\\\\n"), "Cloud bridge editor should not write literal backslash-n into runtime json");
   assert(!cloudBridgeEditor.includes("accountToken\\\":"), "Cloud bridge editor should not export accountToken into runtime json");
-  assert(!cloudBridgeEditor.includes("apiSecret\\\":"), "Cloud bridge editor should not export apiSecret into runtime json");
   assert(!cloudBridgeEditor.includes("appSecret\\\":"), "Cloud bridge editor should not export appSecret into runtime json");
+  assert(cloudBridgeEditor.includes("GlobalCloudRecognizerServiceConfig"), "Cloud bridge editor should apply global CloudRecognizer service config");
   const cloudBridgeRuntime = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs"),
     "utf8"
   );
   assert(cloudBridgeRuntime.includes("CloudRecognitionApiKey"), "Cloud bridge runtime should expose cloud apiKey property");
+  assert(cloudBridgeRuntime.includes("CloudRecognitionServerAddress"), "Cloud bridge runtime should expose cloud serverAddress property");
+  assert(cloudBridgeRuntime.includes("CloudRecognitionApiSecret"), "Cloud bridge runtime should expose cloud apiSecret presence property");
   assert(!cloudBridgeRuntime.includes("AccountToken"), "Cloud bridge runtime should not expose accountToken");
-  assert(!cloudBridgeRuntime.includes("CloudRecognitionApiSecret"), "Cloud bridge runtime should not expose cloud apiSecret property");
   assert(!cloudBridgeRuntime.includes("CloudRecognitionAppSecret"), "Cloud bridge runtime should not expose cloud appSecret property");
   assert(!cloudBridgeRuntime.includes("test-license-key"), "Cloud bridge runtime should not contain local license value");
   assert(!cloudBridgeRuntime.includes("test-app-secret"), "Cloud bridge runtime should not contain local cloud secret value");
@@ -2051,6 +2056,7 @@ exit 0
   );
   assert(cloudLocalConfigExample.includes("Cloud Recognition/CRS credentials"), "Cloud config example should guide official Cloud Recognition credentials");
   assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_APP_ID"), "Cloud config example should list app id env var");
+  assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_SERVER_ADDRESS"), "Cloud config example should list server address env var");
   assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_APP_KEY"), "Cloud config example should list app key env var");
   assert(cloudLocalConfigExample.includes("EASYAR_CLOUD_APP_SECRET"), "Cloud config example should list app secret env var");
   const cloudRunbook = await readFile(
@@ -2078,8 +2084,9 @@ exit 0
         licenseKey: "test-license-key",
         cloudRecognition: {
           appId: "test-cloud-app-id",
-          appKey: "test-cloud-app-key",
-          appSecret: "test-cloud-app-secret"
+          serverAddress: "https://example.cn1.crs.easyar.com:8443",
+          apiKey: "test-cloud-api-key",
+          apiSecret: "test-cloud-api-secret"
         }
       },
       unity: {
@@ -2093,7 +2100,7 @@ exit 0
     projectPath,
     sampleId: "cloud-recognition"
   });
-  assertTextIncludes(configuredCloudReadiness, "Cloud recognition legacy appId, appKey, and appSecret are configured");
+  assertTextIncludes(configuredCloudReadiness, "Cloud recognition appId, serverAddress, apiKey, and apiSecret are configured");
 
   await writeFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
@@ -2118,7 +2125,7 @@ exit 0
     projectPath,
     sampleId: "cloud-recognition"
   });
-  assertTextIncludes(configuredModernCloudReadiness, "Cloud recognition appId and apiKey are configured");
+  assertTextIncludes(configuredModernCloudReadiness, "Cloud recognition credentials are incomplete or missing");
 
   const script = await callTool("easyar_create_mono_behaviour", {
     projectPath,
@@ -2243,6 +2250,29 @@ exit 0
   assert(codeChangeMarkdown.includes("EasyAR Focused Code Change - Image Tracking"), "Code change markdown should include title");
   assert(codeChangeMarkdown.includes("hardcoded-easyar-secret"), "Code change markdown should include static review issue");
 
+  await writeFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
+    JSON.stringify({
+      easyar: {
+        apiBaseUrl: "https://www.easyar.cn",
+        accountToken: "test-account-token",
+        licenseKey: "test-license-key",
+        cloudRecognition: {
+          appId: "",
+          serverAddress: "",
+          apiKey: "",
+          apiSecret: "",
+          appKey: "",
+          appSecret: ""
+        }
+      },
+      unity: {
+        targetPlatform: "android",
+        bundleIdentifier: "com.easyar.testsample"
+      }
+    }),
+    "utf8"
+  );
   const riskyRunReport = await callTool("easyar_generate_run_report", {
     projectPath,
     sampleId: "image-tracking",

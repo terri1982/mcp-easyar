@@ -163,7 +163,7 @@ Used by MCP tools:
 - easyar_account_materials
 
 Acceptance:
-- Configured Cloud Recognition app returns appId plus apiKeyPresent and optional apiSecretPresent flags.
+- Configured Cloud Recognition app returns appId plus serverAddress and apiKeyPresent/apiSecretPresent flags.
 - Response never includes raw API KEY/API Secret, appKey, or appSecret values.
 
 Canary command template:
