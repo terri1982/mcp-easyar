@@ -203,6 +203,7 @@ const resourceCatalog = [
   "easyar://official/openapi",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
+  "easyar://roadmap",
   "easyar://unity/checklist",
   "easyar://workflow/quickstart",
   "easyar://workflow/focused-scope",
@@ -404,6 +405,20 @@ server.resource(
         uri: uri.href,
         mimeType: "text/markdown",
         text: await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-roadmap",
+  "easyar://roadmap",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "ROADMAP.md"), "utf8")
       }
     ]
   })

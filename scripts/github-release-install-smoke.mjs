@@ -38,6 +38,7 @@ try {
   assert(check.stdout.includes("OK resources"), "Release check bin should verify resources.");
   assert(check.stdout.includes("OK github-release-install"), "Release check bin should verify GitHub Release install resource.");
   assert(check.stdout.includes("OK local-key-release-notes"), "Release check bin should verify local-key release notes resource.");
+  assert(check.stdout.includes("OK roadmap"), "Release check bin should verify roadmap resource.");
   assert(check.stdout.includes("Secret values are not required"), "Release install check should state that secrets are not needed.");
 
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");

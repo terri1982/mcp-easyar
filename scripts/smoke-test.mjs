@@ -528,6 +528,13 @@ try {
   assertResourceIncludes(localKeyReleaseResource, "Local-key MVP ready: yes");
   assertResourceIncludes(localKeyReleaseResource, "Production official API ready: no");
 
+  const roadmapResource = await request("resources/read", {
+    uri: "easyar://roadmap"
+  });
+  assertResourceIncludes(roadmapResource, "mcp-easyar Roadmap");
+  assertResourceIncludes(roadmapResource, "Current State");
+  assertResourceIncludes(roadmapResource, "Remaining For Full Goal");
+
   const focusedScopeResource = await request("resources/read", {
     uri: "easyar://workflow/focused-scope"
   });

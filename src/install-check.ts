@@ -38,6 +38,7 @@ const requiredResources = [
   "easyar://official/openapi",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
+  "easyar://roadmap",
   "easyar://workflow/focused-scope",
   "easyar://workflow/programming",
   "easyar://workflow/quickstart"
@@ -144,6 +145,11 @@ try {
       "local-key-release-notes",
       resourceTexts.get("easyar://release/local-key-mvp")?.includes("mcp-easyar local-key MVP") ?? false,
       "Local-key MVP release notes resource is readable."
+    ),
+    check(
+      "roadmap",
+      resourceTexts.get("easyar://roadmap")?.includes("mcp-easyar Roadmap") ?? false,
+      "Roadmap resource is readable."
     ),
     check(
       "focused-scope-workflow",

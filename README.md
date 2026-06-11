@@ -103,6 +103,7 @@ easyar-mcp-check
 ```
 
 See [docs/install-from-github-release.md](docs/install-from-github-release.md) for the user-facing GitHub Release install and first-run flow.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the current local-key MVP boundary and remaining work toward the full EasyAR MCP service goal.
 
 To verify the published GitHub Release tarball from a fresh temporary consumer project:
 
