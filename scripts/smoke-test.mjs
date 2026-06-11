@@ -888,7 +888,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.11"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.12"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -957,12 +957,14 @@ try {
   assertTextIncludes(releaseManifest, "docs/release-notes/local-key-mvp.md");
   assertTextIncludes(releaseManifest, "docs/client-setup.md");
   assertTextIncludes(releaseManifest, "docs/install-from-github-release.md");
+  assertTextIncludes(releaseManifest, "docs/ROADMAP.md");
 
   const committedReleaseManifest = await readFile(
     path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
     "utf8"
   );
   assert(committedReleaseManifest.includes("mcp-easyar Release Manifest"), "Committed release manifest should include title");
+  assert(committedReleaseManifest.includes("docs/ROADMAP.md"), "Committed release manifest should include roadmap");
   assert(committedReleaseManifest.includes("easyar_check_client_setup"), "Committed release manifest should include first calls/client setup tools");
   assert(committedReleaseManifest.includes("Install Profiles"), "Committed release manifest should include install profiles");
   assert(committedReleaseManifest.includes("npm install -g mcp-easyar"), "Committed release manifest should include global install profile");

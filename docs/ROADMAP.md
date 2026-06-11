@@ -4,12 +4,12 @@ This roadmap tracks the gap between the current local-key MVP and the full EasyA
 
 ## Current State
 
-Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.11`.
+Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.12`.
 
 The current release can be installed from GitHub Releases:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.11/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.12/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

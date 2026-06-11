@@ -6525,6 +6525,7 @@ async function buildReleaseManifest() {
     "docs/release-notes/local-key-mvp.md",
     "docs/client-setup.md",
     "docs/install-from-github-release.md",
+    "docs/ROADMAP.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
     "assets/easyar-icon.png",

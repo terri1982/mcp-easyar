@@ -1,6 +1,6 @@
 # mcp-easyar Release Manifest
 
-Generated at: 2026-06-11T02:48:22.714Z
+Generated at: 2026-06-11T04:35:00.000Z
 Package: mcp-easyar 0.1.0
 Bin: easyar-mcp
 Node: >=20
@@ -139,6 +139,7 @@ Entrypoint mode: `npx`
 - OK docs/release-notes/local-key-mvp.md
 - OK docs/client-setup.md
 - OK docs/install-from-github-release.md
+- OK docs/ROADMAP.md
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md
 - OK assets/easyar-icon.png
@@ -159,6 +160,7 @@ Entrypoint mode: `npx`
 - docs/release-notes
 - docs/client-setup.md
 - docs/install-from-github-release.md
+- docs/ROADMAP.md
 - docs/quickstart.md
 - docs/RELEASE_MANIFEST.md
 - docs/troubleshooting.md
