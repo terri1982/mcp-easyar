@@ -21,7 +21,7 @@ Expected result:
 - `OK github-release-install`
 - `OK local-key-release-notes`
 - `OK roadmap`
-- `OK sample-expansion-workflow`
+- `OK focused-scope-workflow`
 
 The check must not require EasyAR website passwords, license keys, Cloud Recognition API secrets, `appKey`, or `appSecret`.
 

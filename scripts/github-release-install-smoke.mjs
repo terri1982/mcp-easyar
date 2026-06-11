@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.16/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.16";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.17/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.17";
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -58,6 +58,16 @@ try {
     entrypointMode: "package-bin",
     includeTokenPlaceholder: false
   });
+  const codexClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_check_client_setup", {
+    client: "codex",
+    entrypointMode: "package-bin",
+    includeTokenPlaceholder: false
+  });
+  const claudeClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_check_client_setup", {
+    client: "claude-desktop",
+    entrypointMode: "package-bin",
+    includeTokenPlaceholder: false
+  });
   assert(installGuide.includes(expectedReleaseTag), "Install guide should point to the expected GitHub Release tag.");
   assert(installGuide.includes("For Codex:"), "Install guide should include a Codex package-bin config section.");
   assert(installGuide.includes("\"command\": \"easyar-mcp\""), "Install guide should use the package-bin easyar-mcp command.");
@@ -65,8 +75,8 @@ try {
   assert(clientAcceptance.includes("Package-Bin Client Config"), "Client acceptance checklist should include package-bin config acceptance.");
   assert(clientAcceptance.includes("First Client Calls"), "Client acceptance checklist should include first client calls.");
   assert(currentStatus.includes("mcp-easyar Current Status"), "Package should include current status guide.");
-  assert(currentStatus.includes("Current scoped objective: about 88%"), "Current status guide should include scoped objective progress.");
-  assert(currentStatus.includes("Local-key MVP public usability: about 90%"), "Current status guide should include local-key MVP progress.");
+  assert(currentStatus.includes("Current scoped objective: about 90%"), "Current status guide should include scoped objective progress.");
+  assert(currentStatus.includes("Local-key MVP public usability: about 92%"), "Current status guide should include local-key MVP progress.");
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");
@@ -74,6 +84,14 @@ try {
   assert(codexConfig.includes("\"client\": \"codex\""), "Installed MCP should identify Codex config.");
   assert(claudeConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Claude package-bin config.");
   assert(claudeConfig.includes("\"client\": \"claude-desktop\""), "Installed MCP should identify Claude config.");
+  assert(codexClientSetup.includes("\"readyForClientConnection\": true"), "Installed MCP should validate Codex package-bin setup.");
+  assert(codexClientSetup.includes("\"client\": \"codex\""), "Installed MCP should identify Codex setup.");
+  assert(codexClientSetup.includes("\"entrypointMode\": \"package-bin\""), "Installed MCP should validate Codex package-bin mode.");
+  assert(codexClientSetup.includes("\"command\": \"easyar-mcp\""), "Installed MCP should validate Codex easyar-mcp command.");
+  assert(claudeClientSetup.includes("\"readyForClientConnection\": true"), "Installed MCP should validate Claude package-bin setup.");
+  assert(claudeClientSetup.includes("\"client\": \"claude-desktop\""), "Installed MCP should identify Claude setup.");
+  assert(claudeClientSetup.includes("\"entrypointMode\": \"package-bin\""), "Installed MCP should validate Claude package-bin mode.");
+  assert(claudeClientSetup.includes("\"command\": \"easyar-mcp\""), "Installed MCP should validate Claude easyar-mcp command.");
 
   console.log("GitHub Release install smoke test passed.");
   console.log(`Release tarball: ${releaseTarballUrl}`);
