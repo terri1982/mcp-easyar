@@ -4575,7 +4575,10 @@ async function readPackageMetadata(): Promise<{
   private: boolean | null;
 }> {
   try {
-    const text = await readFile(path.join(process.cwd(), "package.json"), "utf8");
+    const text = await readFirstExistingFile([
+      path.join(packageRoot, "package.json"),
+      path.join(process.cwd(), "package.json")
+    ]);
     const parsed = JSON.parse(text) as {
       name?: string;
       version?: string;
@@ -4605,6 +4608,18 @@ async function readPackageMetadata(): Promise<{
       private: null
     };
   }
+}
+
+async function readFirstExistingFile(candidates: string[]): Promise<string> {
+  let lastError: unknown = null;
+  for (const candidate of candidates) {
+    try {
+      return await readFile(candidate, "utf8");
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 function check(id: string, ok: boolean, severity: ReadinessCheck["severity"], detail: string): ReadinessCheck {

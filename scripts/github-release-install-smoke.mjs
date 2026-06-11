@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.17/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.17";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.18/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.18";
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -146,10 +146,12 @@ function assert(condition, message) {
 }
 
 function callInstalledTool(serverBin, cwd, name, args) {
+  const installedBinDir = path.join(cwd, "node_modules", ".bin");
   const child = spawn(serverBin, [], {
     cwd,
     env: {
       ...process.env,
+      PATH: `${installedBinDir}${path.delimiter}${process.env.PATH ?? ""}`,
       EASYAR_API_BASE_URL: "https://www.easyar.cn",
       EASYAR_API_TOKEN: "",
       EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
