@@ -7,6 +7,7 @@ Initial public MVP for `mcp-easyar`.
 ### Added
 
 - MCP stdio server for authorized EasyAR Unity workflows.
+- GitHub Release workflow for local-key MVP distribution, with `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1` enforcing focused Image Tracking and Cloud Recognition evidence before uploading a release tarball.
 - MCP prompts for focused Image Tracking, Cloud Recognition, and Unity programming assistant workflows.
 - Official EasyAR links, package-version notes, sample catalog, checklist, and quickstart resources.
 - Official API contract resource at `easyar://official/api-contract` and `docs/OFFICIAL_API_CONTRACT.md` for account, license, downloads, and Cloud Recognition endpoint integration.

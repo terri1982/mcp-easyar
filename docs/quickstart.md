@@ -350,6 +350,8 @@ For the npm package, use the manual GitHub Actions `Release` workflow after conf
 
 `npm run release:check` reports two readiness lines. `Local-key MVP ready: yes` is the current focused-sample target: package/install docs pass, verification passed, and committed safe evidence proves Image Tracking and Cloud Recognition were run through on Android. `Production ready: yes` is stricter and remains blocked until EasyAR official account/license/download/cloud endpoint variables and official access checks are wired.
 
+For GitHub-only distribution before npm publishing, run the manual GitHub Actions `GitHub Release` workflow with `gate=local-key-mvp`. It enforces `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1`, packs the project with `npm pack`, and uploads the tarball as a GitHub Release asset. Use the existing `Release` workflow for npm only after the production official API gate is ready.
+
 After official EasyAR staging or production endpoints are configured, run the official API canary:
 
 ```bash

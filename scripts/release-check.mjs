@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 
 const root = process.cwd();
 const requireProductionReady = process.env.EASYAR_RELEASE_REQUIRE_PRODUCTION_READY === "1";
+const requireLocalKeyMvpReady = process.env.EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP === "1";
 const releaseProjectPath = nonEmpty(process.env.EASYAR_RELEASE_PROJECT_PATH);
 const releaseEvidencePath = nonEmpty(process.env.EASYAR_RELEASE_EVIDENCE_PATH);
 const releasePlatform = nonEmpty(process.env.EASYAR_RELEASE_PLATFORM) ?? "android";
@@ -44,6 +45,10 @@ try {
   console.log(`Local-key MVP ready: ${validation.localKeyMvpReady ? "yes" : "no"}`);
   console.log(`Blockers: ${Array.isArray(validation.blockers) ? validation.blockers.length : "unknown"}`);
 
+  if (requireLocalKeyMvpReady && !validation.localKeyMvpReady) {
+    throw new Error("Local-key MVP readiness is required but easyar_production_validation does not have focused sample evidence.");
+  }
+
   if (!validation.productionReady) {
     const blockerIds = Array.isArray(validation.blockers)
       ? validation.blockers.map((blocker) => blocker.id).join(", ")
@@ -53,6 +58,9 @@ try {
       throw new Error("Production readiness is required but easyar_production_validation is not ready.");
     }
     console.log("Package/repository checks passed. Production readiness is incomplete; set EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 to enforce the final gate.");
+    if (validation.localKeyMvpReady) {
+      console.log("Local-key MVP release gate passed for focused Image Tracking and Cloud Recognition assistance.");
+    }
   } else {
     console.log("Release check passed with production readiness evidence.");
   }

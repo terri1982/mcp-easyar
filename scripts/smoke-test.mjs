@@ -909,7 +909,10 @@ try {
   assertTextIncludes(releaseManifest, "official-api:stub");
   assertTextIncludes(releaseManifest, "official-api:stub-smoke");
   assertTextIncludes(releaseManifest, "npm run release:check");
+  assertTextIncludes(releaseManifest, "EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1");
   assertTextIncludes(releaseManifest, "npm run security:check");
+  assertTextIncludes(releaseManifest, ".github/workflows/github-release.yml");
+  assertTextIncludes(releaseManifest, "\"workflow\": \"GitHub Release\"");
   assertTextIncludes(releaseManifest, "easyar-mcp-check");
   assertTextIncludes(releaseManifest, "\"command\": \"npx\"");
   assertTextIncludes(releaseManifest, "easyar_check_client_setup");
@@ -939,6 +942,8 @@ try {
   assert(committedReleaseManifest.includes("npm run release:check"), "Committed release manifest should include release check");
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
+  assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1"), "Committed release manifest should include strict local-key MVP gate");
+  assert(committedReleaseManifest.includes("GitHub Release"), "Committed release manifest should include GitHub Release workflow");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_PROJECT_PATH"), "Committed release manifest should include release project evidence path env");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_EVIDENCE_PATH"), "Committed release manifest should include safe release evidence file env");
   assert(committedReleaseManifest.includes("Validation Environment"), "Committed release manifest should include validation helper environment section");
@@ -953,6 +958,7 @@ try {
   assert(releaseCheckScript.includes("EASYAR_RELEASE_PROJECT_PATH"), "release:check should accept a focused sample evidence project path");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_EVIDENCE_PATH"), "release:check should accept a safe focused sample evidence file path");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_PLATFORM"), "release:check should accept a focused sample evidence platform");
+  assert(releaseCheckScript.includes("EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP"), "release:check should enforce the local-key MVP release gate");
   const indexSource = await readFile(path.join(process.cwd(), "src", "index.ts"), "utf8");
   assert(indexSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
   assert(indexSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");

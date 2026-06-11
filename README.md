@@ -193,6 +193,10 @@ See [docs/troubleshooting.md](docs/troubleshooting.md) for focused Image Trackin
 
 See [docs/RELEASE_MANIFEST.md](docs/RELEASE_MANIFEST.md) for install commands, MCP entrypoints, focused scope, environment variable names, and release checks.
 
+## GitHub Release
+
+Use the manual GitHub Actions `GitHub Release` workflow to publish a downloadable `npm pack` tarball on GitHub before the official API production gate is complete. Choose `gate=local-key-mvp` to require the committed focused Android evidence and passing package checks. Choose `gate=production` only after the official EasyAR account, license, downloads, and Cloud Recognition endpoints are configured.
+
 ## Release Checks
 
 Before publishing a release or npm package:
@@ -208,7 +212,7 @@ npm run security:check
 npm run release:check
 ```
 
-`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It prints both `Production ready` and `Local-key MVP ready`. `Local-key MVP ready: yes` means the current focused scope can be supported from committed package/install docs, passing verification, and safe Image Tracking/Cloud Recognition device-run evidence; it does not mean official account API automation is finished. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command. For local strict checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; for GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH` to the committed safe evidence JSON.
+`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It prints both `Production ready` and `Local-key MVP ready`. `Local-key MVP ready: yes` means the current focused scope can be supported from committed package/install docs, passing verification, and safe Image Tracking/Cloud Recognition device-run evidence; it does not mean official account API automation is finished. Set `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1` for local-key MVP GitHub releases, or `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a production npm publish to make incomplete production readiness fail the command. For local strict checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; for GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH` to the committed safe evidence JSON.
 
 Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_EVIDENCE_PATH`/`EASYAR_RELEASE_PLATFORM` so the GitHub runner can verify focused sample evidence without reading a local Unity project. Local release checks may use `EASYAR_RELEASE_PROJECT_PATH` instead. If the release is intentionally limited to the local-key MVP, keep strict production publishing disabled and document the remaining official API blockers in the release notes.
 

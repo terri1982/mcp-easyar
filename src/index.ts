@@ -6469,6 +6469,7 @@ async function buildReleaseManifest() {
     "dist/easyar-api.js",
     ".github/ISSUE_TEMPLATE/focused-sample-run.yml",
     ".github/workflows/ci.yml",
+    ".github/workflows/github-release.yml",
     ".github/workflows/release.yml"
   ];
   const requiredFileStatuses = await Promise.all(requiredFiles.map(async (relativePath) => ({
@@ -6522,6 +6523,8 @@ async function buildReleaseManifest() {
     "npm run pack:check",
     "npm run security:check",
     "npm run release:check",
+    "EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json EASYAR_RELEASE_PLATFORM=android npm run release:check",
+    "EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json EASYAR_RELEASE_PLATFORM=android npm run release:check",
     "EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check"
   ];
   const mcpEntrypoints = [
@@ -6563,6 +6566,25 @@ async function buildReleaseManifest() {
       focusedSamples: focusedSamples().map((sample) => sample.id),
       deferredSamples: deferredSamples().map((sample) => sample.id)
     },
+    readinessModel: {
+      localKeyMvp: "Ready for focused Image Tracking and Cloud Recognition assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided.",
+      productionOfficialApi: "Ready only after EasyAR account, license, downloads, and Cloud Recognition endpoint variables are connected to authorized EasyAR services and focused official access checks pass.",
+      unityRuntime: "After the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses local license/API key configuration and does not require website login at runtime."
+    },
+    releaseWorkflows: [
+      {
+        id: "github-local-key-mvp",
+        workflow: "GitHub Release",
+        gate: "local-key-mvp",
+        purpose: "Validate focused evidence and upload an npm-compatible tarball to GitHub Releases before npm publishing."
+      },
+      {
+        id: "npm-production",
+        workflow: "Release",
+        gate: "production",
+        purpose: "Publish to npm with provenance only after official EasyAR endpoint integration is production-ready."
+      }
+    ],
     installCommands,
     installProfiles,
     verificationCommands,
@@ -6585,6 +6607,7 @@ async function buildReleaseManifest() {
       "EASYAR_RELEASE_PLATFORM"
     ],
     validationEnvironment: [
+      "EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP",
       "EASYAR_RELEASE_REQUIRE_PRODUCTION_READY",
       "EASYAR_UNITY_VERSION",
       "EASYAR_BUNDLE_IDENTIFIER",
@@ -6617,6 +6640,7 @@ async function buildReleaseManifest() {
       ? missingRequiredFiles.map((relativePath) => `Restore or generate required release file: ${relativePath}`)
       : [
           "Run verification commands before publishing or tagging a release.",
+          "Use the manual GitHub Actions GitHub Release workflow for local-key MVP GitHub distribution.",
           "Use the manual GitHub Actions Release workflow for npm publishing after configuring the protected npm-publish environment.",
           "Use easyar_check_client_setup to validate the MCP client config path or selected package/npx entrypoint before giving it to Codex or Claude.",
           "Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files."
@@ -15046,6 +15070,12 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
     `Repository: ${manifest.package.repository ?? "unknown"}`,
     `Ready for install docs: ${manifest.readyForInstallDocs ? "yes" : "no"}`,
     "",
+    "## Readiness Model",
+    "",
+    `- Local-key MVP: ${manifest.readinessModel.localKeyMvp}`,
+    `- Production official API: ${manifest.readinessModel.productionOfficialApi}`,
+    `- Unity runtime note: ${manifest.readinessModel.unityRuntime}`,
+    "",
     "## Focused Scope",
     "",
     `Focused samples: ${manifest.focusedScope.focusedSamples.join(", ")}`,
@@ -15073,6 +15103,12 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
     "## Verification Commands",
     "",
     ...manifest.verificationCommands.map((command) => `- \`${command}\``),
+    "",
+    "## Release Workflows",
+    "",
+    ...manifest.releaseWorkflows.flatMap((workflow) => [
+      `- ${workflow.workflow}: gate=\`${workflow.gate}\`; ${workflow.purpose}`
+    ]),
     "",
     "## First MCP Calls",
     "",

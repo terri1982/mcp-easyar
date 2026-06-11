@@ -1,0 +1,107 @@
+name: GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Git tag to create or update, for example v0.1.0-local-key.1
+        required: true
+      release_name:
+        description: Release title shown on GitHub
+        required: true
+        default: mcp-easyar local-key MVP
+      gate:
+        description: Release gate to enforce
+        required: true
+        default: local-key-mvp
+        type: choice
+        options:
+          - local-key-mvp
+          - production
+      prerelease:
+        description: Mark the GitHub release as a prerelease
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release gate
+        run: npm run release:check
+        env:
+          EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP: ${{ inputs.gate == 'local-key-mvp' && '1' || '0' }}
+          EASYAR_RELEASE_REQUIRE_PRODUCTION_READY: ${{ inputs.gate == 'production' && '1' || '0' }}
+          EASYAR_API_BASE_URL: ${{ vars.EASYAR_API_BASE_URL }}
+          EASYAR_ACCOUNT_STATUS_ENDPOINT: ${{ vars.EASYAR_ACCOUNT_STATUS_ENDPOINT }}
+          EASYAR_LICENSE_VALIDATE_ENDPOINT: ${{ vars.EASYAR_LICENSE_VALIDATE_ENDPOINT }}
+          EASYAR_DOWNLOADS_ENDPOINT: ${{ vars.EASYAR_DOWNLOADS_ENDPOINT }}
+          EASYAR_CLOUD_CREDENTIALS_ENDPOINT: ${{ vars.EASYAR_CLOUD_CREDENTIALS_ENDPOINT }}
+          EASYAR_UNITY_PATH: ${{ vars.EASYAR_UNITY_PATH }}
+          EASYAR_RELEASE_PROJECT_PATH: ${{ vars.EASYAR_RELEASE_PROJECT_PATH }}
+          EASYAR_RELEASE_EVIDENCE_PATH: ${{ vars.EASYAR_RELEASE_EVIDENCE_PATH || 'docs/release-evidence/focused-scope.android.json' }}
+          EASYAR_RELEASE_PLATFORM: ${{ vars.EASYAR_RELEASE_PLATFORM || 'android' }}
+          EASYAR_UNITY_VERSION: ${{ vars.EASYAR_UNITY_VERSION }}
+          EASYAR_BUNDLE_IDENTIFIER: ${{ vars.EASYAR_BUNDLE_IDENTIFIER }}
+          EASYAR_API_TOKEN: ${{ secrets.EASYAR_API_TOKEN }}
+          EASYAR_LICENSE_KEY: ${{ secrets.EASYAR_LICENSE_KEY }}
+
+      - name: Pack package
+        run: |
+          mkdir -p artifacts
+          npm pack --pack-destination artifacts
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+          PRERELEASE: ${{ inputs.prerelease }}
+          GATE: ${{ inputs.gate }}
+        run: |
+          set -euo pipefail
+          notes_file="$(mktemp)"
+          {
+            echo "mcp-easyar GitHub release"
+            echo
+            echo "Gate: ${GATE}"
+            echo "Focused scope: Image Tracking and Cloud Recognition"
+            echo "Install profiles: local Git clone, global npm package after npm publish, or npx after npm publish"
+            echo
+            echo "This release asset is an npm-compatible tarball produced by npm pack."
+            echo "Unity sample execution uses the installed official EasyAR Sense Unity Plugin plus local license/API keys."
+          } > "${notes_file}"
+          release_flags=(--title "${RELEASE_NAME}" --notes-file "${notes_file}")
+          create_flags=(--target "${GITHUB_SHA}" "${release_flags[@]}")
+          if [ "${PRERELEASE}" = "true" ]; then
+            release_flags+=(--prerelease)
+            create_flags+=(--prerelease --latest=false)
+          else
+            release_flags+=(--latest)
+            create_flags+=(--latest)
+          fi
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release upload "${TAG_NAME}" artifacts/*.tgz --clobber
+            gh release edit "${TAG_NAME}" "${release_flags[@]}"
+          else
+            gh release create "${TAG_NAME}" artifacts/*.tgz "${create_flags[@]}"
+          fi

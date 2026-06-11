@@ -66,7 +66,13 @@ Entrypoint mode: `npx`
 - `npm run security:check`
 - `npm run release:check`
 - `EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json EASYAR_RELEASE_PLATFORM=android npm run release:check`
+- `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json EASYAR_RELEASE_PLATFORM=android npm run release:check`
 - `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check`
+
+## Release Workflows
+
+- GitHub-only local-key MVP: run the manual `GitHub Release` workflow with `gate=local-key-mvp`; it validates focused evidence and uploads an npm-compatible tarball to GitHub Releases.
+- Production npm publish: run the manual `Release` workflow only after official EasyAR account, license, downloads, and Cloud Recognition endpoint variables are configured; it enforces the production gate before `npm publish --provenance`.
 
 ## First MCP Calls
 
@@ -103,6 +109,7 @@ Entrypoint mode: `npx`
 
 ## Validation Environment
 
+- `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP`
 - `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY`
 - `EASYAR_UNITY_VERSION`
 - `EASYAR_BUNDLE_IDENTIFIER`
@@ -133,6 +140,7 @@ Entrypoint mode: `npx`
 - OK dist/easyar-api.js
 - OK .github/ISSUE_TEMPLATE/focused-sample-run.yml
 - OK .github/workflows/ci.yml
+- OK .github/workflows/github-release.yml
 - OK .github/workflows/release.yml
 
 ## Package Files
