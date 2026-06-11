@@ -95,6 +95,15 @@ npm run build
 
 For package-based clients after publishing, use `npm install -g mcp-easyar` with `entrypointMode=package-bin`, or `entrypointMode=npx` for `npx -y mcp-easyar`.
 
+For the current GitHub local-key MVP release, install the tarball directly:
+
+```bash
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.2/mcp-easyar-0.1.0.tgz
+easyar-mcp-check
+```
+
+See [docs/install-from-github-release.md](docs/install-from-github-release.md) for the user-facing GitHub Release install and first-run flow.
+
 After installing the package, verify the MCP entrypoint without exposing account secrets:
 
 ```bash

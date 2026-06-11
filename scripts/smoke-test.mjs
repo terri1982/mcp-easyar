@@ -930,6 +930,7 @@ try {
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_HANDOFF.md");
   assertTextIncludes(releaseManifest, "docs/openapi/easyar-mcp-account-api.openapi.json");
   assertTextIncludes(releaseManifest, "docs/client-setup.md");
+  assertTextIncludes(releaseManifest, "docs/install-from-github-release.md");
 
   const committedReleaseManifest = await readFile(
     path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
@@ -959,6 +960,7 @@ try {
   assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");
   assert(committedReleaseManifest.includes("docs/openapi/easyar-mcp-account-api.openapi.json"), "Committed release manifest should include OpenAPI contract");
   assert(committedReleaseManifest.includes("docs/client-setup.md"), "Committed release manifest should include client setup guide");
+  assert(committedReleaseManifest.includes("docs/install-from-github-release.md"), "Committed release manifest should include GitHub Release install guide");
 
   const releaseCheckScript = await readFile(path.join(process.cwd(), "scripts", "release-check.mjs"), "utf8");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_PROJECT_PATH"), "release:check should accept a focused sample evidence project path");

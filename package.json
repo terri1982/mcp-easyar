@@ -14,6 +14,7 @@
     "docs/openapi/easyar-mcp-account-api.openapi.json",
     "docs/release-evidence",
     "docs/client-setup.md",
+    "docs/install-from-github-release.md",
     "docs/quickstart.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
