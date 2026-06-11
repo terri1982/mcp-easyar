@@ -1,6 +1,6 @@
 # mcp-easyar Release Manifest
 
-Generated at: 2026-06-11T02:44:46.174Z
+Generated at: 2026-06-11T02:48:22.714Z
 Package: mcp-easyar 0.1.0
 Bin: easyar-mcp
 Node: >=20
@@ -140,13 +140,14 @@ Entrypoint mode: `npx`
 - `install:check`: `npm run build && node dist/install-check.js`
 - `official-api:canary`: `npm run build && node scripts/official-api-canary.mjs`
 - `official-api:stub`: `node scripts/official-api-stub.mjs`
+- `official-api:stub-smoke`: `node scripts/official-api-stub-smoke.mjs`
 - `package:smoke`: `npm run build && node scripts/package-install-smoke.mjs`
 - `pack:check`: `npm run build && npm pack --dry-run`
 - `postbuild`: `chmod +x dist/index.js dist/install-check.js`
 - `release:check`: `node scripts/release-check.mjs`
 - `security:check`: `node scripts/security-check.mjs`
 - `start`: `node dist/index.js`
-- `test`: `npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs && node scripts/openapi-contract-smoke.mjs`
+- `test`: `npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs && node scripts/official-api-stub-smoke.mjs && node scripts/openapi-contract-smoke.mjs`
 - `typecheck`: `tsc --noEmit`
 
 ## Next Actions

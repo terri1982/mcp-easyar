@@ -28,6 +28,7 @@ const fixtureAllowlist = [
   "scripts/smoke-test.mjs",
   "scripts/official-api-canary.mjs",
   "scripts/official-api-stub.mjs",
+  "scripts/official-api-stub-smoke.mjs",
   ".env.example",
   "README.md",
   "docs/quickstart.md",

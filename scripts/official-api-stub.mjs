@@ -106,7 +106,7 @@ server.listen(port, host, () => {
   console.log(`export EASYAR_DOWNLOADS_ENDPOINT=${base}/mcp/downloads`);
   console.log(`export EASYAR_CLOUD_CREDENTIALS_ENDPOINT=${base}/mcp/cloud-recognition/credentials`);
   console.log("");
-  console.log("Use EASYAR_STUB_TOKEN to set the expected bearer token. The default token is fixture-token.");
+  console.log("Use EASYAR_STUB_TOKEN to set the expected bearer token. A default local development token is enabled when it is not set.");
   console.log("This stub is for local contract validation only; do not use it as a production EasyAR account service.");
 });
 
