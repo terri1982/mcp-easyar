@@ -7,6 +7,12 @@ Node: >=20
 Repository: https://github.com/terri1982/mcp-easyar.git
 Ready for install docs: yes
 
+## Readiness Model
+
+- Local-key MVP: ready for focused Image Tracking and Cloud Recognition assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided through `docs/release-evidence/focused-scope.android.json`.
+- Production official API: not ready until EasyAR account, license, downloads, and Cloud Recognition endpoint variables are connected to authorized EasyAR services and focused official access checks pass.
+- Unity runtime note: after the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses local license/API key configuration and does not require website login at runtime.
+
 ## Focused Scope
 
 Focused samples: image-tracking, cloud-recognition
@@ -59,6 +65,7 @@ Entrypoint mode: `npx`
 - `npm run pack:check`
 - `npm run security:check`
 - `npm run release:check`
+- `EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json EASYAR_RELEASE_PLATFORM=android npm run release:check`
 - `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check`
 
 ## First MCP Calls
@@ -134,6 +141,7 @@ Entrypoint mode: `npx`
 - docs/OFFICIAL_API_CONTRACT.md
 - docs/OFFICIAL_API_HANDOFF.md
 - docs/openapi/easyar-mcp-account-api.openapi.json
+- docs/release-evidence
 - docs/client-setup.md
 - docs/quickstart.md
 - docs/RELEASE_MANIFEST.md

@@ -10,6 +10,11 @@
 
 This MVP focuses on local Unity project assistance. The current sample run-through scope is intentionally limited to Image Tracking and Cloud Recognition; Hello AR, Surface Tracking, and other samples are cataloged for later expansion.
 
+Current readiness is split into two tracks:
+
+- Local-key MVP: ready for focused Image Tracking and Cloud Recognition assistance when the official EasyAR Sense Unity Plugin is installed and local license/API keys are filled in the Unity project.
+- Production official API automation: still requires EasyAR-owned account, license, download, and Cloud Recognition endpoints before private account-scoped distribution can be automated.
+
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
@@ -203,9 +208,9 @@ npm run security:check
 npm run release:check
 ```
 
-`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command. For local strict checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; for GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH` to the committed safe evidence JSON.
+`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It prints both `Production ready` and `Local-key MVP ready`. `Local-key MVP ready: yes` means the current focused scope can be supported from committed package/install docs, passing verification, and safe Image Tracking/Cloud Recognition device-run evidence; it does not mean official account API automation is finished. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command. For local strict checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; for GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH` to the committed safe evidence JSON.
 
-Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_EVIDENCE_PATH`/`EASYAR_RELEASE_PLATFORM` so the GitHub runner can verify focused sample evidence without reading a local Unity project. Local release checks may use `EASYAR_RELEASE_PROJECT_PATH` instead.
+Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_EVIDENCE_PATH`/`EASYAR_RELEASE_PLATFORM` so the GitHub runner can verify focused sample evidence without reading a local Unity project. Local release checks may use `EASYAR_RELEASE_PROJECT_PATH` instead. If the release is intentionally limited to the local-key MVP, keep strict production publishing disabled and document the remaining official API blockers in the release notes.
 
 After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with `EASYAR_API_TOKEN`, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
 
@@ -219,7 +224,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 `mcp-easyar` treats account setup as a guided browser handoff. If the user has not registered yet, start with `easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition`; the guide chooses the first safe MCP call, sends the user to the official EasyAR registration/login pages, and explains what to do after they return to Codex or Claude. The MCP server never asks for website passwords, verification codes, raw API tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
 
-After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, the CRS/Cloud Recognition AppId, Client-end Target Recognition URL, API KEY, and API Secret. EasyAR Unity CloudRecognizer API Key access uses `easyar.cloudRecognition.appId` + `serverAddress` + `apiKey` + `apiSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
+After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, the CRS/Cloud Recognition AppId, Client-end Target Recognition URL, API KEY, and API Secret. After the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses those local keys and does not require website login at runtime. EasyAR Unity CloudRecognizer API Key access uses `easyar.cloudRecognition.appId` + `serverAddress` + `apiKey` + `apiSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
 
 For Unity-project handoff, call `easyar_write_first_run_guide projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`, then `easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`. These write `Assets/EasyARGenerated/FIRST_RUN.md` and `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`, combining the official browser registration/login path, focused sample scope, account materials checklist, manual `easyar.local.json` steps, environment-backed writer command, and validation chain.
 

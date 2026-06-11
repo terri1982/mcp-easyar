@@ -2,6 +2,11 @@
 
 This workflow supports both new and registered EasyAR users connecting Codex, Claude, or another MCP client to local Unity project automation.
 
+Current status:
+
+- Local-key MVP is ready for the focused Image Tracking and Cloud Recognition workflow after the official EasyAR Sense Unity Plugin is installed and local keys are configured.
+- Official EasyAR account APIs are still a production automation track. They are needed for server-side account/license/download/cloud entitlement checks, but they are not required for Unity-side sample execution once authorized plugin and keys are local.
+
 ## 1. Build The Server
 
 ```bash
@@ -342,6 +347,8 @@ EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
 ```
 
 For the npm package, use the manual GitHub Actions `Release` workflow after configuring the protected `npm-publish` environment. The workflow runs the strict gate before `npm publish --provenance`, so package publishing cannot bypass official endpoint and real-device evidence. For local release checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project containing the passed focused sample artifacts. For GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json` after generating that safe evidence file with `easyar_write_release_evidence`.
+
+`npm run release:check` reports two readiness lines. `Local-key MVP ready: yes` is the current focused-sample target: package/install docs pass, verification passed, and committed safe evidence proves Image Tracking and Cloud Recognition were run through on Android. `Production ready: yes` is stricter and remains blocked until EasyAR official account/license/download/cloud endpoint variables and official access checks are wired.
 
 After official EasyAR staging or production endpoints are configured, run the official API canary:
 
