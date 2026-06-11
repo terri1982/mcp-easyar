@@ -29,21 +29,33 @@ Deferred samples: hello-ar, surface-tracking
 ### Local Git clone
 
 Entrypoint mode: `local-dist`
+Availability: development checkout
 
 - `npm install`
 - `npm run build`
 - Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=local-dist serverPath=/absolute/path/to/mcp-easyar/dist/index.js`
 
-### Global npm package
+### GitHub Release package
 
 Entrypoint mode: `package-bin`
+Availability: current public prerelease path
+
+- `npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.20/mcp-easyar-0.1.0.tgz`
+- `easyar-mcp-check`
+- Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=package-bin`
+
+### Global npm package after npm publish
+
+Entrypoint mode: `package-bin`
+Availability: post-npm-publish only
 
 - `npm install -g mcp-easyar`
 - Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=package-bin`
 
-### npx package
+### npx package after npm publish
 
 Entrypoint mode: `npx`
+Availability: post-npm-publish only
 
 - `npx -y mcp-easyar`
 - Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=npx`
@@ -53,7 +65,7 @@ Entrypoint mode: `npx`
 - Built dist entrypoint: `node /Users/tuyi/Documents/EasyAR 官方 MCP 服务/dist/index.js`
 - Package bin: `easyar-mcp`
 - Install check: `easyar-mcp-check`
-- npx package: `npx -y mcp-easyar`
+- npx package after npm publish: `npx -y mcp-easyar`
 
 ## Verification Commands
 
@@ -201,7 +213,7 @@ Entrypoint mode: `npx`
 
 - Run verification commands before publishing or tagging a release.
 - Use the manual GitHub Actions Release workflow for npm publishing after configuring the protected npm-publish environment.
-- Use easyar_check_client_setup to validate the MCP client config path or selected package/npx entrypoint before giving it to Codex or Claude.
+- Use easyar_check_client_setup to validate the MCP client config path or selected package entrypoint before giving it to Codex or Claude. Use npx only after npm publishing is complete.
 - Keep official EasyAR account tokens and Cloud Recognition credentials out of committed config files.
 
 ## Security

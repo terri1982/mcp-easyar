@@ -42,7 +42,7 @@ easyar_check_client_setup client=claude-desktop entrypointMode=local-dist server
 Use this for the current local-key MVP GitHub Release. This installs the package binary without waiting for npm registry publishing.
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.19/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.20/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -86,7 +86,7 @@ easyar_generate_client_config client=codex entrypointMode=package-bin includeTok
 easyar_check_client_setup client=claude-desktop entrypointMode=package-bin
 ```
 
-### Global npm package
+### Global npm package after npm publish
 
 Use this after the package is published to npm.
 
@@ -97,9 +97,9 @@ easyar-mcp-check
 
 After installation, use the same `package-bin` MCP launch config shown above.
 
-### npx package
+### npx package after npm publish
 
-Use this when the client machine can reach the npm registry and you do not want a global install.
+Use this after `mcp-easyar` is published to npm, when the client machine can reach the npm registry and you do not want a global install. For the current GitHub prerelease, use the GitHub Release package profile above.
 
 ```bash
 npx -y mcp-easyar
@@ -163,5 +163,5 @@ Then follow the generated `CLIENT_SETUP.md`, `FIRST_RUN.md`, and `PREFLIGHT.md` 
 - If `tools/list` is empty, restart the MCP client and verify that the JSON is nested under `mcpServers.easyar`.
 - If `local-dist` fails, rerun `npm install && npm run build` and use an absolute `dist/index.js` path.
 - If `package-bin` fails, run `easyar-mcp-check` in the same shell environment used by the MCP client.
-- If `npx` fails, verify npm registry/network access and run `npx -y mcp-easyar` in a terminal.
+- If `npx` fails after npm publishing, verify npm registry/network access and run `npx -y mcp-easyar` in a terminal. Before npm publishing, use the GitHub Release package profile instead.
 - If official account tools return `configured=false`, set the official endpoint env vars and `EASYAR_API_TOKEN` in the MCP client environment.

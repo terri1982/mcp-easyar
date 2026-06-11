@@ -93,12 +93,12 @@ npm install
 npm run build
 ```
 
-For package-based clients after publishing, use `npm install -g mcp-easyar` with `entrypointMode=package-bin`, or `entrypointMode=npx` for `npx -y mcp-easyar`.
+For the current public prerelease, use the GitHub Release tarball with `entrypointMode=package-bin`. After a future npm publish, `npm install -g mcp-easyar` and `entrypointMode=npx` will also be available.
 
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.19/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.20/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -190,7 +190,7 @@ Use the same package-bin stdio command:
 }
 ```
 
-You can also ask the MCP server for a config snippet with `easyar_generate_client_config`. The default `entrypointMode=local-dist` uses `node /absolute/path/to/dist/index.js`; `entrypointMode=package-bin` uses the installed `easyar-mcp` bin; `entrypointMode=npx` uses `npx -y mcp-easyar`.
+You can also ask the MCP server for a config snippet with `easyar_generate_client_config`. The default `entrypointMode=local-dist` uses `node /absolute/path/to/dist/index.js`; `entrypointMode=package-bin` uses the installed `easyar-mcp` bin. `entrypointMode=npx` uses `npx -y mcp-easyar` after the package is published to npm.
 
 ## Local Development
 

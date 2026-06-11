@@ -67,14 +67,14 @@ Ask the MCP server for a client snippet:
 easyar_server_status
 easyar_release_manifest
 easyar_generate_client_config client=claude-desktop
-easyar_generate_client_config client=codex entrypointMode=npx includeTokenPlaceholder=false
+easyar_generate_client_config client=codex entrypointMode=package-bin includeTokenPlaceholder=false
 easyar_generate_client_config client=generic-json entrypointMode=package-bin
 easyar_check_client_setup client=claude-desktop serverPath=/absolute/path/to/mcp-easyar/dist/index.js
 easyar_write_client_setup outputRoot=/path/to/report-folder client=claude-desktop serverPath=/absolute/path/to/mcp-easyar/dist/index.js
 easyar_onboarding_report projectPath=/path/to/UnityProject sampleId=image-tracking client=claude-desktop platform=android
 ```
 
-For copyable Codex, Claude Desktop, local-dist, package-bin, and npx setup profiles, see `docs/client-setup.md`.
+For copyable Codex, Claude Desktop, local-dist, current GitHub Release package-bin, and future npm/npx setup profiles, see `docs/client-setup.md`.
 
 `CLIENT_SETUP.md` includes the config destination, acceptance checklist, first smoke calls such as `easyar_server_status`, and client-specific troubleshooting steps. Use it before handing a Codex or Claude setup to another user.
 

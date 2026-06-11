@@ -18,7 +18,7 @@ Out of scope for this release target:
 Use Node.js 20 or newer.
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.19/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.20/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -65,6 +65,8 @@ For Codex:
 ```
 
 Other stdio MCP clients should use the same command, args, and env shape.
+
+Do not use `npx -y mcp-easyar` for this GitHub prerelease path unless the package has also been published to npm. The current public install route is the GitHub Release tarball plus `entrypointMode=package-bin`.
 
 ## 3. Start With Local-Key MVP
 

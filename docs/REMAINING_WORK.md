@@ -13,11 +13,12 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 
 ## Current Evidence
 
-- Current public prerelease: `v0.1.0-local-key.19`
+- Current public prerelease: `v0.1.0-local-key.20`
 - Current scoped objective: about 90%
 - Local-key MVP public usability: about 92%
 - Android real-device evidence exists for Image Tracking and CRS/Cloud Recognition.
 - GitHub Release tarball install smoke passes, including Codex and Claude Desktop `package-bin` client setup checks.
+- `npx -y mcp-easyar` is reserved for a future npm publish; the current public prerelease install path is the GitHub Release tarball.
 - Security checks pass without committed local config secrets, runtime secrets, APKs, Unity packages, or obvious secret-like values.
 
 ## Remaining For Current Scoped Target
@@ -33,6 +34,7 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 - Collecting EasyAR website passwords, verification codes, license keys, CRS API KEY/API Secret, `appKey`, or `appSecret` in chat.
 - Calling real EasyAR official account APIs for automated license/download/cloud credential discovery.
 - Publishing to npm as a production release.
+- Using `npx -y mcp-easyar` before the npm package exists.
 
 ## Remaining For Full Production Goal
 

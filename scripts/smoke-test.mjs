@@ -912,7 +912,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.19"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.20"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -997,6 +997,8 @@ try {
   assert(committedReleaseManifest.includes("Install Profiles"), "Committed release manifest should include install profiles");
   assert(committedReleaseManifest.includes("npm install -g mcp-easyar"), "Committed release manifest should include global install profile");
   assert(committedReleaseManifest.includes("npx -y mcp-easyar"), "Committed release manifest should include npx entrypoint");
+  assert(committedReleaseManifest.includes("GitHub Release package"), "Committed release manifest should include current GitHub Release profile");
+  assert(committedReleaseManifest.includes("post-npm-publish only"), "Committed release manifest should mark npm/npx profiles as post-publish only");
   assert(committedReleaseManifest.includes("easyar-mcp-check"), "Committed release manifest should include install check bin");
   assert(committedReleaseManifest.includes("npm run package:smoke"), "Committed release manifest should include package install smoke");
   assert(committedReleaseManifest.includes("official-api:canary"), "Committed release manifest should include official API canary");

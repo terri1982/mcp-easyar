@@ -76,6 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
+const currentGitHubReleaseTag = "v0.1.0-local-key.20";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -6514,7 +6515,7 @@ function buildClientAcceptanceChecklist(client: typeof clientKinds[number], entr
       ? "The local repository has run npm install and npm run build; dist/index.js exists at the configured absolute path."
       : entrypointMode === "package-bin"
         ? "The easyar-mcp binary is available on the PATH used by the MCP client."
-        : "The client machine can run npx -y mcp-easyar with network access to the npm registry.",
+        : "After npm publishing, the client machine can run npx -y mcp-easyar with network access to the npm registry.",
     `${client} has been restarted after editing MCP configuration.`,
     "easyar_server_status returns server name mcp-easyar and lists focused samples.",
     "easyar_auth_status reports only presence/redacted endpoint state and does not print secret values.",
@@ -6540,7 +6541,7 @@ function buildClientTroubleshooting(client: typeof clientKinds[number], entrypoi
       ? "If local-dist fails, rerun npm install && npm run build and confirm the serverPath is absolute."
       : entrypointMode === "package-bin"
         ? "If package-bin fails, run easyar-mcp-check from the same shell environment used to launch the MCP client."
-        : "If npx fails, check npm registry access and try npx -y mcp-easyar in a terminal.",
+        : "If npx fails after npm publishing, check npm registry access and try npx -y mcp-easyar in a terminal. Before npm publishing, use the GitHub Release package profile.",
     "If tools/list is empty, restart the MCP client and verify the JSON nesting under mcpServers/easyar.",
     "If account calls fail, check EASYAR_API_TOKEN and official endpoint env vars in the MCP client environment.",
     `${client} logs should be inspected only for startup errors; remove any copied private token or license values before sharing logs.`
@@ -6624,20 +6625,31 @@ async function buildReleaseManifest() {
       label: "Local Git clone",
       commands: ["npm install", "npm run build"],
       entrypointMode: "local-dist",
+      availability: "development checkout",
       clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=local-dist serverPath=/absolute/path/to/mcp-easyar/dist/index.js"
     },
     {
+      id: "github-release-package",
+      label: "GitHub Release package",
+      commands: [`npm install -g https://github.com/terri1982/mcp-easyar/releases/download/${currentGitHubReleaseTag}/mcp-easyar-0.1.0.tgz`, "easyar-mcp-check"],
+      entrypointMode: "package-bin",
+      availability: "current public prerelease path",
+      clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=package-bin"
+    },
+    {
       id: "global-package",
-      label: "Global npm package",
+      label: "Global npm package after npm publish",
       commands: [`npm install -g ${packageJson.name ?? serverName}`],
       entrypointMode: "package-bin",
+      availability: "post-npm-publish only",
       clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=package-bin"
     },
     {
       id: "npx-package",
-      label: "npx package",
+      label: "npx package after npm publish",
       commands: [`npx -y ${packageJson.name ?? serverName}`],
       entrypointMode: "npx",
+      availability: "post-npm-publish only",
       clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=npx"
     }
   ];
@@ -6671,7 +6683,7 @@ async function buildReleaseManifest() {
       args: []
     },
     {
-      label: "npx package",
+      label: "npx package after npm publish",
       command: "npx",
       args: ["-y", packageJson.name ?? serverName]
     }
@@ -15243,6 +15255,7 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
       `### ${profile.label}`,
       "",
       `Entrypoint mode: \`${profile.entrypointMode}\``,
+      `Availability: ${profile.availability}`,
       "",
       ...profile.commands.map((command) => `- \`${command}\``),
       `- Client config: \`${profile.clientConfigCall}\``,
