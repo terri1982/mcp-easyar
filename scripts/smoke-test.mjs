@@ -333,6 +333,14 @@ try {
     "easyar_account_onboarding should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_authorization_strategy"),
+    "easyar_authorization_strategy should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_authorization_strategy"),
+    "easyar_write_authorization_strategy should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_account_onboarding"),
     "easyar_write_account_onboarding should be listed"
   );
@@ -527,6 +535,34 @@ try {
   assertTextIncludes(authStatus, "Secret values are never returned");
   assertTextIncludes(authStatus, "\"downloadsEndpointConfigured\": false");
   assertTextIncludes(authStatus, "\"cloudCredentialsEndpointConfigured\": false");
+
+  const authorizationStrategy = await callTool("easyar_authorization_strategy", {
+    sampleId: "cloud-recognition",
+    platform: "android",
+    preferredMode: "auto"
+  });
+  assertTextIncludes(authorizationStrategy, "\"selectedMode\": \"manual-browser\"");
+  assertTextIncludes(authorizationStrategy, "\"localKey\"");
+  assertTextIncludes(authorizationStrategy, "focused sample execution is driven by local EasyAR license/API key configuration");
+  assertTextIncludes(authorizationStrategy, "must not bypass EasyAR login");
+  assertTextIncludes(authorizationStrategy, "Official EasyAR Sense Unity Plugin");
+
+  const authStrategyRoot = await createUnityProject();
+  const writtenAuthorizationStrategy = await callTool("easyar_write_authorization_strategy", {
+    projectPath: authStrategyRoot,
+    sampleId: "cloud-recognition",
+    platform: "android",
+    preferredMode: "local-key"
+  });
+  assertTextIncludes(writtenAuthorizationStrategy, "AUTHORIZATION_STRATEGY.md");
+  assertTextIncludes(writtenAuthorizationStrategy, "\"selectedMode\": \"local-key\"");
+  const authorizationStrategyMarkdown = await readFile(
+    path.join(authStrategyRoot, "Assets", "EasyARGenerated", "AUTHORIZATION_STRATEGY.md"),
+    "utf8"
+  );
+  assert(authorizationStrategyMarkdown.includes("EasyAR Authorization Strategy"), "Authorization strategy markdown should include title");
+  assert(authorizationStrategyMarkdown.includes("focused sample execution is driven by local EasyAR license/API key configuration"), "Authorization strategy markdown should explain local key runtime model");
+  assert(authorizationStrategyMarkdown.includes("No Bypass Policy"), "Authorization strategy markdown should include no-bypass policy");
 
   const officialApiContract = await callTool("easyar_generate_official_api_contract", {
     baseUrl: "https://www.easyar.cn",

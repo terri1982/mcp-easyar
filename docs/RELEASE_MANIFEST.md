@@ -65,6 +65,7 @@ Entrypoint mode: `npx`
 
 - `easyar_server_status`
 - `easyar_release_manifest`
+- `easyar_authorization_strategy`
 - `easyar_account_onboarding`
 - `easyar_account_materials`
 - `easyar_check_client_setup`

@@ -252,6 +252,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_server_status`: return server version, capability summary, resources, authorization state, and recommended first calls.
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
 - `easyar_auth_status`: check EasyAR API environment configuration without returning secrets.
+- `easyar_authorization_strategy`: choose the safe authorization path across local key mode, manual browser handoff, official API, local packages, and stub mode without bypassing EasyAR access controls.
+- `easyar_write_authorization_strategy`: write `AUTHORIZATION_STRATEGY.md`, explaining that Unity runs from the installed official plugin plus local license/API keys while website login is only for obtaining authorized packages and keys.
 - `easyar_check_account`: call a configured official EasyAR account-status endpoint with `EASYAR_API_TOKEN`.
 - `easyar_validate_license`: call a configured official EasyAR license-validation endpoint using local config or explicit input without returning secrets.
 - `easyar_discover_downloads`: call a configured official downloads endpoint for account-scoped SDK/sample package discovery without returning tokens.

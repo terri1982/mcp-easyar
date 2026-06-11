@@ -72,6 +72,8 @@ const clientKinds = ["claude-desktop", "codex", "generic-json"] as const;
 const clientEntrypointModes = ["local-dist", "package-bin", "npx"] as const;
 const accountStageValues = ["unknown", "not-registered", "registered-not-logged-in", "logged-in", "has-license", "has-cloud-credentials"] as const;
 type AccountStage = typeof accountStageValues[number];
+const authorizationModeValues = ["auto", "official-api", "local-key", "manual-browser", "local-packages", "stub"] as const;
+type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -89,6 +91,8 @@ const toolCatalog = [
   "easyar_official_api_handoff",
   "easyar_write_official_api_handoff",
   "easyar_auth_status",
+  "easyar_authorization_strategy",
+  "easyar_write_authorization_strategy",
   "easyar_account_onboarding",
   "easyar_write_account_onboarding",
   "easyar_account_materials",
@@ -758,6 +762,64 @@ server.tool(
         "EASYAR_CLOUD_CREDENTIALS_ENDPOINT"
       ],
       security: "Secret values are never returned by this tool."
+    });
+  }
+);
+
+server.tool(
+  "easyar_authorization_strategy",
+  "Explain the safe EasyAR authorization strategy: official API, manual browser handoff, local authorized packages, or local stub, without bypassing EasyAR access controls.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path used to inspect local config state."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it exercises license and Cloud Recognition materials."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
+    preferredMode: z.enum(authorizationModeValues).default("auto").describe("Preferred authorization path. auto chooses official-api when ready, otherwise manual-browser/local-packages.")
+  },
+  async ({ projectPath, sampleId, platform, accountStage, preferredMode }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : null;
+    if (root) {
+      await ensureDirectory(root);
+    }
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    return jsonText(await buildAuthorizationStrategyReport(root, sample, platform, accountStage, preferredMode));
+  }
+);
+
+server.tool(
+  "easyar_write_authorization_strategy",
+  "Write the safe EasyAR authorization strategy as a Markdown artifact for users, backend teams, and future MCP sessions.",
+  {
+    projectPath: z.string().optional().describe("Optional Unity project path. If provided, writes to Assets/EasyARGenerated/AUTHORIZATION_STRATEGY.md by default."),
+    outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
+    sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition."),
+    platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+    accountStage: z.enum(accountStageValues).default("unknown"),
+    preferredMode: z.enum(authorizationModeValues).default("auto"),
+    relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/AUTHORIZATION_STRATEGY.md for Unity projects or EasyARGenerated/AUTHORIZATION_STRATEGY.md for outputRoot."),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing authorization strategy artifact.")
+  },
+  async ({ projectPath, outputRoot, sampleId, platform, accountStage, preferredMode, relativePath, overwrite }) => {
+    const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
+    await ensureDirectory(root);
+    const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
+    const report = await buildAuthorizationStrategyReport(projectPath ? root : null, sample, platform, accountStage, preferredMode);
+    const defaultRelativePath = projectPath
+      ? path.join("Assets", "EasyARGenerated", "AUTHORIZATION_STRATEGY.md")
+      : path.join("EasyARGenerated", "AUTHORIZATION_STRATEGY.md");
+    const target = path.resolve(root, relativePath ?? defaultRelativePath);
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildAuthorizationStrategyMarkdown(report), overwrite, written);
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      selectedMode: report.selectedMode,
+      productionReady: report.productionReady,
+      officialApiReady: report.modes.officialApi.ready,
+      manualModeReady: report.modes.manualBrowser.ready,
+      nextActions: report.nextActions,
+      security: report.security
     });
   }
 );
@@ -5461,6 +5523,257 @@ function officialApiEndpointContract(input: {
   };
 }
 
+async function buildAuthorizationStrategyReport(
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  accountStage: AccountStage,
+  preferredMode: AuthorizationMode
+) {
+  const auth = readAuthConfig();
+  const localConfig = root ? await buildLocalConfigValidationReport(root) : null;
+  const cloudConfig = root ? await readCloudRecognitionConfig(root) : {};
+  const needsCloudRecognition = sample.id === "cloud-recognition";
+  const derivedStage = deriveAccountOnboardingStage(accountStage, auth, localConfig, cloudConfig, needsCloudRecognition);
+  const localLicenseReady = localConfig?.checks.some((check) => check.id === "license-key" && check.ok) ?? false;
+  const localCloudReady = !needsCloudRecognition || hasCompleteCloudRecognitionConfig(cloudConfig);
+  const officialApiReady = auth.hasToken
+    && auth.accountStatusEndpointConfigured
+    && auth.licenseValidationEndpointConfigured
+    && auth.downloadsEndpointConfigured
+    && auth.cloudCredentialsEndpointConfigured;
+  const localKeyReady = localLicenseReady && localCloudReady;
+  const portalReadyForKeyCollection = ["logged-in", "has-license", "has-cloud-credentials"].includes(derivedStage) || localLicenseReady;
+  const selectedMode = chooseAuthorizationMode(preferredMode, officialApiReady, localKeyReady, portalReadyForKeyCollection);
+  const nextActions = authorizationStrategyNextActions(selectedMode, root, sample, platform, needsCloudRecognition, officialApiReady, localKeyReady, portalReadyForKeyCollection);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name,
+      needsCloudRecognition
+    },
+    platform,
+    requestedMode: preferredMode,
+    selectedMode,
+    accountStage: {
+      requested: accountStage,
+      derived: derivedStage
+    },
+    productionReady: officialApiReady,
+    focusedUnityRunReadyWithoutOfficialApi: localKeyReady,
+    keyModel: {
+      statement: "After the official EasyAR Sense Unity Plugin is installed in Unity, focused sample execution is driven by local EasyAR license/API key configuration; users do not need to log in to www.easyar.cn at Unity runtime.",
+      accountUse: "The EasyAR website account is still used to obtain authorized plugin packages, license keys, and Cloud Recognition/CRS AppId/API KEY materials.",
+      mcpUse: "mcp-easyar guides the user to store those materials locally and validates presence/redacted readiness without collecting passwords or secret values in chat."
+    },
+    noBypassPolicy: {
+      allowed: false,
+      statement: "mcp-easyar must not bypass EasyAR login, license, download, Cloud Recognition, enterprise, or rate-limit gates.",
+      forbiddenApproaches: [
+        "Scraping or reusing browser login sessions/cookies.",
+        "Guessing private EasyAR backend endpoints.",
+        "Minting or exposing unauthorized SDK/sample download URLs.",
+        "Asking users to paste website passwords, verification codes, account tokens, license keys, API KEY/API Secret, appKey, or appSecret into chat.",
+        "Embedding EasyAR account materials in source code, GitHub issues, CI logs, Unity logs, APKs, or npm package files."
+      ],
+      safeAlternatives: [
+        "Local key mode for Unity sample execution after authorized plugin/key setup.",
+        "Official API mode for future production automation of account status, entitlement, and downloads.",
+        "Local authorized package import after the user downloads packages through their EasyAR account.",
+        "Local stub mode for backend contract wiring only."
+      ]
+    },
+    modes: {
+      localKey: {
+        ready: localKeyReady,
+        purpose: "Primary MVP/internal path for Unity execution after the user has installed the official plugin and filled local keys.",
+        requires: [
+          "Official EasyAR Sense Unity Plugin installed in the Unity project.",
+          "ProjectSettings/EasyAR/easyar.local.json contains a matching EasyAR license key and bundle/package identifier.",
+          ...(needsCloudRecognition ? ["Cloud Recognition appId/serverAddress/apiKey/apiSecret are filled locally from the EasyAR account page."] : [])
+        ],
+        enables: [
+          "MCP can validate local config presence without printing values.",
+          "MCP can prepare/import Unity assets.",
+          "MCP can build, install, and help verify focused samples on a real device."
+        ],
+        limitations: [
+          "Does not automatically download private packages.",
+          "Does not remotely prove account entitlement without official API responses.",
+          "Production auto-distribution/release gate still remains blocked on official API readiness."
+        ]
+      },
+      officialApi: {
+        ready: officialApiReady,
+        purpose: "Future production account-scoped automation for registered EasyAR users.",
+        requires: [
+          "EASYAR_API_TOKEN issued or validated by official EasyAR account infrastructure.",
+          "EASYAR_ACCOUNT_STATUS_ENDPOINT",
+          "EASYAR_LICENSE_VALIDATE_ENDPOINT",
+          "EASYAR_DOWNLOADS_ENDPOINT",
+          "EASYAR_CLOUD_CREDENTIALS_ENDPOINT"
+        ],
+        enables: [
+          "Account status checks.",
+          "License validation.",
+          "Authorized SDK/sample package discovery.",
+          "Cloud Recognition credential presence checks."
+        ],
+        limitations: officialApiReady
+          ? ["Still must not return raw secrets or unauthorized download URLs."]
+          : ["Not ready until EasyAR official account API endpoints and token validation are configured."]
+      },
+      manualBrowser: {
+        ready: portalReadyForKeyCollection,
+        purpose: "Browser-only handoff for obtaining authorized plugin/key materials when official API endpoints are not available.",
+        requires: [
+          "User registers/logs in only through https://www.easyar.cn/ in a browser.",
+          "User creates/locates license and Cloud Recognition materials in the EasyAR development center.",
+          "User stores values locally in ProjectSettings/EasyAR/easyar.local.json or environment/secret storage."
+        ],
+        enables: [
+          "Transitions into local-key mode.",
+          "Avoids website password or verification-code handling by MCP."
+        ],
+        limitations: [
+          "MCP cannot prove account entitlement to downloads without official API responses.",
+          "MCP cannot distribute private SDK/sample packages automatically."
+        ]
+      },
+      localPackages: {
+        ready: localKeyReady,
+        purpose: "Use officially downloaded local Unity packages and samples without account API calls.",
+        requires: [
+          "Official EasyAR Unity Plugin and samples were downloaded/imported by the registered user.",
+          "Local config has a matching license key and bundle/package identifier.",
+          ...(needsCloudRecognition ? ["Cloud Recognition service config is filled locally."] : [])
+        ],
+        enables: [
+          "Focused preflight.",
+          "Unity compile/build automation.",
+          "Real-device run result recording."
+        ],
+        limitations: [
+          "Does not replace official download authorization.",
+          "Does not validate account entitlement remotely."
+        ]
+      },
+      stub: {
+        ready: true,
+        purpose: "Backend/gateway contract wiring before real EasyAR services exist.",
+        requires: [
+          "npm run official-api:stub in a local shell.",
+          "Endpoint env vars exported from the stub output.",
+          "A fixture token only for local validation."
+        ],
+        enables: [
+          "Canary/client routing tests.",
+          "Endpoint schema compatibility checks."
+        ],
+        limitations: [
+          "Not a production account service.",
+          "Must not be deployed as a real authorization backend.",
+          "Does not prove any real EasyAR user entitlement."
+        ]
+      }
+    },
+    recommendedToolSequence: authorizationStrategyToolSequence(selectedMode, root, sample, platform),
+    nextActions,
+    security: "This strategy contains policy, readiness flags, and tool calls only. It does not include EasyAR passwords, verification codes, account tokens, license keys, Cloud Recognition API KEY/API Secret values, appKey, appSecret, signing keys, provisioning secrets, APKs, Unity packages, or raw logs."
+  };
+}
+
+function chooseAuthorizationMode(
+  preferredMode: AuthorizationMode,
+  officialApiReady: boolean,
+  localKeyReady: boolean,
+  portalReadyForKeyCollection: boolean
+): Exclude<AuthorizationMode, "auto"> {
+  if (preferredMode !== "auto") {
+    return preferredMode;
+  }
+  if (officialApiReady) {
+    return "official-api";
+  }
+  if (localKeyReady) {
+    return "local-key";
+  }
+  if (portalReadyForKeyCollection) {
+    return "manual-browser";
+  }
+  return "manual-browser";
+}
+
+function authorizationStrategyToolSequence(
+  selectedMode: Exclude<AuthorizationMode, "auto">,
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown"
+) {
+  const projectPath = root ?? "/path/to/UnityProject";
+  if (selectedMode === "official-api") {
+    return [
+      { tool: "easyar_auth_status", arguments: {} },
+      { tool: "easyar_check_official_access", arguments: { projectPath, sampleId: sample.id, platform } },
+      { tool: "easyar_write_official_access_report", arguments: { projectPath, sampleId: sample.id, platform } },
+      { tool: "easyar_next_workflow_step", arguments: { projectPath, sampleId: sample.id, platform } }
+    ];
+  }
+  if (selectedMode === "stub") {
+    return [
+      { command: "npm run official-api:stub" },
+      { command: "npm run official-api:canary" },
+      { tool: "easyar_write_official_api_handoff", arguments: { workspacePath: "/path/to/mcp-easyar", deploymentTarget: "staging" } }
+    ];
+  }
+  return [
+    { tool: "easyar_account_onboarding", arguments: { projectPath, sampleId: sample.id, platform, accountStage: "not-registered" } },
+    { tool: "easyar_write_local_config_handoff", arguments: { projectPath, sampleId: sample.id, platform, accountStage: "logged-in" } },
+    { tool: "easyar_validate_local_config", arguments: { projectPath } },
+    { tool: "easyar_write_import_checklist", arguments: { projectPath, sampleId: sample.id, platform } },
+    { tool: "easyar_next_workflow_step", arguments: { projectPath, sampleId: sample.id, platform } }
+  ];
+}
+
+function authorizationStrategyNextActions(
+  selectedMode: Exclude<AuthorizationMode, "auto">,
+  root: string | null,
+  sample: SampleInfo,
+  platform: "android" | "ios" | "standalone" | "unknown",
+  needsCloudRecognition: boolean,
+  officialApiReady: boolean,
+  localKeyReady: boolean,
+  portalReadyForKeyCollection: boolean
+) {
+  const projectPath = root ?? "/path/to/UnityProject";
+  const actions: string[] = [];
+  if (!officialApiReady) {
+    actions.push("Treat official API work as future production automation; do not bypass EasyAR account/download gates.");
+  }
+  if (selectedMode === "official-api") {
+    actions.push(`Run easyar_check_official_access projectPath=${projectPath} sampleId=${sample.id} platform=${platform}.`);
+    actions.push("Run npm run official-api:canary with a registered EasyAR test account before enabling strict production release.");
+  } else if (selectedMode === "stub") {
+    actions.push("Run npm run official-api:stub only for local contract wiring; never deploy it as production authorization.");
+    actions.push("Replace stub routes with official EasyAR account/license/download/cloud services before release.");
+  } else {
+    if (!portalReadyForKeyCollection) {
+      actions.push("Start with easyar_account_onboarding accountStage=not-registered and guide the user through browser-only registration/login to obtain plugin/key materials.");
+    }
+    actions.push(`Write local handoff: easyar_write_local_config_handoff projectPath=${projectPath} sampleId=${sample.id} platform=${platform}.`);
+    actions.push("Have the user fill ProjectSettings/EasyAR/easyar.local.json locally, then run easyar_validate_local_config.");
+    actions.push("Install/import only packages obtained through the user's authorized EasyAR account or official public download page.");
+    if (needsCloudRecognition && !localKeyReady) {
+      actions.push("For Cloud Recognition, fill the official CRS/Cloud Recognition AppId, serverAddress, API KEY, and API Secret locally.");
+    }
+    actions.push(`Continue with easyar_next_workflow_step projectPath=${projectPath} sampleId=${sample.id} platform=${platform}.`);
+  }
+  return Array.from(new Set(actions));
+}
+
 function buildOfficialApiHandoff(baseUrl: string | undefined, includeCurl: boolean, deploymentTarget: string | undefined) {
   const contract = buildOfficialApiContract(baseUrl, true);
   const endpointMapping = contract.endpoints.map((endpoint) => ({
@@ -6078,6 +6391,7 @@ function buildClientFirstSmokeCalls() {
   return [
     "easyar_server_status",
     "easyar_auth_status",
+    "easyar_authorization_strategy preferredMode=auto sampleId=cloud-recognition",
     "easyar_list_samples",
     "easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition",
     "easyar_check_client_setup"
@@ -6270,6 +6584,7 @@ async function buildReleaseManifest() {
     firstCalls: [
       "easyar_server_status",
       "easyar_release_manifest",
+      "easyar_authorization_strategy",
       "easyar_account_onboarding",
       "easyar_account_materials",
       "easyar_check_client_setup",
@@ -6430,6 +6745,7 @@ async function buildFirstRunGuide(input: {
     path.join("Assets", "EasyARGenerated", input.sample.id, "PREFLIGHT.md")
   ];
   const firstCalls = [
+    `easyar_write_authorization_strategy projectPath=${input.root ?? "/path/to/UnityProject"} preferredMode=auto sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_write_first_run_guide projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_write_account_onboarding projectPath=${input.root ?? "/path/to/UnityProject"} accountStage=${accountOnboarding.stage} sampleId=${input.sample.id} platform=${input.platform}`,
     `easyar_write_account_materials projectPath=${input.root ?? "/path/to/UnityProject"} sampleId=${input.sample.id} platform=${input.platform}`,
@@ -13953,6 +14269,69 @@ function buildProductionValidationMarkdown(report: Awaited<ReturnType<typeof bui
     "## Blockers",
     "",
     ...markdownIssueList(report.blockers.map((blocker) => `${blocker.id}: ${blocker.currentEvidence} Action: ${blocker.nextAction}`), "No production validation blockers."),
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(report.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    report.security,
+    ""
+  ].join("\n");
+}
+
+function buildAuthorizationStrategyMarkdown(report: Awaited<ReturnType<typeof buildAuthorizationStrategyReport>>): string {
+  return [
+    "# EasyAR Authorization Strategy",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Project: ${report.projectPath ?? "not provided"}`,
+    `Sample: ${report.sample.name} (${report.sample.id})`,
+    `Platform: ${report.platform}`,
+    `Requested mode: ${report.requestedMode}`,
+    `Selected mode: ${report.selectedMode}`,
+    `Production ready: ${report.productionReady ? "yes" : "no"}`,
+    `Focused Unity run ready without official API: ${report.focusedUnityRunReadyWithoutOfficialApi ? "yes" : "no"}`,
+    "",
+    "## Key Model",
+    "",
+    report.keyModel.statement,
+    "",
+    `Account use: ${report.keyModel.accountUse}`,
+    `MCP use: ${report.keyModel.mcpUse}`,
+    "",
+    "## No Bypass Policy",
+    "",
+    report.noBypassPolicy.statement,
+    "",
+    "Forbidden approaches:",
+    ...report.noBypassPolicy.forbiddenApproaches.map((item) => `- ${item}`),
+    "",
+    "Safe alternatives:",
+    ...report.noBypassPolicy.safeAlternatives.map((item) => `- ${item}`),
+    "",
+    "## Modes",
+    "",
+    ...Object.entries(report.modes).flatMap(([id, mode]) => [
+      `### ${id}`,
+      "",
+      `Ready: ${mode.ready ? "yes" : "no"}`,
+      `Purpose: ${mode.purpose}`,
+      "",
+      "Requires:",
+      ...mode.requires.map((item) => `- ${item}`),
+      "",
+      "Enables:",
+      ...mode.enables.map((item) => `- ${item}`),
+      "",
+      "Limitations:",
+      ...mode.limitations.map((item) => `- ${item}`),
+      ""
+    ]),
+    "## Recommended Tool Sequence",
+    "",
+    ...report.recommendedToolSequence.map((step) => `- ${"tool" in step ? `${step.tool} ${JSON.stringify(step.arguments)}` : step.command}`),
     "",
     "## Next Actions",
     "",
