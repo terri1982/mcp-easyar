@@ -202,6 +202,7 @@ const resourceCatalog = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://client/acceptance",
+  "easyar://status/current",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
@@ -393,6 +394,20 @@ server.resource(
         uri: uri.href,
         mimeType: "text/markdown",
         text: await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-current-status",
+  "easyar://status/current",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "STATUS.md"), "utf8")
       }
     ]
   })
@@ -6558,6 +6573,7 @@ async function buildReleaseManifest() {
     "docs/install-from-github-release.md",
     "docs/ROADMAP.md",
     "docs/SAMPLE_EXPANSION.md",
+    "docs/STATUS.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
     "assets/easyar-icon.png",

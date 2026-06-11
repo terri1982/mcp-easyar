@@ -98,12 +98,13 @@ For package-based clients after publishing, use `npm install -g mcp-easyar` with
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.15/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.16/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
 See [docs/install-from-github-release.md](docs/install-from-github-release.md) for the user-facing GitHub Release install and first-run flow.
 See [docs/CLIENT_ACCEPTANCE.md](docs/CLIENT_ACCEPTANCE.md) for the Codex/Claude client acceptance checklist after installing the package.
+See [docs/STATUS.md](docs/STATUS.md) for the current evidence-weighted progress, ready scope, and known remaining work.
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the current local-key MVP boundary and remaining work toward the full EasyAR MCP service goal.
 See [docs/SAMPLE_EXPANSION.md](docs/SAMPLE_EXPANSION.md) for the acceptance bar before adding more EasyAR samples to the supported scope.
 
@@ -407,6 +408,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar://official/api-contract`
 - `easyar://official/openapi`
 - `easyar://client/acceptance`
+- `easyar://status/current`
 - `easyar://unity/checklist`
 - `easyar://workflow/quickstart`
 - `easyar://workflow/focused-scope`

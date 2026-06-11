@@ -521,6 +521,13 @@ try {
   assertResourceIncludes(clientAcceptanceResource, "Package-Bin Client Config");
   assertResourceIncludes(clientAcceptanceResource, "First Client Calls");
 
+  const currentStatusResource = await request("resources/read", {
+    uri: "easyar://status/current"
+  });
+  assertResourceIncludes(currentStatusResource, "mcp-easyar Current Status");
+  assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
+  assertResourceIncludes(currentStatusResource, "Full objective: about 66%");
+
   const githubReleaseInstallResource = await request("resources/read", {
     uri: "easyar://install/github-release"
   });
@@ -902,7 +909,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.15"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.16"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -974,6 +981,7 @@ try {
   assertTextIncludes(releaseManifest, "docs/install-from-github-release.md");
   assertTextIncludes(releaseManifest, "docs/ROADMAP.md");
   assertTextIncludes(releaseManifest, "docs/SAMPLE_EXPANSION.md");
+  assertTextIncludes(releaseManifest, "docs/STATUS.md");
 
   const committedReleaseManifest = await readFile(
     path.join(process.cwd(), "docs", "RELEASE_MANIFEST.md"),
@@ -983,6 +991,7 @@ try {
   assert(committedReleaseManifest.includes("docs/CLIENT_ACCEPTANCE.md"), "Committed release manifest should include client acceptance guide");
   assert(committedReleaseManifest.includes("docs/ROADMAP.md"), "Committed release manifest should include roadmap");
   assert(committedReleaseManifest.includes("docs/SAMPLE_EXPANSION.md"), "Committed release manifest should include sample expansion guide");
+  assert(committedReleaseManifest.includes("docs/STATUS.md"), "Committed release manifest should include current status guide");
   assert(committedReleaseManifest.includes("easyar_check_client_setup"), "Committed release manifest should include first calls/client setup tools");
   assert(committedReleaseManifest.includes("Install Profiles"), "Committed release manifest should include install profiles");
   assert(committedReleaseManifest.includes("npm install -g mcp-easyar"), "Committed release manifest should include global install profile");

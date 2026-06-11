@@ -37,6 +37,7 @@ const requiredResources = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://client/acceptance",
+  "easyar://status/current",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
@@ -142,6 +143,11 @@ try {
       "client-acceptance",
       resourceTexts.get("easyar://client/acceptance")?.includes("mcp-easyar Client Acceptance Checklist") ?? false,
       "Client acceptance checklist resource is readable."
+    ),
+    check(
+      "current-status",
+      resourceTexts.get("easyar://status/current")?.includes("mcp-easyar Current Status") ?? false,
+      "Current status resource is readable."
     ),
     check(
       "github-release-install",
