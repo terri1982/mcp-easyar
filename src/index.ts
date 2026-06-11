@@ -6477,6 +6477,7 @@ async function buildReleaseManifest() {
     "docs/OFFICIAL_API_HANDOFF.md",
     "docs/openapi/easyar-mcp-account-api.openapi.json",
     "docs/release-evidence/focused-scope.android.json",
+    "docs/release-notes/local-key-mvp.md",
     "docs/client-setup.md",
     "docs/install-from-github-release.md",
     "docs/RELEASE_MANIFEST.md",

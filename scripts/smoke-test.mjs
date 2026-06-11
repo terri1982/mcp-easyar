@@ -929,6 +929,7 @@ try {
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_CONTRACT.md");
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_HANDOFF.md");
   assertTextIncludes(releaseManifest, "docs/openapi/easyar-mcp-account-api.openapi.json");
+  assertTextIncludes(releaseManifest, "docs/release-notes/local-key-mvp.md");
   assertTextIncludes(releaseManifest, "docs/client-setup.md");
   assertTextIncludes(releaseManifest, "docs/install-from-github-release.md");
 
@@ -959,6 +960,7 @@ try {
   assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
   assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");
   assert(committedReleaseManifest.includes("docs/openapi/easyar-mcp-account-api.openapi.json"), "Committed release manifest should include OpenAPI contract");
+  assert(committedReleaseManifest.includes("docs/release-notes/local-key-mvp.md"), "Committed release manifest should include local-key release notes");
   assert(committedReleaseManifest.includes("docs/client-setup.md"), "Committed release manifest should include client setup guide");
   assert(committedReleaseManifest.includes("docs/install-from-github-release.md"), "Committed release manifest should include GitHub Release install guide");
 

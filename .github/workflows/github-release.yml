@@ -79,17 +79,19 @@ jobs:
           GATE: ${{ inputs.gate }}
         run: |
           set -euo pipefail
-          notes_file="$(mktemp)"
-          {
-            echo "mcp-easyar GitHub release"
-            echo
-            echo "Gate: ${GATE}"
-            echo "Focused scope: Image Tracking and Cloud Recognition"
-            echo "Install profiles: local Git clone, global npm package after npm publish, or npx after npm publish"
-            echo
-            echo "This release asset is an npm-compatible tarball produced by npm pack."
-            echo "Unity sample execution uses the installed official EasyAR Sense Unity Plugin plus local license/API keys."
-          } > "${notes_file}"
+          notes_file="docs/release-notes/local-key-mvp.md"
+          if [ ! -f "${notes_file}" ]; then
+            notes_file="$(mktemp)"
+            {
+              echo "mcp-easyar GitHub release"
+              echo
+              echo "Gate: ${GATE}"
+              echo "Focused scope: Image Tracking and Cloud Recognition"
+              echo
+              echo "This release asset is an npm-compatible tarball produced by npm pack."
+              echo "Unity sample execution uses the installed official EasyAR Sense Unity Plugin plus local license/API keys."
+            } > "${notes_file}"
+          fi
           release_flags=(--title "${RELEASE_NAME}" --notes-file "${notes_file}")
           create_flags=(--target "${GITHUB_SHA}" "${release_flags[@]}")
           if [ "${PRERELEASE}" = "true" ]; then
