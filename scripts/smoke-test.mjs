@@ -877,6 +877,8 @@ try {
 
   const productionValidation = await callTool("easyar_production_validation", {});
   assertTextIncludes(productionValidation, "\"productionReady\": false");
+  assertTextIncludes(productionValidation, "\"localKeyMvpReady\": false");
+  assertTextIncludes(productionValidation, "\"readinessModel\"");
   assertTextIncludes(productionValidation, "\"verificationEvidence\": \"not-provided\"");
   assertTextIncludes(productionValidation, "focused-scope-run-through");
   assertTextIncludes(productionValidation, "official-access/cloud-recognition");
@@ -892,6 +894,7 @@ try {
   );
   assert(productionValidationMarkdown.includes("mcp-easyar Production Validation"), "Production validation markdown should include title");
   assert(productionValidationMarkdown.includes("Production ready: no"), "Production validation markdown should clearly mark incomplete production readiness");
+  assert(productionValidationMarkdown.includes("Local-key MVP ready: no"), "Production validation markdown should include local-key MVP readiness");
   assert(productionValidationMarkdown.includes("Focused Image Tracking and Cloud Recognition run-through"), "Production validation markdown should include focused scope gate");
   await rm(productionValidationRoot, { recursive: true, force: true });
 
@@ -1032,7 +1035,7 @@ try {
   assertTextIncludes(onboardingReport, "\"readyForFirstRun\": false");
   assertTextIncludes(onboardingReport, "\"entrypointMode\": \"npx\"");
   assertTextIncludes(onboardingReport, "\"area\": \"official-access\"");
-  assertTextIncludes(onboardingReport, "\"tool\": \"easyar_check_official_access\"");
+  assertTextExcludes(onboardingReport, "\"tool\": \"easyar_check_official_access\"");
 
   const writtenOnboarding = await callTool("easyar_write_onboarding_report", {
     projectPath,
@@ -1157,9 +1160,9 @@ try {
     sampleId: "image-tracking",
     platform: "android"
   });
-  assertTextIncludes(initialWorkflowState, "\"phase\": \"check-official-access\"");
+  assertTextIncludes(initialWorkflowState, "\"phase\": \"import-official-assets\"");
   assertTextIncludes(initialWorkflowState, "\"blocked\": true");
-  assertTextIncludes(initialWorkflowState, "\"tool\": \"easyar_check_official_access\"");
+  assertTextIncludes(initialWorkflowState, "\"tool\": \"easyar_write_import_checklist\"");
 
   const writtenWorkflowState = await callTool("easyar_write_workflow_state", {
     projectPath,
@@ -1172,7 +1175,7 @@ try {
     "utf8"
   );
   assert(workflowStateMarkdown.includes("EasyAR Workflow State - Image Tracking"), "Workflow state markdown should include title");
-  assert(workflowStateMarkdown.includes("check-official-access"), "Workflow state markdown should include phase");
+  assert(workflowStateMarkdown.includes("import-official-assets"), "Workflow state markdown should include phase");
 
   const projectHandoff = await callTool("easyar_generate_project_handoff", {
     projectPath,
@@ -1214,6 +1217,7 @@ try {
   });
   assertTextIncludes(remainingWork, "\"remainingPercent\"");
   assertTextIncludes(remainingWork, "\"productionReady\": false");
+  assertTextIncludes(remainingWork, "\"localKeyMvp\"");
   assertTextIncludes(remainingWork, "official-easyar-account-api");
   assertTextIncludes(remainingWork, "focused-sample-image-tracking");
   assertTextIncludes(remainingWork, "focused-sample-cloud-recognition");
@@ -1932,8 +1936,8 @@ exit 0
     platform: "android",
     outputPath: "Builds/image-tracking.apk"
   });
-  assertTextIncludes(preparedWorkflowState, "\"phase\": \"check-official-access\"");
-  assertTextIncludes(preparedWorkflowState, "easyar_check_official_access");
+  assertTextIncludes(preparedWorkflowState, "\"phase\":");
+  assertTextExcludes(preparedWorkflowState, "easyar_check_official_access");
 
   const buildSettingsHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARBuildSettingsHelper.cs"),

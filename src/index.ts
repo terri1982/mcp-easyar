@@ -4694,10 +4694,18 @@ async function buildProductionValidationReport(
   ];
   const blockers = gates.filter((gate) => gate.required && !gate.ok);
   const productionReady = blockers.length === 0;
+  const localKeyMvpReady = releaseManifest.readyForInstallDocs
+    && verificationEvidence === "passed"
+    && Boolean(focusedScopeStatus?.allFocusedSamplesComplete);
 
   return {
     generatedAt: new Date().toISOString(),
     productionReady,
+    localKeyMvpReady,
+    readinessModel: {
+      localKeyMvp: "Ready when package/install docs, verification commands, and focused Image Tracking/Cloud Recognition run-through evidence pass. It uses locally configured EasyAR license/API keys after the official Unity Plugin is installed.",
+      productionOfficialApi: "Ready only when official EasyAR account/license/download/cloud endpoint env vars and focused official access checks pass."
+    },
     projectPath: root,
     focusedEvidencePath: focusedEvidencePath ?? null,
     focusedEvidenceSource,
@@ -4751,7 +4759,13 @@ async function buildProductionValidationReport(
           "Keep PRODUCTION_VALIDATION.md with the release/tag evidence.",
           "Publish or tag only the verified commit and keep secrets in environment variables or secret storage."
         ]
-      : Array.from(new Set(blockers.map((blocker) => blocker.nextAction))).slice(0, 12),
+      : localKeyMvpReady
+        ? [
+            "Local-key MVP evidence is ready for focused Unity sample assistance.",
+            "Keep official API endpoint integration as the remaining production automation work.",
+            ...Array.from(new Set(blockers.map((blocker) => blocker.nextAction))).slice(0, 10)
+          ]
+        : Array.from(new Set(blockers.map((blocker) => blocker.nextAction))).slice(0, 12),
     security: "Production validation reports evidence status and redacted metadata only. They do not include EasyAR passwords, verification codes, account tokens, license keys, appKey, appSecret, signing keys, provisioning secrets, or raw private logs."
   };
 }
@@ -7141,6 +7155,10 @@ async function buildRemainingWorkReport(input: {
   const earned = categories.reduce((total, category) => total + category.earnedWeight, 0);
   const totalWeight = categories.reduce((total, category) => total + category.weight, 0);
   const percent = totalWeight > 0 ? Math.round((earned / totalWeight) * 100) : 0;
+  const localKeyMvpCategories = categories.filter((category) => category.id !== "official-easyar-account-api");
+  const localKeyMvpEarned = localKeyMvpCategories.reduce((total, category) => total + category.earnedWeight, 0);
+  const localKeyMvpTotal = localKeyMvpCategories.reduce((total, category) => total + category.weight, 0);
+  const localKeyMvpPercent = localKeyMvpTotal > 0 ? Math.round((localKeyMvpEarned / localKeyMvpTotal) * 100) : 0;
   const incomplete = categories.filter((category) => !category.done);
   const topRemainingAreas = incomplete
     .sort((left, right) => right.remainingWeight - left.remainingWeight)
@@ -7164,6 +7182,7 @@ async function buildRemainingWorkReport(input: {
     projectPath: input.root,
     platform: input.platform,
     productionReady: production.productionReady,
+    localKeyMvpReady: production.localKeyMvpReady,
     verificationEvidence: input.verificationEvidence,
     overall: {
       percent,
@@ -7171,6 +7190,14 @@ async function buildRemainingWorkReport(input: {
       earnedWeight: earned,
       totalWeight,
       note: "This is an evidence-weighted estimate, not a claim of completion. True completion still requires every required production and focused sample gate to pass."
+    },
+    localKeyMvp: {
+      percent: localKeyMvpPercent,
+      remainingPercent: Math.max(0, 100 - localKeyMvpPercent),
+      earnedWeight: localKeyMvpEarned,
+      totalWeight: localKeyMvpTotal,
+      ready: production.localKeyMvpReady,
+      note: "This excludes official EasyAR account API automation. It measures readiness for Codex/Claude to help users run focused Unity samples with the installed official plugin and local license/API keys."
     },
     focusedScope: focusedScope
       ? {
@@ -8351,31 +8378,6 @@ function chooseWorkflowNextState(input: {
         arguments: {}
       },
       ["Switch to sampleId image-tracking or cloud-recognition for current run-through work."]
-    );
-  }
-
-  if (!input.officialAccessReady) {
-    return workflowDecision(
-      "check-official-access",
-      true,
-      `Official EasyAR access blocker(s): ${input.officialAccessBlockers.join(", ")}.`,
-      {
-        tool: "easyar_check_official_access",
-        arguments: {
-          ...baseArgs,
-          platform: input.platform,
-          packageKind: "unity-samples"
-        }
-      },
-      [
-        "Configure EASYAR_API_TOKEN and official EasyAR account/license/download/cloud endpoint environment variables.",
-        "Run easyar_check_official_access before expecting account-scoped downloads or Cloud Recognition credentials through MCP.",
-        "Use only authorized official EasyAR account APIs; do not bypass login, license, or download gates."
-      ],
-      [
-        { tool: "easyar_write_official_access_report", arguments: { ...baseArgs, platform: input.platform, packageKind: "unity-samples" } },
-        { tool: "easyar_auth_status", arguments: {} }
-      ]
     );
   }
 
@@ -14204,6 +14206,7 @@ function buildProductionValidationMarkdown(report: Awaited<ReturnType<typeof bui
     "",
     `Generated at: ${report.generatedAt}`,
     `Production ready: ${report.productionReady ? "yes" : "no"}`,
+    `Local-key MVP ready: ${report.localKeyMvpReady ? "yes" : "no"}`,
     `Project: ${report.projectPath ?? "not provided"}`,
     `Focused evidence path: ${report.focusedEvidencePath ?? "not provided"}`,
     `Focused evidence source: ${report.focusedEvidenceSource}`,
@@ -14222,6 +14225,11 @@ function buildProductionValidationMarkdown(report: Awaited<ReturnType<typeof bui
     `Focused samples: ${report.scope.focusedSamples.join(", ")}`,
     `Deferred samples: ${report.scope.deferredSamples.join(", ")}`,
     report.scope.note,
+    "",
+    "## Readiness Model",
+    "",
+    `Local-key MVP: ${report.readinessModel.localKeyMvp}`,
+    `Production official API: ${report.readinessModel.productionOfficialApi}`,
     "",
     "## Gates",
     "",
@@ -15255,6 +15263,7 @@ function buildRemainingWorkMarkdown(report: Awaited<ReturnType<typeof buildRemai
     `Project: ${report.projectPath ?? "not provided"}`,
     `Platform: ${report.platform}`,
     `Production ready: ${report.productionReady ? "yes" : "no"}`,
+    `Local-key MVP ready: ${report.localKeyMvpReady ? "yes" : "no"}`,
     `Verification evidence: ${report.verificationEvidence}`,
     "",
     "## Overall",
@@ -15263,6 +15272,14 @@ function buildRemainingWorkMarkdown(report: Awaited<ReturnType<typeof buildRemai
     `Remaining estimate: ${report.overall.remainingPercent}%`,
     `Earned weight: ${report.overall.earnedWeight}/${report.overall.totalWeight}`,
     report.overall.note,
+    "",
+    "## Local-Key MVP",
+    "",
+    `Evidence-weighted completion: ${report.localKeyMvp.percent}%`,
+    `Remaining estimate: ${report.localKeyMvp.remainingPercent}%`,
+    `Earned weight: ${report.localKeyMvp.earnedWeight}/${report.localKeyMvp.totalWeight}`,
+    `Ready: ${report.localKeyMvp.ready ? "yes" : "no"}`,
+    report.localKeyMvp.note,
     "",
     "## Focused Scope",
     "",

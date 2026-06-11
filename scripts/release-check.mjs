@@ -41,6 +41,7 @@ try {
   const validationText = extractText(productionValidation);
   const validation = JSON.parse(validationText);
   console.log(`Production ready: ${validation.productionReady ? "yes" : "no"}`);
+  console.log(`Local-key MVP ready: ${validation.localKeyMvpReady ? "yes" : "no"}`);
   console.log(`Blockers: ${Array.isArray(validation.blockers) ? validation.blockers.length : "unknown"}`);
 
   if (!validation.productionReady) {
