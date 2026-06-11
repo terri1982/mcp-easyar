@@ -120,6 +120,10 @@ try {
     "easyar_write_unity_environment_report should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_sample_expansion_plan"),
+    "easyar_generate_sample_expansion_plan should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_discover_downloads"),
     "easyar_discover_downloads should be listed"
   );
@@ -947,7 +951,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.27"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.28"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -1182,6 +1186,16 @@ try {
   assert(accountOnboardingMarkdown.includes("What The User Never Provides To MCP"), "Account onboarding markdown should include secret boundary");
   assert(accountOnboardingMarkdown.includes("https://www.easyar.cn/"), "Account onboarding markdown should include official EasyAR website");
   assert(!accountOnboardingMarkdown.includes("test-account-token"), "Account onboarding markdown should not include test tokens");
+
+  const sampleExpansionPlan = await callTool("easyar_generate_sample_expansion_plan", {
+    platform: "android",
+    unityVersion: "2022.3.62f3"
+  });
+  assertTextIncludes(sampleExpansionPlan, "\"sampleId\": \"hello-ar\"");
+  assertTextIncludes(sampleExpansionPlan, "\"sampleId\": \"surface-tracking\"");
+  assertTextIncludes(sampleExpansionPlan, "\"expansionCandidates\"");
+  assertTextIncludes(sampleExpansionPlan, "easyar_write_completion_report");
+  assertTextIncludes(sampleExpansionPlan, "Do not collect website passwords");
 
   const writtenAccountMaterials = await callTool("easyar_write_account_materials", {
     projectPath,

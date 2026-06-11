@@ -22,6 +22,7 @@ const requiredTools = [
   "easyar_write_completion_report",
   "easyar_write_focused_scope_status",
   "easyar_write_production_validation",
+  "easyar_generate_sample_expansion_plan",
   "easyar_unity_environment"
 ];
 

@@ -98,7 +98,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.27/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.28/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -299,6 +299,7 @@ The first MCP screen is intentionally account-stage driven:
 ## Tools
 
 - `easyar_list_samples`: list supported sample categories.
+- `easyar_generate_sample_expansion_plan`: plan how deferred samples such as Hello AR or Surface Tracking become verified run-through candidates.
 - `easyar_server_status`: return server version, capability summary, resources, authorization state, and recommended first calls.
 - `easyar_official_info`: return official EasyAR links and currently documented package versions captured by this MCP server.
 - `easyar_auth_status`: check EasyAR API environment configuration without returning secrets.

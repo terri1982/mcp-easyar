@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.27";
+const currentGitHubReleaseTag = "v0.1.0-local-key.28";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -124,6 +124,7 @@ const toolCatalog = [
   "easyar_remaining_work_report",
   "easyar_write_remaining_work_report",
   "easyar_generate_sample_plan",
+  "easyar_generate_sample_expansion_plan",
   "easyar_generate_focused_preflight",
   "easyar_write_focused_preflight",
   "easyar_next_workflow_step",
@@ -2048,6 +2049,37 @@ server.tool(
     ].join("\n");
 
     return markdownText(plan);
+  }
+);
+
+server.tool(
+  "easyar_generate_sample_expansion_plan",
+  "Generate the acceptance plan for moving a deferred EasyAR sample into the verified run-through scope.",
+  {
+    sampleId: z.string().optional().describe("Optional sample id from easyar_list_samples. Omit to plan all deferred samples."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    unityVersion: z.string().default("2022.3.62f3").describe("Unity version to use as the validation baseline."),
+    includeOfficialApiTrack: z.boolean().default(false).describe("Include official API production prerequisites in addition to local-key acceptance.")
+  },
+  async ({ sampleId, platform, unityVersion, includeOfficialApiTrack }) => {
+    const targetSamples = sampleId ? [findSample(sampleId)] : deferredSamples();
+    return jsonText({
+      generatedAt: new Date().toISOString(),
+      release: currentGitHubReleaseTag,
+      platform,
+      unityVersion,
+      currentFocusedSamples: focusedSamples().map((sample) => sample.id),
+      expansionCandidates: targetSamples.map((sample) => buildSampleExpansionPlan(sample, platform, unityVersion, includeOfficialApiTrack)),
+      recommendedOrder: chooseSampleExpansionOrder(targetSamples),
+      nextMcpCalls: [
+        "easyar_list_samples",
+        "easyar_generate_sample_plan sampleId=<sampleId> platform=" + platform,
+        "easyar_account_onboarding accountStage=not-registered sampleId=<sampleId> platform=" + platform,
+        "easyar_write_project_handoff projectPath=/path/to/UnityProject sampleId=<sampleId> platform=" + platform,
+        "easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=<sampleId> platform=" + platform
+      ],
+      security: "Sample expansion must use official EasyAR packages and local user-owned keys. Do not collect website passwords, verification codes, license keys, Cloud Recognition API secrets, signing keys, APKs, Unity packages, or raw private logs in chat or committed files."
+    });
   }
 );
 
@@ -4507,6 +4539,129 @@ function focusedSamples(): SampleInfo[] {
 
 function deferredSamples(): SampleInfo[] {
   return samples.filter((sample) => sample.implementationStatus === "deferred");
+}
+
+function chooseSampleExpansionOrder(targetSamples: SampleInfo[]) {
+  const rank = new Map([
+    ["hello-ar", 1],
+    ["surface-tracking", 2]
+  ]);
+  return [...targetSamples]
+    .sort((a, b) => (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99))
+    .map((sample) => ({
+      sampleId: sample.id,
+      sampleName: sample.name,
+      reason: sample.id === "hello-ar"
+        ? "Use the smallest camera, ARSession, license, and mobile-build baseline before expanding to tracking-heavy samples."
+        : sample.id === "surface-tracking"
+          ? "Run after the baseline sample because it needs real-device motion tracking and placement evidence."
+          : "Run after its official prerequisites and pass criteria are documented."
+    }));
+}
+
+function buildSampleExpansionPlan(
+  sample: SampleInfo,
+  platform: typeof mobilePlatforms[number],
+  unityVersion: string,
+  includeOfficialApiTrack: boolean
+) {
+  return {
+    sampleId: sample.id,
+    sampleName: sample.name,
+    currentStatus: sample.implementationStatus,
+    targetStatus: "focused-candidate",
+    unityVersion,
+    platform,
+    purpose: sample.description,
+    entryCriteria: [
+      "User explicitly asks to continue this sample.",
+      "Official EasyAR Sense Unity Plugin is installed from authorized EasyAR materials.",
+      "ProjectSettings/EasyAR/easyar.local.json contains required local keys on the user's machine.",
+      "No secret values are pasted into chat or committed to git.",
+      ...sample.requiredCapabilities.map((capability) => `Capability ready: ${capability}.`)
+    ],
+    requiredArtifacts: [
+      "ACCOUNT_ONBOARDING.md",
+      "ACCOUNT_MATERIALS.md",
+      `${sample.id}/SAMPLE_IMPORT_GUIDE.md`,
+      `${sample.id}/PREFLIGHT.md`,
+      `${sample.id}/RUN_SEQUENCE.md`,
+      `${sample.id}/DEVICE_VALIDATION.md`,
+      `${sample.id}/RUN_RESULT.md`,
+      `${sample.id}/COMPLETION_REPORT.md`,
+      `${sample.id}/SUPPORT_BUNDLE.md`
+    ],
+    validationSequence: [
+      `easyar_generate_sample_plan sampleId=${sample.id} unityVersion=${unityVersion} platform=${platform}`,
+      `easyar_write_account_onboarding projectPath=/path/to/UnityProject sampleId=${sample.id} accountStage=not-registered`,
+      `easyar_write_sample_import_guide projectPath=/path/to/UnityProject sampleId=${sample.id}`,
+      `easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=${sample.id} platform=${platform}`,
+      `easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=${sample.id} platform=${platform}`,
+      `easyar_write_device_validation projectPath=/path/to/UnityProject sampleId=${sample.id} platform=${platform}`,
+      `easyar_write_run_result projectPath=/path/to/UnityProject sampleId=${sample.id} platform=${platform} overallStatus=passed`,
+      `easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=${sample.id} platform=${platform}`
+    ],
+    passCriteria: sampleExpansionPassCriteria(sample),
+    officialApiTrack: includeOfficialApiTrack
+      ? [
+          "Configure official EasyAR account, license, downloads, and Cloud Recognition endpoint env vars.",
+          "Run npm run official-api:canary against staging or production services.",
+          "Require easyar_production_validation to report Production ready: yes before production npm publishing."
+        ]
+      : [
+          "Not required for local-key sample expansion. Use official browser handoff plus local user-owned keys."
+        ],
+    risks: sampleExpansionRisks(sample),
+    security: "Expansion evidence must be status/path based and redacted. Do not commit APKs, Unity packages, local config secrets, raw logs, or EasyAR account credentials."
+  };
+}
+
+function sampleExpansionPassCriteria(sample: SampleInfo): string[] {
+  if (sample.id === "hello-ar") {
+    return [
+      "App installs and launches on a physical Android or iOS device.",
+      "Camera permission is granted.",
+      "EasyAR initializes without license or plugin import errors.",
+      "ARSession reaches running state with live camera feed.",
+      "No secret values appear in generated reports or logs."
+    ];
+  }
+  if (sample.id === "surface-tracking") {
+    return [
+      "App installs and launches on a physical device with camera permission.",
+      "EasyAR initializes without license or plugin import errors.",
+      "Motion/surface tracking starts on a supported device.",
+      "A deliberate placement action anchors visible content to the tracked surface.",
+      "Device screenshots or logs prove the observed placement behavior."
+    ];
+  }
+  return [
+    "Official sample imports successfully.",
+    "Unity compile check passes.",
+    "Device build succeeds.",
+    "Real-device behavior proves the sample's advertised EasyAR capability.",
+    "No secret values appear in generated reports or logs."
+  ];
+}
+
+function sampleExpansionRisks(sample: SampleInfo): string[] {
+  if (sample.id === "surface-tracking") {
+    return [
+      "Editor or emulator startup cannot prove surface tracking behavior.",
+      "Some devices may not support the required motion tracking mode.",
+      "Lighting, textureless surfaces, or fast motion can make validation flaky."
+    ];
+  }
+  if (sample.id === "hello-ar") {
+    return [
+      "A passing launch alone is not enough; the evidence must show EasyAR initialization and live camera/ARSession state.",
+      "This sample proves baseline setup but not image, cloud, or surface tracking behavior."
+    ];
+  }
+  return [
+    "Unknown official sample prerequisites may require new local config fields or pass criteria.",
+    "Real-device evidence is required for camera/tracking samples."
+  ];
 }
 
 function readAuthConfig() {

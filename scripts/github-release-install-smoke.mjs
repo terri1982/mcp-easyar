@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.27/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.27";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.28/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.28";
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Current scoped objective: about 90%"
