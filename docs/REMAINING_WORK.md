@@ -13,7 +13,7 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 
 ## Current Evidence
 
-- Current public prerelease: `v0.1.0-local-key.20`
+- Current public prerelease: `v0.1.0-local-key.21`
 - Current scoped objective: about 90%
 - Local-key MVP public usability: about 92%
 - Android real-device evidence exists for Image Tracking and CRS/Cloud Recognition.

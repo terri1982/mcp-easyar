@@ -98,7 +98,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.20/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.21/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -128,21 +128,31 @@ For a local build, use `npm run install:check`.
 npm start
 ```
 
-Optional environment variables:
+For the current local-key MVP, start with local Unity/project variables. Official API token and endpoint variables are not required to run Image Tracking or CRS after the user has installed the official plugin and filled local keys.
 
 ```bash
 EASYAR_API_BASE_URL=https://www.easyar.cn
-EASYAR_API_TOKEN=your_registered_user_token
-EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
-EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
-EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
-EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity
 EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
 EASYAR_RELEASE_PROJECT_PATH=/path/to/UnityProject
 EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json
 EASYAR_RELEASE_PLATFORM=android
 EASYAR_UNITY_VERSION=2022.3.62f3
+EASYAR_LICENSE_KEY=<set locally if using easyar_write_local_config_from_env>
+EASYAR_CLOUD_APP_ID=<set locally for Cloud Recognition>
+EASYAR_CLOUD_SERVER_ADDRESS=<set locally for Cloud Recognition>
+EASYAR_CLOUD_API_KEY=<set locally for Cloud Recognition>
+EASYAR_CLOUD_API_SECRET=<set locally for Cloud Recognition>
+```
+
+Production official API variables are optional until EasyAR-owned account endpoints are available:
+
+```bash
+EASYAR_API_TOKEN=your_official_api_token_after_easyar_backend_support_exists
+EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
+EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
+EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
+EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
 EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject
 EASYAR_CANARY_PLATFORM=android
 EASYAR_STUB_HOST=127.0.0.1

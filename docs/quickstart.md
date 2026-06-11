@@ -80,21 +80,31 @@ For copyable Codex, Claude Desktop, local-dist, current GitHub Release package-b
 
 `easyar_server_status` also returns a `preflightFirst` onboarding block. The recommended first-call sequence is account guide, account materials, Unity environment report, project preparation, focused preflight, and then reading `PREFLIGHT.md`.
 
-Set these environment variables locally:
+For the current local-key MVP, start with local Unity/project variables only:
 
 ```bash
 EASYAR_API_BASE_URL=https://www.easyar.cn
-EASYAR_API_TOKEN=your_registered_user_token
-EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
-EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
-EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
-EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity
 EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
 EASYAR_RELEASE_PROJECT_PATH=/path/to/UnityProject
 EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json
 EASYAR_RELEASE_PLATFORM=android
 EASYAR_UNITY_VERSION=2022.3.62f3
+EASYAR_LICENSE_KEY=<set locally if using easyar_write_local_config_from_env>
+EASYAR_CLOUD_APP_ID=<set locally for Cloud Recognition>
+EASYAR_CLOUD_SERVER_ADDRESS=<set locally for Cloud Recognition>
+EASYAR_CLOUD_API_KEY=<set locally for Cloud Recognition>
+EASYAR_CLOUD_API_SECRET=<set locally for Cloud Recognition>
+```
+
+Official account API variables are for the production automation track, not for the current local-key sample run-through:
+
+```bash
+EASYAR_API_TOKEN=your_official_api_token_after_easyar_backend_support_exists
+EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
+EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
+EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
+EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
 EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject
 EASYAR_CANARY_PLATFORM=android
 EASYAR_STUB_HOST=127.0.0.1
@@ -102,7 +112,7 @@ EASYAR_STUB_PORT=8787
 EASYAR_STUB_TOKEN=your_local_stub_token
 ```
 
-The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, `appKey`, or `appSecret`.
+The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, API KEY/API Secret, `appKey`, or `appSecret`.
 
 The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md`. The machine-readable OpenAPI contract for gateway import, backend stubs, and client generation is `docs/openapi/easyar-mcp-account-api.openapi.json`. The Markdown contract can be regenerated with:
 
@@ -130,9 +140,9 @@ For first-time EasyAR users, the intended order is:
 1. Register or log in on the official EasyAR website/development center.
 2. Create or locate an EasyAR Sense license key for the app bundle/package identifier.
 3. For Cloud Recognition, create or locate the CRS AppId plus API KEY in the official account.
-4. Put MCP API tokens in the MCP client environment or secret store.
-5. Put license and Cloud Recognition values only in `ProjectSettings/EasyAR/easyar.local.json`.
-6. Run `easyar_validate_local_config` and `easyar_check_official_access`.
+4. Put license and Cloud Recognition values only in `ProjectSettings/EasyAR/easyar.local.json` or local environment variables consumed by `easyar_write_local_config_from_env`.
+5. Run `easyar_validate_local_config` and `easyar_write_focused_preflight`.
+6. Use `easyar_check_official_access` only when official EasyAR account API endpoints have been configured.
 
 If official EasyAR account endpoints are configured, verify account and license access with:
 
@@ -228,7 +238,7 @@ easyar_write_local_config_form projectPath=/path/to/UnityProject sampleId=cloud-
 `LOCAL_CONFIG_FORM.md` is the safest thing to hand to a first-time user after registration/login: it shows each JSON path, required status for the selected sample, placeholder, official source, env-var alternative, and validation command without containing secret values.
 
 ```bash
-export EASYAR_API_TOKEN=your_registered_user_token
+export EASYAR_ACCOUNT_TOKEN=your_local_easyar_account_token_if_required
 export EASYAR_LICENSE_KEY=your_easyar_sense_license_key
 export EASYAR_BUNDLE_IDENTIFIER=com.company.easyarsample
 export EASYAR_CLOUD_APP_ID=your_cloud_recognition_app_id
@@ -236,6 +246,8 @@ export EASYAR_CLOUD_SERVER_ADDRESS=https://your_crs_client_target_recognition_ur
 export EASYAR_CLOUD_API_KEY=your_cloud_recognition_api_key
 export EASYAR_CLOUD_API_SECRET=your_cloud_recognition_api_secret
 ```
+
+Use `EASYAR_ACCOUNT_TOKEN` here only as local Unity config material if the selected EasyAR workflow requires it. It is separate from `EASYAR_API_TOKEN`, which is reserved for future official MCP account API calls.
 
 ```text
 easyar_write_local_config_from_env projectPath=/path/to/UnityProject sampleId=cloud-recognition targetPlatform=android

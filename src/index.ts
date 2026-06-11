@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.20";
+const currentGitHubReleaseTag = "v0.1.0-local-key.21";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -293,8 +293,8 @@ const quickstartWorkflow = [
   "",
   "1. Build the server with `npm install && npm run build`.",
   "2. Use `easyar_generate_client_config` to create a Codex or Claude Desktop MCP config snippet.",
-  "3. Configure `EASYAR_API_BASE_URL`, `EASYAR_API_TOKEN`, official validation endpoints, and optionally `EASYAR_UNITY_PATH` locally.",
-  "4. Use `easyar_check_account` and `easyar_validate_license` after official EasyAR endpoints are configured.",
+  "3. For the current local-key MVP, configure only local Unity/project paths and local license/CRS values; `EASYAR_API_TOKEN` and official endpoint vars are optional production API settings.",
+  "4. Use `easyar_check_account` and `easyar_validate_license` only after official EasyAR endpoints are configured.",
   "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
   "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
   "7. Run `easyar_prepare_unity_project`, `easyar_write_unity_environment_report`, and `easyar_write_focused_preflight` before any Unity batch command.",
