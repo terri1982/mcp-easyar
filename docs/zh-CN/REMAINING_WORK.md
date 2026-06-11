@@ -2,7 +2,7 @@
 
 ## 当前已完成
 
-- 当前公开版本：`v0.1.0-local-key.32`
+- 当前公开版本：`v0.1.0-local-key.33`
 - Image Tracking 已真机跑通。
 - CRS / Cloud Recognition 已真机跑通。
 - GitHub Release tarball 安装验证通过。

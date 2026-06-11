@@ -4,7 +4,7 @@
 
 ## 1. 已发布 local-key MVP
 
-当前版本：`v0.1.0-local-key.32`
+当前版本：`v0.1.0-local-key.33`
 
 已完成：
 

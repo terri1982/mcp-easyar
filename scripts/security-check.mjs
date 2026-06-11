@@ -110,7 +110,7 @@ function findSuspiciousSecretValues(text) {
 }
 
 function isPlaceholderValue(value) {
-  return /^(your_|paste-|placeholder|test-|env-test-|fixture-|should-not-leak|secret-|redacted|<redacted>)/i.test(value)
+  return /^(your_|paste-|placeholder|local-only-placeholder|test-|env-test-|fixture-|should-not-leak|secret-|redacted|<redacted>)/i.test(value)
     || /^<[^>]+>$/.test(value)
     || /paste locally|never send|example|sample|tests?ample|fake|dummy/i.test(value);
 }

@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.32";
+const currentGitHubReleaseTag = "v0.1.0-local-key.33";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -12319,9 +12319,9 @@ async function buildLocalConfigForm(
       present: checkOk("license-key") || materialPresent("license-key"),
       source: `EasyAR development center license entry for ${platform}; it must match the app bundle/package identifier.`,
       envNames: ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"],
-      placeholder: "<paste locally from EasyAR license page>",
-      sharePolicy: "Secret or account-scoped value. Never commit or paste publicly.",
-      userAction: "Create or locate the license after official EasyAR registration/login."
+      placeholder: "<local-only-placeholder: fill in ignored Unity config>",
+      sharePolicy: "Secret or account-scoped value. Never commit, paste into chat, or submit to marketplace forms.",
+      userAction: "Log in to the official EasyAR website in your own browser, locate the license there yourself, then enter it only in local Unity config or local environment variables."
     }),
     localConfigFormField({
       id: "target-platform",
@@ -12353,11 +12353,11 @@ async function buildLocalConfigForm(
       label: "Cloud Recognition appId",
       required: needsCloudRecognition,
       present: materialPresent("cloud-app-id"),
-      source: "EasyAR development center Cloud Recognition/CRS service configuration.",
+      source: "EasyAR development center Cloud Recognition/CRS service configuration found by the user after browser login.",
       envNames: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
-      placeholder: needsCloudRecognition ? "<paste locally from Cloud Recognition service>" : "",
+      placeholder: needsCloudRecognition ? "<local-only-placeholder: fill from EasyAR website>" : "",
       sharePolicy: needsCloudRecognition ? "Sensitive account-scoped config. MCP reports presence only." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with apiKey from the official API KEY list." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "After logging in to the EasyAR website in your own browser, find this value yourself and fill it only in local Unity config or local environment variables." : "Leave empty unless this project also runs Cloud Recognition."
     }),
     localConfigFormField({
       id: "cloud-server-address",
@@ -12365,11 +12365,11 @@ async function buildLocalConfigForm(
       label: "Cloud Recognition server address",
       required: needsCloudRecognition,
       present: materialPresent("cloud-server-address") || checkOk("cloud-recognition"),
-      source: "EasyAR development center Cloud Recognition/CRS library key page, shown as Client-end (Target Recognition) URL.",
+      source: "EasyAR development center Cloud Recognition/CRS library key page, shown as Client-end (Target Recognition) URL, found by the user after browser login.",
       envNames: ["EASYAR_CLOUD_SERVER_ADDRESS", "EASYAR_CLOUD_RECOGNITION_SERVER_ADDRESS", "EASYAR_CRS_SERVER_ADDRESS", "EASYAR_CRS_RECOGNITION_URL"],
-      placeholder: needsCloudRecognition ? "<paste locally from CRS Client-end Target Recognition URL>" : "",
+      placeholder: needsCloudRecognition ? "<local-only-placeholder: fill from EasyAR website>" : "",
       sharePolicy: needsCloudRecognition ? "Endpoint URL. Usually safe, but keep account-specific service URLs local by default." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with appId, apiKey, and apiSecret before exporting runtime config." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "After logging in to the EasyAR website in your own browser, find this value yourself and fill it only in local Unity config or local environment variables." : "Leave empty unless this project also runs Cloud Recognition."
     }),
     localConfigFormField({
       id: "cloud-api-key",
@@ -12377,11 +12377,11 @@ async function buildLocalConfigForm(
       label: "Cloud Recognition API Key",
       required: needsCloudRecognition,
       present: materialPresent("cloud-api-key"),
-      source: "EasyAR development center Cloud Recognition/CRS API KEY list. Sense 4.1+ uses APPID + API KEY.",
+      source: "EasyAR development center Cloud Recognition/CRS API KEY list, found by the user after browser login. Sense 4.1+ uses APPID + API KEY.",
       envNames: ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
-      placeholder: needsCloudRecognition ? "<paste locally from API KEY list>" : "",
+      placeholder: needsCloudRecognition ? "<local-only-placeholder: fill from EasyAR website>" : "",
       sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with appId, serverAddress, and apiSecret. Legacy appKey/appSecret fields can stay as aliases when needed." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "After logging in to the EasyAR website in your own browser, find this value yourself and fill it only in local Unity config or local environment variables." : "Leave empty unless this project also runs Cloud Recognition."
     }),
     localConfigFormField({
       id: "cloud-api-secret",
@@ -12389,11 +12389,11 @@ async function buildLocalConfigForm(
       label: "Cloud Recognition API Secret",
       required: needsCloudRecognition,
       present: materialPresent("cloud-api-secret"),
-      source: "EasyAR development center Cloud Recognition/CRS API Secret for API KEY access.",
+      source: "EasyAR development center Cloud Recognition/CRS API Secret for API KEY access, found by the user after browser login.",
       envNames: ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"],
-      placeholder: needsCloudRecognition ? "<paste locally from API KEY list>" : "",
+      placeholder: needsCloudRecognition ? "<local-only-placeholder: fill from EasyAR website>" : "",
       sharePolicy: needsCloudRecognition ? "Secret. Never paste into chat, logs, GitHub issues, or source code." : "Leave empty for Image Tracking.",
-      userAction: needsCloudRecognition ? "Fill together with appId, serverAddress, and apiKey. The Unity CloudRecognizer API Key path requires it." : "Leave empty unless this project also runs Cloud Recognition."
+      userAction: needsCloudRecognition ? "After logging in to the EasyAR website in your own browser, find this value yourself and fill it only in local Unity config or local environment variables." : "Leave empty unless this project also runs Cloud Recognition."
     }),
     localConfigFormField({
       id: "cloud-app-key-legacy",
@@ -12427,12 +12427,12 @@ async function buildLocalConfigForm(
     easyar: {
       apiBaseUrl: "https://www.easyar.cn",
       accountToken: "",
-      licenseKey: "<paste locally; never send to MCP chat>",
+      licenseKey: "<local-only-placeholder: find on EasyAR website, fill in ignored config>",
       cloudRecognition: {
-        appId: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : "",
-        serverAddress: needsCloudRecognition ? "<paste locally; required CRS Client-end Target Recognition URL>" : "",
-        apiKey: needsCloudRecognition ? "<paste locally; required for Cloud Recognition Sense 4.1+>" : "",
-        apiSecret: needsCloudRecognition ? "<paste locally; required for CloudRecognizer API Key access>" : "",
+        appId: needsCloudRecognition ? "<local-only-placeholder: find on EasyAR website, fill in ignored config>" : "",
+        serverAddress: needsCloudRecognition ? "<local-only-placeholder: find on EasyAR website, fill in ignored config>" : "",
+        apiKey: needsCloudRecognition ? "<local-only-placeholder: find on EasyAR website, fill in ignored config>" : "",
+        apiSecret: needsCloudRecognition ? "<local-only-placeholder: find on EasyAR website, fill in ignored config>" : "",
         appKey: needsCloudRecognition ? "<optional legacy alias for apiKey>" : "",
         appSecret: needsCloudRecognition ? "<optional legacy alias for apiSecret>" : ""
       }
@@ -12740,7 +12740,7 @@ function localConfigAction(checkId: string): string {
     return "Leave easyar.accountToken empty for current local-key sample runs unless this Unity project has a local account-token consumer.";
   }
   if (checkId === "license-key") {
-    return "Set easyar.licenseKey from the official EasyAR account/license configuration.";
+    return "Log in to the EasyAR website in your own browser, find the license yourself, then set easyar.licenseKey only in local ignored Unity config.";
   }
   if (checkId === "target-platform") {
     return "Set unity.targetPlatform to android, ios, or standalone.";
@@ -12749,7 +12749,7 @@ function localConfigAction(checkId: string): string {
     return "Set unity.bundleIdentifier to the Android package name or iOS bundle identifier bound to the EasyAR license.";
   }
   if (checkId === "cloud-recognition") {
-    return "Either leave all cloudRecognition fields empty, or fill appId, serverAddress, apiKey, and apiSecret together for EasyAR Unity CloudRecognizer API Key access.";
+    return "Either leave all cloudRecognition fields empty, or log in to the EasyAR website in your own browser, find appId, serverAddress, apiKey, and apiSecret yourself, then fill them only in local ignored Unity config.";
   }
   return "Review ProjectSettings/EasyAR/easyar.local.json.";
 }
@@ -16664,7 +16664,7 @@ function buildLocalConfigExample(sample: SampleInfo): string {
       easyar: {
         apiBaseUrl: "https://www.easyar.cn",
         accountToken: "",
-        licenseKey: "paste-easyar-license-key-here",
+        licenseKey: "local-only-placeholder-fill-in-ignored-config",
         cloudRecognition: {
           appId: "",
           serverAddress: "",
