@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 const root = process.cwd();
 const requireProductionReady = process.env.EASYAR_RELEASE_REQUIRE_PRODUCTION_READY === "1";
 const releaseProjectPath = nonEmpty(process.env.EASYAR_RELEASE_PROJECT_PATH);
+const releaseEvidencePath = nonEmpty(process.env.EASYAR_RELEASE_EVIDENCE_PATH);
 const releasePlatform = nonEmpty(process.env.EASYAR_RELEASE_PLATFORM) ?? "android";
 const verificationCommands = [
   ["npm", ["run", "typecheck"]],
@@ -30,7 +31,11 @@ try {
   if (releaseProjectPath) {
     productionValidationArgs.projectPath = releaseProjectPath;
   }
+  if (releaseEvidencePath) {
+    productionValidationArgs.focusedEvidencePath = releaseEvidencePath;
+  }
   console.log(`Production validation project: ${releaseProjectPath ?? "not provided"}`);
+  console.log(`Production validation evidence: ${releaseEvidencePath ?? "not provided"}`);
   console.log(`Production validation platform: ${releasePlatform}`);
   const productionValidation = await callMcpTool("easyar_production_validation", productionValidationArgs);
   const validationText = extractText(productionValidation);

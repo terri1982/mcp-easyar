@@ -901,6 +901,7 @@ try {
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_PROJECT_PATH"), "Committed release manifest should include release project evidence path env");
+  assert(committedReleaseManifest.includes("EASYAR_RELEASE_EVIDENCE_PATH"), "Committed release manifest should include safe release evidence file env");
   assert(committedReleaseManifest.includes("Validation Environment"), "Committed release manifest should include validation helper environment section");
   assert(committedReleaseManifest.includes("EASYAR_CANARY_PROJECT_PATH"), "Committed release manifest should include canary project evidence path env");
   assert(committedReleaseManifest.includes("EASYAR_STUB_TOKEN"), "Committed release manifest should include stub token env placeholder");
@@ -911,7 +912,11 @@ try {
 
   const releaseCheckScript = await readFile(path.join(process.cwd(), "scripts", "release-check.mjs"), "utf8");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_PROJECT_PATH"), "release:check should accept a focused sample evidence project path");
+  assert(releaseCheckScript.includes("EASYAR_RELEASE_EVIDENCE_PATH"), "release:check should accept a safe focused sample evidence file path");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_PLATFORM"), "release:check should accept a focused sample evidence platform");
+  const indexSource = await readFile(path.join(process.cwd(), "src", "index.ts"), "utf8");
+  assert(indexSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
+  assert(indexSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");
   const officialApiCanaryScript = await readFile(path.join(process.cwd(), "scripts", "official-api-canary.mjs"), "utf8");
   assert(officialApiCanaryScript.includes("easyar_check_official_access"), "Official API canary should check focused sample official access");
   assert(officialApiCanaryScript.includes("easyar_production_validation"), "Official API canary should check production validation");

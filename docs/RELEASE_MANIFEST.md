@@ -90,11 +90,15 @@ Entrypoint mode: `npx`
 - `EASYAR_CLOUD_CREDENTIALS_ENDPOINT`
 - `EASYAR_UNITY_PATH`
 - `EASYAR_RELEASE_PROJECT_PATH`
+- `EASYAR_RELEASE_EVIDENCE_PATH`
 - `EASYAR_RELEASE_PLATFORM`
 
 ## Validation Environment
 
 - `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY`
+- `EASYAR_UNITY_VERSION`
+- `EASYAR_BUNDLE_IDENTIFIER`
+- `EASYAR_LICENSE_KEY`
 - `EASYAR_CANARY_PROJECT_PATH`
 - `EASYAR_CANARY_PLATFORM`
 - `EASYAR_STUB_HOST`
@@ -112,6 +116,7 @@ Entrypoint mode: `npx`
 - OK docs/OFFICIAL_API_CONTRACT.md
 - OK docs/OFFICIAL_API_HANDOFF.md
 - OK docs/openapi/easyar-mcp-account-api.openapi.json
+- OK docs/release-evidence/focused-scope.android.json
 - OK docs/client-setup.md
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md

@@ -42,8 +42,12 @@ jobs:
           EASYAR_CLOUD_CREDENTIALS_ENDPOINT: ${{ vars.EASYAR_CLOUD_CREDENTIALS_ENDPOINT }}
           EASYAR_UNITY_PATH: ${{ vars.EASYAR_UNITY_PATH }}
           EASYAR_RELEASE_PROJECT_PATH: ${{ vars.EASYAR_RELEASE_PROJECT_PATH }}
+          EASYAR_RELEASE_EVIDENCE_PATH: ${{ vars.EASYAR_RELEASE_EVIDENCE_PATH }}
           EASYAR_RELEASE_PLATFORM: ${{ vars.EASYAR_RELEASE_PLATFORM }}
+          EASYAR_UNITY_VERSION: ${{ vars.EASYAR_UNITY_VERSION }}
+          EASYAR_BUNDLE_IDENTIFIER: ${{ vars.EASYAR_BUNDLE_IDENTIFIER }}
           EASYAR_API_TOKEN: ${{ secrets.EASYAR_API_TOKEN }}
+          EASYAR_LICENSE_KEY: ${{ secrets.EASYAR_LICENSE_KEY }}
 
       - name: Publish to npm with provenance
         run: npm publish --provenance --access public --tag "${{ inputs.npm_tag }}"

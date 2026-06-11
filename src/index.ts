@@ -1381,6 +1381,7 @@ server.tool(
   "Generate a production validation evidence matrix for official mcp-easyar deployment and focused sample run-through readiness.",
   {
     projectPath: z.string().optional().describe("Optional Unity project path used to inspect focused sample completion evidence."),
+    focusedEvidencePath: z.string().optional().describe("Optional safe JSON evidence file exported from a completed Unity focused sample run. Used by CI/release runners that cannot access the local Unity project."),
     platform: z.enum(["android", "ios"]).default("android").describe("Target mobile platform for focused sample completion evidence."),
     unityPath: z.string().optional().describe("Optional Unity executable path. Defaults to EASYAR_UNITY_PATH or Unity command lookup."),
     verificationEvidence: z.enum(["not-provided", "passed"]).default("not-provided").describe("Whether npm/CI verification commands have been run and passed outside this report."),
@@ -1388,12 +1389,47 @@ server.tool(
     maxLogBytes: z.number().int().min(1024).max(1024 * 1024).default(200000),
     maxLogIssues: z.number().int().min(1).max(200).default(30)
   },
-  async ({ projectPath, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues }) => {
+  async ({ projectPath, focusedEvidencePath, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues }) => {
     const root = projectPath ? resolveProjectPath(projectPath) : null;
     if (root) {
       await ensureDirectory(root);
     }
-    return jsonText(await buildProductionValidationReport(root, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues));
+    return jsonText(await buildProductionValidationReport(root, focusedEvidencePath, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues));
+  }
+);
+
+server.tool(
+  "easyar_write_release_evidence",
+  "Export a safe focused sample release evidence JSON file for GitHub release runners that cannot access the local Unity project.",
+  {
+    projectPath: z.string().describe("Unity project path containing completed focused sample evidence."),
+    workspacePath: z.string().default(process.cwd()).describe("Workspace/repository path that should receive the safe evidence file."),
+    relativePath: z.string().optional().describe("Evidence path inside workspacePath. Defaults to docs/release-evidence/focused-scope.<platform>.json."),
+    platform: z.enum(["android", "ios"]).default("android"),
+    maxScriptIssues: z.number().int().min(1).max(200).default(40),
+    maxLogBytes: z.number().int().min(1024).max(1024 * 1024).default(200000),
+    maxLogIssues: z.number().int().min(1).max(200).default(30),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing evidence file.")
+  },
+  async ({ projectPath, workspacePath, relativePath, platform, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const workspace = resolveProjectPath(workspacePath);
+    await ensureDirectory(workspace);
+    const status = await buildFocusedScopeStatus(root, platform, maxScriptIssues, maxLogBytes, maxLogIssues);
+    const evidence = buildFocusedReleaseEvidence(status);
+    const target = path.resolve(workspace, relativePath ?? path.join("docs", "release-evidence", `focused-scope.${platform}.json`));
+    assertInside(workspace, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, `${JSON.stringify(evidence, null, 2)}\n`, overwrite, written);
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      allFocusedSamplesComplete: evidence.allFocusedSamplesComplete,
+      completedCount: evidence.completedCount,
+      sampleIds: evidence.items.map((item) => item.sampleId),
+      security: evidence.security
+    });
   }
 );
 
@@ -1414,7 +1450,7 @@ server.tool(
   async ({ projectPath, platform, unityPath, verificationEvidence, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
     const root = resolveProjectPath(projectPath);
     await ensureDirectory(root);
-    const report = await buildProductionValidationReport(root, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues);
+    const report = await buildProductionValidationReport(root, undefined, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues);
     const defaultRelativePath = await exists(path.join(root, "Assets"))
       ? path.join("Assets", "EasyARGenerated", "PRODUCTION_VALIDATION.md")
       : path.join("EasyARGenerated", "PRODUCTION_VALIDATION.md");
@@ -4483,6 +4519,7 @@ function deploymentNextActions(
 
 async function buildProductionValidationReport(
   root: string | null,
+  focusedEvidencePath: string | undefined,
   platform: typeof mobilePlatforms[number],
   unityPath: string | undefined,
   verificationEvidence: "not-provided" | "passed",
@@ -4501,12 +4538,17 @@ async function buildProductionValidationReport(
     return !configured[name];
   });
   const focused = focusedSamples();
-  const officialAccessReports = root
-    ? await Promise.all(focused.map((sample) => buildOfficialAccessReport(root, sample, platform, "unity-samples")))
-    : [];
+  const officialAccessReports = await Promise.all(focused.map((sample) => buildOfficialAccessReport(root, sample, platform, "unity-samples")));
   const focusedScopeStatus = root
     ? await buildFocusedScopeStatus(root, platform, maxScriptIssues, maxLogBytes, maxLogIssues)
-    : null;
+    : focusedEvidencePath
+      ? await readFocusedReleaseEvidence(focusedEvidencePath, platform)
+      : null;
+  const focusedEvidenceSource = root
+    ? "unity-project"
+    : focusedEvidencePath
+      ? "release-evidence-file"
+      : "not-provided";
   const gates = [
     productionGate(
       "release-manifest",
@@ -4550,11 +4592,15 @@ async function buildProductionValidationReport(
     ),
     productionGate(
       "unity-project-evidence",
-      "Unity project evidence",
-      Boolean(root),
-      "A Unity project path is provided so focused sample import, config, logs, and run artifacts can be inspected.",
-      root ? `Project path: ${root}.` : "No projectPath was provided.",
-      "Provide projectPath for the Unity project used for Image Tracking and Cloud Recognition validation."
+      "Unity focused sample evidence",
+      Boolean(root) || Boolean(focusedScopeStatus?.allFocusedSamplesComplete),
+      "A Unity project path or safe focused release evidence file is provided so Image Tracking and Cloud Recognition run-through evidence can be verified.",
+      root
+        ? `Project path: ${root}.`
+        : focusedScopeStatus
+          ? `Evidence file: ${focusedEvidencePath}; source=${focusedEvidenceSource}.`
+          : "No projectPath or focusedEvidencePath was provided.",
+      "Provide projectPath locally, or set EASYAR_RELEASE_EVIDENCE_PATH to a safe JSON evidence file exported with easyar_write_release_evidence."
     ),
     ...focused.map((sample) => {
       const access = officialAccessReports.find((report) => report.sample.id === sample.id);
@@ -4565,9 +4611,9 @@ async function buildProductionValidationReport(
         "Registered-user account, license, downloads, and sample-specific official access checks pass against configured EasyAR endpoints.",
         access
           ? access.readyForOfficialContent
-            ? "Official access checks passed for this sample."
-            : `${access.blockers.length} official access blocker(s) remain.`
-          : "Official access was not checked because no projectPath was provided.",
+          ? "Official access checks passed for this sample."
+          : `${access.blockers.length} official access blocker(s) remain.`
+          : "Official access was not checked.",
         access?.nextActions[0] ?? `Run easyar_write_official_access_report projectPath=/path/to/UnityProject sampleId=${sample.id} platform=${platform}.`
       );
     }),
@@ -4591,6 +4637,8 @@ async function buildProductionValidationReport(
     generatedAt: new Date().toISOString(),
     productionReady,
     projectPath: root,
+    focusedEvidencePath: focusedEvidencePath ?? null,
+    focusedEvidenceSource,
     platform,
     server: {
       name: serverName,
@@ -4633,6 +4681,7 @@ async function buildProductionValidationReport(
       "OFFICIAL_ACCESS.md for image-tracking and cloud-recognition",
       "PREFLIGHT.md, DEVICE_VALIDATION.md, RUN_RESULT.md, and COMPLETION_REPORT.md for both focused samples",
       "FOCUSED_SCOPE_STATUS.md",
+      "docs/release-evidence/focused-scope.<platform>.json for GitHub release runners that cannot access the Unity project",
       "Passing GitHub Actions or locally recorded verification commands"
     ],
     nextActions: productionReady
@@ -5593,14 +5642,18 @@ function buildOfficialApiContractExamples(baseUrl: string) {
 }
 
 async function buildOfficialAccessReport(
-  root: string,
+  root: string | null,
   sample: SampleInfo,
   platform: "android" | "ios" | "standalone" | "unknown",
   packageKind: "unity-plugin" | "unity-samples" | "native-sdk" | "xr-extension" | "unknown"
 ) {
   const auth = readAuthConfig();
-  const unityVersion = await readUnityVersion(root);
-  const localConfig = await readLocalConfigForRemoteValidation(root);
+  const unityVersion = root
+    ? await readUnityVersion(root)
+    : envFirst(["EASYAR_UNITY_VERSION", "UNITY_VERSION"]) ?? "2022.3.62f3";
+  const localConfig = root
+    ? await readLocalConfigForRemoteValidation(root)
+    : readRemoteValidationConfigFromEnv(sample);
   const [account, license, downloads, cloudCredentials] = await Promise.all([
     easyarApi.checkAccount(),
     easyarApi.validateLicense({
@@ -5645,7 +5698,8 @@ async function buildOfficialAccessReport(
     unityVersion,
     input: {
       hasLicenseKey: Boolean(localConfig.licenseKey),
-      bundleIdentifier: localConfig.bundleIdentifier ?? null
+      bundleIdentifier: localConfig.bundleIdentifier ?? null,
+      source: root ? "project-local-config" : "environment"
     },
     auth: {
       apiBaseUrl: auth.apiBaseUrl,
@@ -5671,6 +5725,16 @@ async function buildOfficialAccessReport(
           "Continue with easyar_generate_import_checklist after importing official packages into Unity."
         ],
     security: "EASYAR_API_TOKEN, licenseKey, appKey, appSecret, and credential values are never returned. This report only calls configured official EasyAR endpoints and does not bypass authorization."
+  };
+}
+
+function readRemoteValidationConfigFromEnv(sample: SampleInfo): {
+  licenseKey?: string;
+  bundleIdentifier?: string;
+} {
+  return {
+    licenseKey: envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"]),
+    bundleIdentifier: envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)
   };
 }
 
@@ -6068,6 +6132,7 @@ async function buildReleaseManifest() {
     "docs/OFFICIAL_API_CONTRACT.md",
     "docs/OFFICIAL_API_HANDOFF.md",
     "docs/openapi/easyar-mcp-account-api.openapi.json",
+    "docs/release-evidence/focused-scope.android.json",
     "docs/client-setup.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
@@ -6188,10 +6253,14 @@ async function buildReleaseManifest() {
       "EASYAR_CLOUD_CREDENTIALS_ENDPOINT",
       "EASYAR_UNITY_PATH",
       "EASYAR_RELEASE_PROJECT_PATH",
+      "EASYAR_RELEASE_EVIDENCE_PATH",
       "EASYAR_RELEASE_PLATFORM"
     ],
     validationEnvironment: [
       "EASYAR_RELEASE_REQUIRE_PRODUCTION_READY",
+      "EASYAR_UNITY_VERSION",
+      "EASYAR_BUNDLE_IDENTIFIER",
+      "EASYAR_LICENSE_KEY",
       "EASYAR_CANARY_PROJECT_PATH",
       "EASYAR_CANARY_PLATFORM",
       "EASYAR_STUB_HOST",
@@ -6657,6 +6726,7 @@ async function buildRemainingWorkReport(input: {
   const focused = focusedSamples();
   const production = await buildProductionValidationReport(
     input.root,
+    undefined,
     input.platform,
     undefined,
     input.verificationEvidence,
@@ -9869,6 +9939,112 @@ async function buildFocusedScopeStatus(
     items,
     nextActions,
     security: "Focused scope status reports completion states, artifact paths, and next calls only. It does not include EasyAR tokens, license keys, Cloud Recognition appKey/appSecret, signing keys, provisioning secrets, or raw Unity logs."
+  };
+}
+
+function buildFocusedReleaseEvidence(status: Awaited<ReturnType<typeof buildFocusedScopeStatus>>) {
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    evidenceKind: "mcp-easyar-focused-scope",
+    source: "easyar_write_release_evidence",
+    platform: status.platform,
+    scope: status.scope,
+    focusedSampleIds: status.focusedSampleIds,
+    deferredSampleIds: status.deferredSampleIds,
+    focusedSampleCount: status.focusedSampleCount,
+    completedCount: status.completedCount,
+    blockedCount: status.blockedCount,
+    failedCount: status.failedCount,
+    notRunCount: status.notRunCount,
+    allFocusedSamplesComplete: status.allFocusedSamplesComplete,
+    items: status.items.map((item) => ({
+      sampleId: item.sampleId,
+      sampleName: item.sampleName,
+      completionStatus: item.completionStatus,
+      runThroughComplete: item.runThroughComplete,
+      blockerCount: item.blockerCount,
+      latestRunResultStatus: item.latestRunResultStatus,
+      completionReportPath: item.completionReportPath,
+      runResultPath: item.runResultPath
+    })),
+    security: "Safe release evidence contains completion states and relative artifact paths only. It excludes project absolute paths, EasyAR passwords, account tokens, license keys, Cloud Recognition API KEY/API Secret values, appKey/appSecret, signing keys, provisioning secrets, APKs, Unity packages, and raw logs."
+  };
+}
+
+async function readFocusedReleaseEvidence(
+  evidencePath: string,
+  platform: typeof mobilePlatforms[number]
+): Promise<Awaited<ReturnType<typeof buildFocusedScopeStatus>>> {
+  const resolved = path.resolve(process.cwd(), evidencePath);
+  const parsed = await readJsonFile(resolved);
+  if (!isRecord(parsed)) {
+    throw new Error(`Focused release evidence must be a JSON object: ${evidencePath}`);
+  }
+  const expectedSampleIds = focusedSamples().map((sample) => sample.id);
+  const items = Array.isArray(parsed.items) ? parsed.items.filter(isRecord) : [];
+  const itemSampleIds = items.map((item) => typeof item.sampleId === "string" ? item.sampleId : "").filter(Boolean);
+  const missingSamples = expectedSampleIds.filter((sampleId) => !itemSampleIds.includes(sampleId));
+  const evidencePlatform = typeof parsed.platform === "string" ? parsed.platform : "unknown";
+  const schemaVersion = typeof parsed.schemaVersion === "number" ? parsed.schemaVersion : 0;
+  const valid =
+    schemaVersion === 1
+    && parsed.evidenceKind === "mcp-easyar-focused-scope"
+    && evidencePlatform === platform
+    && missingSamples.length === 0
+    && parsed.allFocusedSamplesComplete === true
+    && items.every((item) => item.runThroughComplete === true && item.completionStatus === "passed" && item.latestRunResultStatus === "passed");
+
+  const normalizedItems = items.map((item) => {
+    const latestRunResultStatus = item.latestRunResultStatus === "passed"
+      ? "passed" as const
+      : item.latestRunResultStatus === "failed"
+        ? "failed" as const
+        : item.latestRunResultStatus === "blocked"
+          ? "blocked" as const
+          : item.latestRunResultStatus === "not-run"
+            ? "not-run" as const
+            : null;
+    return {
+      sampleId: typeof item.sampleId === "string" ? item.sampleId : "unknown",
+      sampleName: typeof item.sampleName === "string" ? item.sampleName : typeof item.sampleId === "string" ? item.sampleId : "unknown",
+      completionStatus: item.completionStatus === "passed" ? "passed" as const : item.completionStatus === "failed" ? "failed" as const : item.completionStatus === "blocked" ? "blocked" as const : "not-run" as const,
+      runThroughComplete: item.runThroughComplete === true,
+      blockerCount: typeof item.blockerCount === "number" ? item.blockerCount : 1,
+      latestRunResultStatus,
+      completionReportPath: typeof item.completionReportPath === "string" ? item.completionReportPath : "unknown",
+      runResultPath: typeof item.runResultPath === "string" ? item.runResultPath : "unknown",
+      nextActions: item.runThroughComplete === true
+        ? ["Keep safe release evidence file with the release/tag record."]
+        : ["Regenerate release evidence from the Unity project after focused samples pass."]
+    };
+  });
+
+  const completedCount = normalizedItems.filter((item) => item.completionStatus === "passed").length;
+  const failedCount = normalizedItems.filter((item) => item.completionStatus === "failed").length;
+  const blockedCount = normalizedItems.filter((item) => item.completionStatus === "blocked").length;
+  const notRunCount = normalizedItems.filter((item) => item.completionStatus === "not-run").length;
+  return {
+    generatedAt: typeof parsed.generatedAt === "string" ? parsed.generatedAt : new Date().toISOString(),
+    projectPath: `release-evidence:${evidencePath}`,
+    platform,
+    scope: "focused-samples",
+    focusedSampleIds: expectedSampleIds,
+    deferredSampleIds: deferredSamples().map((sample) => sample.id),
+    focusedSampleCount: expectedSampleIds.length,
+    completedCount,
+    blockedCount,
+    failedCount,
+    notRunCount,
+    allFocusedSamplesComplete: valid,
+    items: normalizedItems,
+    nextActions: valid
+      ? ["Safe release evidence proves the focused sample run-through for this release runner."]
+      : [
+          `Regenerate focused release evidence with easyar_write_release_evidence. Missing samples: ${missingSamples.join(", ") || "none"}.`,
+          `Expected platform ${platform}, evidence platform ${evidencePlatform}.`
+        ],
+    security: "Focused release evidence was loaded from a safe JSON file and does not contain secret values."
   };
 }
 
@@ -13713,6 +13889,8 @@ function buildProductionValidationMarkdown(report: Awaited<ReturnType<typeof bui
     `Generated at: ${report.generatedAt}`,
     `Production ready: ${report.productionReady ? "yes" : "no"}`,
     `Project: ${report.projectPath ?? "not provided"}`,
+    `Focused evidence path: ${report.focusedEvidencePath ?? "not provided"}`,
+    `Focused evidence source: ${report.focusedEvidenceSource}`,
     `Platform: ${report.platform}`,
     `Verification evidence: ${report.verificationEvidence}`,
     "",

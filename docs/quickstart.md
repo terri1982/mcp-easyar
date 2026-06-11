@@ -82,7 +82,9 @@ EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-r
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity
 EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
 EASYAR_RELEASE_PROJECT_PATH=/path/to/UnityProject
+EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json
 EASYAR_RELEASE_PLATFORM=android
+EASYAR_UNITY_VERSION=2022.3.62f3
 EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject
 EASYAR_CANARY_PLATFORM=android
 EASYAR_STUB_HOST=127.0.0.1
@@ -336,7 +338,7 @@ Before a real npm publish or release tag, enforce the final production gate:
 EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
 ```
 
-For the npm package, use the manual GitHub Actions `Release` workflow after configuring the protected `npm-publish` environment. The workflow runs the strict gate before `npm publish --provenance`, so package publishing cannot bypass official endpoint and real-device evidence. Set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project containing the passed focused sample artifacts, and set `EASYAR_RELEASE_PLATFORM` to `android` or `ios` so `release:check` can pass that evidence into `easyar_production_validation`.
+For the npm package, use the manual GitHub Actions `Release` workflow after configuring the protected `npm-publish` environment. The workflow runs the strict gate before `npm publish --provenance`, so package publishing cannot bypass official endpoint and real-device evidence. For local release checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project containing the passed focused sample artifacts. For GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json` after generating that safe evidence file with `easyar_write_release_evidence`.
 
 After official EasyAR staging or production endpoints are configured, run the official API canary:
 

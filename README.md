@@ -114,7 +114,9 @@ EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-r
 EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity
 EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
 EASYAR_RELEASE_PROJECT_PATH=/path/to/UnityProject
+EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json
 EASYAR_RELEASE_PLATFORM=android
+EASYAR_UNITY_VERSION=2022.3.62f3
 EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject
 EASYAR_CANARY_PLATFORM=android
 EASYAR_STUB_HOST=127.0.0.1
@@ -201,15 +203,15 @@ npm run security:check
 npm run release:check
 ```
 
-`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command. For the strict gate, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; set `EASYAR_RELEASE_PLATFORM` when the evidence is not Android.
+`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command. For local strict checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; for GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH` to the committed safe evidence JSON.
 
-Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_PROJECT_PATH`/`EASYAR_RELEASE_PLATFORM` so the gate can verify both account APIs and focused sample evidence.
+Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_EVIDENCE_PATH`/`EASYAR_RELEASE_PLATFORM` so the GitHub runner can verify focused sample evidence without reading a local Unity project. Local release checks may use `EASYAR_RELEASE_PROJECT_PATH` instead.
 
 After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with `EASYAR_API_TOKEN`, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
 
 When backend routing is still being wired, run `npm run official-api:stub` to start a local contract-compatible endpoint stub. Use it only for local gateway/canary validation; production must connect to real EasyAR account, license, downloads, and Cloud Recognition services.
 
-The release and canary project path variables should point to a Unity project that already contains focused sample evidence under `Assets/EasyARGenerated`. The stub variables are local development placeholders only; do not configure them in production.
+The release and canary project path variables should point to a Unity project that already contains focused sample evidence under `Assets/EasyARGenerated`. For GitHub release runners, generate the safe committed evidence file with `easyar_write_release_evidence projectPath=/path/to/UnityProject workspacePath=/path/to/mcp-easyar`. The stub variables are local development placeholders only; do not configure them in production.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-11T02:28:20.988Z",
+  "evidenceKind": "mcp-easyar-focused-scope",
+  "source": "easyar_write_release_evidence",
+  "platform": "android",
+  "scope": "focused-samples",
+  "focusedSampleIds": [
+    "image-tracking",
+    "cloud-recognition"
+  ],
+  "deferredSampleIds": [
+    "hello-ar",
+    "surface-tracking"
+  ],
+  "focusedSampleCount": 2,
+  "completedCount": 2,
+  "blockedCount": 0,
+  "failedCount": 0,
+  "notRunCount": 0,
+  "allFocusedSamplesComplete": true,
+  "items": [
+    {
+      "sampleId": "image-tracking",
+      "sampleName": "Image Tracking",
+      "completionStatus": "passed",
+      "runThroughComplete": true,
+      "blockerCount": 0,
+      "latestRunResultStatus": "passed",
+      "completionReportPath": "Assets/EasyARGenerated/image-tracking/COMPLETION_REPORT.md",
+      "runResultPath": "Assets/EasyARGenerated/image-tracking/RUN_RESULT.md"
+    },
+    {
+      "sampleId": "cloud-recognition",
+      "sampleName": "Cloud Recognition",
+      "completionStatus": "passed",
+      "runThroughComplete": true,
+      "blockerCount": 0,
+      "latestRunResultStatus": "passed",
+      "completionReportPath": "Assets/EasyARGenerated/cloud-recognition/COMPLETION_REPORT.md",
+      "runResultPath": "Assets/EasyARGenerated/cloud-recognition/RUN_RESULT.md"
+    }
+  ],
+  "security": "Safe release evidence contains completion states and relative artifact paths only. It excludes project absolute paths, EasyAR passwords, account tokens, license keys, Cloud Recognition API KEY/API Secret values, appKey/appSecret, signing keys, provisioning secrets, APKs, Unity packages, and raw logs."
+}
