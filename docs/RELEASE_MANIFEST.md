@@ -140,6 +140,7 @@ Entrypoint mode: `npx`
 - OK docs/client-setup.md
 - OK docs/install-from-github-release.md
 - OK docs/ROADMAP.md
+- OK docs/SAMPLE_EXPANSION.md
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md
 - OK assets/easyar-icon.png
@@ -161,6 +162,7 @@ Entrypoint mode: `npx`
 - docs/client-setup.md
 - docs/install-from-github-release.md
 - docs/ROADMAP.md
+- docs/SAMPLE_EXPANSION.md
 - docs/quickstart.md
 - docs/RELEASE_MANIFEST.md
 - docs/troubleshooting.md

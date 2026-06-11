@@ -41,6 +41,7 @@ const requiredResources = [
   "easyar://roadmap",
   "easyar://workflow/focused-scope",
   "easyar://workflow/programming",
+  "easyar://workflow/sample-expansion",
   "easyar://workflow/quickstart"
 ];
 
@@ -160,6 +161,11 @@ try {
       "programming-workflow",
       resourceTexts.get("easyar://workflow/programming")?.includes("easyar_write_code_plan") ?? false,
       "Programming workflow resource is readable."
+    ),
+    check(
+      "sample-expansion-workflow",
+      resourceTexts.get("easyar://workflow/sample-expansion")?.includes("EasyAR Sample Expansion Guide") ?? false,
+      "Sample expansion workflow resource is readable."
     )
   ];
   const failed = checks.filter((item) => !item.ok);
