@@ -18,7 +18,7 @@ Out of scope for this release target:
 Use Node.js 20 or newer.
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.24/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.25/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -77,6 +77,8 @@ easyar_server_status
 easyar_authorization_strategy preferredMode=auto sampleId=cloud-recognition platform=android
 easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android
 ```
+
+Also read MCP resource `easyar://acceptance/fresh-project` before running Unity setup.
 
 The normal MVP mode is `local-key`.
 

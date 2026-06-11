@@ -494,6 +494,7 @@ try {
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "\"preflightFirst\": true");
+  assertTextIncludes(status, "easyar://acceptance/fresh-project");
   assertTextIncludes(status, "easyar_first_run_guide accountStage=not-registered");
   assertTextIncludes(status, "easyar_account_onboarding accountStage=not-registered");
   assertTextIncludes(status, "easyar_write_focused_preflight");
@@ -510,6 +511,7 @@ try {
   const quickstart = await request("resources/read", {
     uri: "easyar://workflow/quickstart"
   });
+  assertResourceIncludes(quickstart, "easyar://acceptance/fresh-project");
   assertResourceIncludes(quickstart, "easyar_write_focused_preflight");
   assertResourceIncludes(quickstart, "PREFLIGHT.md");
   assertResourceIncludes(quickstart, "PROGRAMMING_CONTEXT.md");
@@ -899,6 +901,7 @@ try {
   assertTextIncludes(clientSetup, "\"mcpServers\"");
   assertTextIncludes(clientSetup, "\"acceptanceChecklist\"");
   assertTextIncludes(clientSetup, "easyar_server_status");
+  assertTextIncludes(clientSetup, "easyar://acceptance/fresh-project");
   assertTextIncludes(clientSetup, "\"configDestination\"");
 
   const packageBinClientSetup = await callTool("easyar_check_client_setup", {
@@ -926,6 +929,7 @@ try {
   assert(clientSetupMarkdown.includes("Acceptance Checklist"), "Client setup markdown should include acceptance checklist");
   assert(clientSetupMarkdown.includes("First Smoke Calls"), "Client setup markdown should include first smoke calls");
   assert(clientSetupMarkdown.includes("easyar_server_status"), "Client setup markdown should include first status call");
+  assert(clientSetupMarkdown.includes("easyar://acceptance/fresh-project"), "Client setup markdown should include fresh project acceptance resource");
   assert(clientSetupMarkdown.includes("Troubleshooting"), "Client setup markdown should include troubleshooting");
   await rm(clientSetupRoot, { recursive: true, force: true });
 
@@ -935,11 +939,12 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.24"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.25"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
   assert(committedClientSetupGuide.includes("easyar-mcp-check"), "Client setup guide should include install check bin");
+  assert(committedClientSetupGuide.includes("easyar://acceptance/fresh-project"), "Client setup guide should include fresh project acceptance resource");
   assert(committedClientSetupGuide.includes("Never paste these values into chat"), "Client setup guide should include secret handling");
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});

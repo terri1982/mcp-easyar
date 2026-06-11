@@ -42,7 +42,7 @@ easyar_check_client_setup client=claude-desktop entrypointMode=local-dist server
 Use this for the current local-key MVP GitHub Release. This installs the package binary without waiting for npm registry publishing.
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.24/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.25/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -156,7 +156,7 @@ easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition pl
 easyar_write_client_setup outputRoot=/path/to/report-folder client=claude-desktop entrypointMode=package-bin
 ```
 
-Then follow the generated `CLIENT_SETUP.md`, `FIRST_RUN.md`, and `PREFLIGHT.md` artifacts before asking the client to run Unity automation.
+Also read MCP resource `easyar://acceptance/fresh-project`. Then follow the generated `CLIENT_SETUP.md`, `FIRST_RUN.md`, and `PREFLIGHT.md` artifacts before asking the client to run Unity automation.
 
 ## Troubleshooting
 

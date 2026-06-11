@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.24";
+const currentGitHubReleaseTag = "v0.1.0-local-key.25";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -296,17 +296,18 @@ const quickstartWorkflow = [
   "2. Use `easyar_generate_client_config` to create a Codex or Claude Desktop MCP config snippet.",
   "3. For the current local-key MVP, configure only local Unity/project paths and local license/CRS values; `EASYAR_API_TOKEN` and official endpoint vars are optional production API settings.",
   "4. Use `easyar_check_account` and `easyar_validate_license` only after official EasyAR endpoints are configured.",
-  "5. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
-  "6. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
-  "7. Run `easyar_prepare_unity_project`, `easyar_write_unity_environment_report`, and `easyar_write_focused_preflight` before any Unity batch command.",
-  "8. Read `PREFLIGHT.md` first and follow its `nextCall`; do not skip account, local config, import, Unity path, scene, or script blockers.",
-  "9. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads or Unity Package Manager Samples.",
-  "10. Use `easyar_write_local_config_from_env` or fill `ProjectSettings/EasyAR/easyar.local.json` locally without committing secrets.",
-  "11. Run `easyar_write_run_sequence`, `easyar_write_artifact_index`, `easyar_write_run_report`, `easyar_write_scene_audit`, and `easyar_write_support_bundle` for handoff evidence.",
-  "12. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
-  "13. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
-  "14. For project code, write `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md`, then use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, `easyar_review_csharp_scripts`, and `easyar_write_code_change_summary`.",
-  "15. Run `easyar_run_unity_compile_check`, build to a real Android or iOS device, and use `easyar_write_run_result` after compile, build, or device attempts.",
+  "5. Read `easyar://acceptance/fresh-project` before a fresh Unity project run so the client keeps the current Image Tracking + CRS/Cloud Recognition scope and safety boundary.",
+  "6. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
+  "7. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
+  "8. Run `easyar_prepare_unity_project`, `easyar_write_unity_environment_report`, and `easyar_write_focused_preflight` before any Unity batch command.",
+  "9. Read `PREFLIGHT.md` first and follow its `nextCall`; do not skip account, local config, import, Unity path, scene, or script blockers.",
+  "10. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads or Unity Package Manager Samples.",
+  "11. Use `easyar_write_local_config_from_env` or fill `ProjectSettings/EasyAR/easyar.local.json` locally without committing secrets.",
+  "12. Run `easyar_write_run_sequence`, `easyar_write_artifact_index`, `easyar_write_run_report`, `easyar_write_scene_audit`, and `easyar_write_support_bundle` for handoff evidence.",
+  "13. Run `easyar_create_mobile_settings_helper` and `easyar_run_unity_method` to apply Android/iOS player settings.",
+  "14. Run `easyar_create_build_settings_helper` and `easyar_run_unity_method` to add the sample scene to Build Settings.",
+  "15. For project code, write `PROGRAMMING_CONTEXT.md` before `CODE_PLAN.md`, then use `easyar_create_mono_behaviour`, `easyar_write_csharp_file`, `easyar_review_csharp_scripts`, and `easyar_write_code_change_summary`.",
+  "16. Run `easyar_run_unity_compile_check`, build to a real Android or iOS device, and use `easyar_write_run_result` after compile, build, or device attempts.",
   "",
   "Do not commit account tokens, EasyAR license keys, cloud credentials, signing keys, or provisioning secrets."
 ].join("\n");
@@ -785,6 +786,7 @@ server.tool(
           "has-cloud-credentials"
         ],
         newUserRoute: [
+          "Read easyar://acceptance/fresh-project before starting a fresh Unity project run.",
           "Call easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition or sampleId=image-tracking.",
           "Open the official EasyAR website/development center in a browser for registration and login.",
           "Return to MCP after login; do not paste website passwords, verification codes, appKey, appSecret, API token, or license key into chat.",
@@ -795,6 +797,7 @@ server.tool(
         localSecretTarget: "ProjectSettings/EasyAR/easyar.local.json"
       },
       recommendedFirstCalls: [
+        "Read MCP resource easyar://acceptance/fresh-project",
         "easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android",
         "easyar_write_first_run_guide projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition platform=android",
         "easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition",
@@ -6537,6 +6540,7 @@ function buildClientAcceptanceChecklist(client: typeof clientKinds[number], entr
         : "After npm publishing, the client machine can run npx -y mcp-easyar with network access to the npm registry.",
     `${client} has been restarted after editing MCP configuration.`,
     "easyar_server_status returns server name mcp-easyar and lists focused samples.",
+    "easyar://acceptance/fresh-project is readable and confirms the fresh Unity project acceptance scope.",
     "easyar_auth_status reports only presence/redacted endpoint state and does not print secret values.",
     "easyar_account_onboarding or easyar_write_local_config_handoff is the first user-facing EasyAR workflow call."
   ];
@@ -6545,6 +6549,7 @@ function buildClientAcceptanceChecklist(client: typeof clientKinds[number], entr
 function buildClientFirstSmokeCalls() {
   return [
     "easyar_server_status",
+    "Read MCP resource easyar://acceptance/fresh-project",
     "easyar_auth_status",
     "easyar_authorization_strategy preferredMode=auto sampleId=cloud-recognition",
     "easyar_list_samples",
