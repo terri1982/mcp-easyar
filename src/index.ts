@@ -144,6 +144,8 @@ const toolCatalog = [
   "easyar_write_device_validation_checklist",
   "easyar_generate_device_run_result_form",
   "easyar_write_device_run_result_form",
+  "easyar_generate_android_device_runbook",
+  "easyar_write_android_device_runbook",
   "easyar_generate_run_result",
   "easyar_write_run_result",
   "easyar_generate_completion_report",
@@ -2595,6 +2597,89 @@ server.tool(
       requiredFormStepCount: form.formSteps.filter((step) => step.requiredForCompletion).length,
       nextActions: form.nextActions,
       note: "The form contains placeholders and command templates only. Replace placeholders with observed evidence and never paste secret values."
+    });
+  }
+);
+
+server.tool(
+  "easyar_generate_android_device_runbook",
+  "Generate an Android real-device runbook for installing, launching, logging, and recording focused EasyAR sample evidence.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    apkPath: z.string().optional().describe("APK path. Defaults to Builds/<sampleId>.apk inside the Unity project."),
+    bundleIdentifier: z.string().optional().describe("Android package name. Defaults to unity.bundleIdentifier from local config or sample default."),
+    adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
+    deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
+    device: z.string().optional().describe("Optional tested device model or test-device label for RUN_RESULT.md templates."),
+    logRelativePath: z.string().optional().describe("Optional device log path inside the project. Defaults to Logs/mcp-easyar-DeviceLog-<sampleId>.log."),
+    timeoutSeconds: z.number().int().positive().max(60).default(10)
+  },
+  async ({ projectPath, sampleId, apkPath, bundleIdentifier, adbPath, deviceSerial, device, logRelativePath, timeoutSeconds }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    return jsonText(await buildAndroidDeviceRunbook({
+      root,
+      sample,
+      apkPath,
+      bundleIdentifier,
+      adbPath,
+      deviceSerial,
+      device,
+      logRelativePath,
+      timeoutSeconds
+    }));
+  }
+);
+
+server.tool(
+  "easyar_write_android_device_runbook",
+  "Write the Android real-device runbook to Assets/EasyARGenerated/<sampleId>/ANDROID_DEVICE_RUNBOOK.md.",
+  {
+    projectPath: z.string().describe("Unity project path."),
+    sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+    apkPath: z.string().optional().describe("APK path. Defaults to Builds/<sampleId>.apk inside the Unity project."),
+    bundleIdentifier: z.string().optional().describe("Android package name. Defaults to unity.bundleIdentifier from local config or sample default."),
+    adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
+    deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
+    device: z.string().optional().describe("Optional tested device model or test-device label for RUN_RESULT.md templates."),
+    logRelativePath: z.string().optional().describe("Optional device log path inside the project. Defaults to Logs/mcp-easyar-DeviceLog-<sampleId>.log."),
+    relativePath: z.string().optional().describe("Optional runbook path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/ANDROID_DEVICE_RUNBOOK.md."),
+    timeoutSeconds: z.number().int().positive().max(60).default(10),
+    overwrite: z.boolean().default(true).describe("Whether to replace an existing Android device runbook.")
+  },
+  async ({ projectPath, sampleId, apkPath, bundleIdentifier, adbPath, deviceSerial, device, logRelativePath, relativePath, timeoutSeconds, overwrite }) => {
+    const root = resolveProjectPath(projectPath);
+    await ensureDirectory(root);
+    const sample = findSample(sampleId);
+    const runbook = await buildAndroidDeviceRunbook({
+      root,
+      sample,
+      apkPath,
+      bundleIdentifier,
+      adbPath,
+      deviceSerial,
+      device,
+      logRelativePath,
+      timeoutSeconds
+    });
+    const target = relativePath
+      ? path.resolve(root, relativePath)
+      : path.join(focusedSampleGeneratedDir(root, sample), "ANDROID_DEVICE_RUNBOOK.md");
+    assertInside(root, target);
+    const written: string[] = [];
+    await writeGeneratedFile(target, buildAndroidDeviceRunbookMarkdown(runbook), overwrite, written);
+
+    return jsonText({
+      written: written.includes(target) ? target : null,
+      skipped: written.includes(target) ? null : target,
+      sample: sample.name,
+      apkExists: runbook.apk.exists,
+      readyForInstall: runbook.deviceStatus.readyForInstall,
+      packageName: runbook.packageName,
+      nextActions: runbook.nextActions,
+      note: "The Android device runbook contains commands, safe templates, and evidence prompts only. It does not include EasyAR secret values."
     });
   }
 );
@@ -8499,6 +8584,15 @@ async function writeFocusedHandoffPackForSample(
   artifacts.push({ name: "Device Validation", relativePath: path.join(base, "DEVICE_VALIDATION.md"), markdown: buildDeviceValidationChecklistMarkdown(deviceValidation) });
   const deviceRunForm = await buildDeviceRunResultForm(input.root, sample, input.platform, undefined, outputPath, undefined);
   artifacts.push({ name: "Device Run Result Form", relativePath: path.join(base, "DEVICE_RUN_RESULT_FORM.md"), markdown: buildDeviceRunResultFormMarkdown(deviceRunForm) });
+  if (input.platform === "android") {
+    const androidRunbook = await buildAndroidDeviceRunbook({
+      root: input.root,
+      sample,
+      apkPath: outputPath,
+      timeoutSeconds: 10
+    });
+    artifacts.push({ name: "Android Device Runbook", relativePath: path.join(base, "ANDROID_DEVICE_RUNBOOK.md"), markdown: buildAndroidDeviceRunbookMarkdown(androidRunbook) });
+  }
   const configAudit = await buildConfigIntegrationAudit(input.root, sample, 120, 40);
   artifacts.push({ name: "Config Integration Audit", relativePath: path.join(base, "CONFIG_INTEGRATION.md"), markdown: buildConfigIntegrationAuditMarkdown(configAudit) });
   const programmingContext = await buildProgrammingContext(input.root, sample, input.programmingGoal, 80, input.maxScriptIssues);
@@ -8561,6 +8655,7 @@ function focusedHandoffPackArtifactSpecs(root: string, sample: SampleInfo) {
     "SUPPORT_BUNDLE.md",
     "DEVICE_VALIDATION.md",
     "DEVICE_RUN_RESULT_FORM.md",
+    "ANDROID_DEVICE_RUNBOOK.md",
     "CONFIG_INTEGRATION.md",
     "PROGRAMMING_CONTEXT.md",
     "CODE_PLAN.md",
@@ -8587,6 +8682,7 @@ function focusedHandoffPackPurpose(name: string): string {
     "SUPPORT_BUNDLE.md": "Diagnostic handoff across run report, scene audit, sequence, and logs.",
     "DEVICE_VALIDATION.md": "Real-device validation checklist.",
     "DEVICE_RUN_RESULT_FORM.md": "Fillable real-device result form.",
+    "ANDROID_DEVICE_RUNBOOK.md": "Android install, launch, logcat, and RUN_RESULT evidence sequence.",
     "CONFIG_INTEGRATION.md": "Local config wiring audit for scripts/assets/scenes.",
     "PROGRAMMING_CONTEXT.md": "Script inventory and programming handoff.",
     "CODE_PLAN.md": "Scoped plan before C# edits.",
@@ -8638,6 +8734,7 @@ function focusedArtifactReadOrder(artifacts: Array<{ relativePath: string }>): s
     "SUPPORT_BUNDLE.md",
     "DEVICE_VALIDATION.md",
     "DEVICE_RUN_RESULT_FORM.md",
+    "ANDROID_DEVICE_RUNBOOK.md",
     "RUN_RESULT.md",
     "COMPLETION_REPORT.md",
     "ISSUE_REPORT.md",
@@ -8805,6 +8902,12 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
       relativePath: path.join(base, "DEVICE_RUN_RESULT_FORM.md"),
       purpose: "Fillable real-device result form and safe easyar_write_run_result templates.",
       generateWith: `easyar_write_device_run_result_form sampleId=${sample.id}`
+    },
+    {
+      name: "Android Device Runbook",
+      relativePath: path.join(base, "ANDROID_DEVICE_RUNBOOK.md"),
+      purpose: "Android adb device status, install, launch, logcat, and RUN_RESULT evidence sequence.",
+      generateWith: `easyar_write_android_device_runbook sampleId=${sample.id}`
     },
     {
       name: "Code Plan",
@@ -9057,6 +9160,148 @@ async function buildDeviceRunResultForm(
           `Regenerate this form after blockers are resolved with easyar_write_device_run_result_form projectPath=${root} sampleId=${sample.id} platform=${platform}.`
         ],
     security: "This form is designed for evidence collection only. Do not paste EasyAR license keys, account tokens, Cloud Recognition appKey/appSecret, signing keys, provisioning profiles, passwords, private device identifiers, or raw secret-bearing logs."
+  };
+}
+
+async function buildAndroidDeviceRunbook(input: {
+  root: string;
+  sample: SampleInfo;
+  apkPath?: string;
+  bundleIdentifier?: string;
+  adbPath?: string;
+  deviceSerial?: string;
+  device?: string;
+  logRelativePath?: string;
+  timeoutSeconds: number;
+}) {
+  const adb = input.adbPath ?? process.env.EASYAR_ADB_PATH ?? "adb";
+  const localConfig = await readLocalConfigForRemoteValidation(input.root);
+  const packageName = input.bundleIdentifier ?? localConfig.bundleIdentifier ?? defaultBundleIdentifier(input.sample);
+  const relativeApkPath = input.apkPath ?? path.join("Builds", `${input.sample.id}.apk`);
+  const resolvedApk = path.resolve(input.root, relativeApkPath);
+  assertInside(input.root, resolvedApk);
+  const apkExists = await exists(resolvedApk);
+  const logRelativePath = input.logRelativePath ?? path.join("Logs", `mcp-easyar-DeviceLog-${input.sample.id}.log`);
+  const logPath = path.resolve(input.root, logRelativePath);
+  assertInside(input.root, logPath);
+  const deviceStatusResult = await runProcess(adb, ["devices", "-l"], input.timeoutSeconds);
+  const devices = parseAdbDevices(deviceStatusResult.stdout);
+  const readyForInstall = deviceStatusResult.exitCode === 0 && devices.some((device) => device.state === "device");
+  const serialArgs = input.deviceSerial ? ["-s", input.deviceSerial] : [];
+  const deviceLabel = input.device
+    ?? devices.find((device) => device.serial === input.deviceSerial)?.detail
+    ?? devices.find((device) => device.state === "device")?.detail
+    ?? null;
+  const form = await buildDeviceRunResultForm(input.root, input.sample, "android", deviceLabel ?? input.device, path.relative(input.root, resolvedApk), "Android device runbook generated for focused real-device validation.");
+  const commands = [
+    {
+      id: "device-status",
+      tool: "easyar_android_device_status",
+      arguments: { adbPath: adb },
+      shell: [adb, "devices", "-l"].join(" "),
+      purpose: "Confirm adb is installed and a physical Android device is authorized."
+    },
+    {
+      id: "install-apk",
+      tool: "easyar_android_install_apk",
+      arguments: {
+        projectPath: input.root,
+        sampleId: input.sample.id,
+        apkPath: path.relative(input.root, resolvedApk),
+        adbPath: adb,
+        ...(input.deviceSerial ? { deviceSerial: input.deviceSerial } : {})
+      },
+      shell: [adb, ...serialArgs, "install", "-r", "-d", resolvedApk].join(" "),
+      purpose: "Install or replace the focused APK on the authorized Android device."
+    },
+    {
+      id: "clear-logcat",
+      tool: "easyar_android_collect_logcat",
+      arguments: {
+        projectPath: input.root,
+        sampleId: input.sample.id,
+        adbPath: adb,
+        relativePath: logRelativePath,
+        clearFirst: true,
+        ...(input.deviceSerial ? { deviceSerial: input.deviceSerial } : {})
+      },
+      shell: [adb, ...serialArgs, "logcat", "-c"].join(" "),
+      purpose: "Optional: clear logcat before launching so the evidence window is focused."
+    },
+    {
+      id: "start-app",
+      tool: "easyar_android_start_app",
+      arguments: {
+        projectPath: input.root,
+        sampleId: input.sample.id,
+        bundleIdentifier: packageName,
+        adbPath: adb,
+        ...(input.deviceSerial ? { deviceSerial: input.deviceSerial } : {})
+      },
+      shell: [adb, ...serialArgs, "shell", "monkey", "-p", packageName, "-c", "android.intent.category.LAUNCHER", "1"].join(" "),
+      purpose: "Launch the focused EasyAR app on the Android device."
+    },
+    {
+      id: "collect-logcat",
+      tool: "easyar_android_collect_logcat",
+      arguments: {
+        projectPath: input.root,
+        sampleId: input.sample.id,
+        adbPath: adb,
+        relativePath: logRelativePath,
+        ...(input.deviceSerial ? { deviceSerial: input.deviceSerial } : {})
+      },
+      shell: [adb, ...serialArgs, "logcat", "-d", "-v", "time"].join(" "),
+      purpose: "Collect a filtered, redacted logcat snapshot after launch and sample interaction."
+    }
+  ];
+  const nextActions = [
+    ...(apkExists ? [] : [`Build the APK first at ${path.relative(input.root, resolvedApk)}.`]),
+    ...buildAndroidDeviceStatusActions(deviceStatusResult, devices),
+    "Run the install, launch, and logcat commands in order.",
+    input.sample.id === "cloud-recognition"
+      ? "On the phone, grant camera permission, point the camera at a target uploaded to the Cloud Recognition library, and record whether recognition succeeds."
+      : "On the phone, grant camera permission, point the camera at the focused image target, and record tracking stability.",
+    "Write RUN_RESULT.md with overallStatus=passed only after the physical-device behavior satisfies every pass criterion."
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample: {
+      id: input.sample.id,
+      name: input.sample.name,
+      implementationStatus: input.sample.implementationStatus
+    },
+    platform: "android" as const,
+    adb,
+    packageName,
+    deviceSerial: input.deviceSerial ?? null,
+    apk: {
+      path: resolvedApk,
+      relativePath: path.relative(input.root, resolvedApk),
+      exists: apkExists
+    },
+    log: {
+      path: logPath,
+      relativePath: path.relative(input.root, logPath)
+    },
+    deviceStatus: {
+      command: deviceStatusResult.command,
+      exitCode: deviceStatusResult.exitCode,
+      adbAvailable: deviceStatusResult.exitCode !== null,
+      readyForInstall,
+      devices,
+      stderr: redactSecretText(deviceStatusResult.stderr)
+    },
+    commands,
+    completionAcceptanceRules: form.completionAcceptanceRules,
+    passCriteria: form.passCriteria,
+    evidencePrompts: form.evidencePrompts,
+    safeDraftRunResultArguments: form.safeDraftRunResultArguments,
+    passedRunResultTemplate: form.passedRunResultTemplate,
+    nextActions: Array.from(new Set(nextActions)),
+    security: "Android device runbooks record adb metadata, commands, paths, package names, and evidence prompts only. They do not include EasyAR passwords, license keys, API KEY/API Secret values, appKey/appSecret, signing keys, or raw secret-bearing logs."
   };
 }
 
@@ -12854,6 +13099,78 @@ function buildDeviceRunResultFormMarkdown(form: Awaited<ReturnType<typeof buildD
     "## Security",
     "",
     form.security,
+    ""
+  ].join("\n");
+}
+
+function buildAndroidDeviceRunbookMarkdown(runbook: Awaited<ReturnType<typeof buildAndroidDeviceRunbook>>): string {
+  return [
+    `# EasyAR Android Device Runbook - ${runbook.sample.name}`,
+    "",
+    `Generated at: ${runbook.generatedAt}`,
+    `Project: ${runbook.projectPath}`,
+    `Sample id: ${runbook.sample.id}`,
+    `Status: ${runbook.sample.implementationStatus}`,
+    `Platform: ${runbook.platform}`,
+    `ADB: ${runbook.adb}`,
+    `Package name: ${runbook.packageName}`,
+    `Device serial: ${runbook.deviceSerial ?? "not pinned"}`,
+    `APK: ${runbook.apk.relativePath}`,
+    `APK exists: ${runbook.apk.exists ? "yes" : "no"}`,
+    `Device ready for install: ${runbook.deviceStatus.readyForInstall ? "yes" : "no"}`,
+    `Log output: ${runbook.log.relativePath}`,
+    "",
+    "## Connected Devices",
+    "",
+    ...markdownIssueList(
+      runbook.deviceStatus.devices.map((device) => `${device.serial} ${device.state}${device.detail ? ` ${device.detail}` : ""}`),
+      "No adb devices were reported."
+    ),
+    "",
+    "## Command Sequence",
+    "",
+    ...runbook.commands.flatMap((command, index) => [
+      `${index + 1}. ${command.purpose}`,
+      `   - Tool: \`${command.tool}\``,
+      `   - Arguments: \`${JSON.stringify(command.arguments)}\``,
+      `   - Shell equivalent: \`${command.shell}\``
+    ]),
+    "",
+    "## Completion Acceptance Rules",
+    "",
+    ...runbook.completionAcceptanceRules.map((rule) => `- ${rule}`),
+    "",
+    "## Pass Criteria",
+    "",
+    ...runbook.passCriteria.map((criterion) => `- ${criterion}`),
+    "",
+    "## Evidence To Capture",
+    "",
+    ...runbook.evidencePrompts.map((prompt) => `- ${prompt}`),
+    "",
+    "## Safe Draft easyar_write_run_result Arguments",
+    "",
+    "Use this for blocked, failed, or incomplete attempts. Replace placeholders with observed evidence.",
+    "",
+    "```json",
+    JSON.stringify(runbook.safeDraftRunResultArguments, null, 2),
+    "```",
+    "",
+    "## Passed easyar_write_run_result Template",
+    "",
+    "Use this only after all required steps pass on a physical device.",
+    "",
+    "```json",
+    JSON.stringify(runbook.passedRunResultTemplate, null, 2),
+    "```",
+    "",
+    "## Next Actions",
+    "",
+    ...markdownIssueList(runbook.nextActions, "No next actions recorded."),
+    "",
+    "## Security",
+    "",
+    runbook.security,
     ""
   ].join("\n");
 }

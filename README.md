@@ -297,6 +297,8 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_write_device_validation_checklist`: write the real-device validation checklist to `Assets/EasyARGenerated/<sampleId>/DEVICE_VALIDATION.md`.
 - `easyar_generate_device_run_result_form`: generate a fillable real-device run result form plus safe `easyar_write_run_result` templates.
 - `easyar_write_device_run_result_form`: write the real-device run result form to `Assets/EasyARGenerated/<sampleId>/DEVICE_RUN_RESULT_FORM.md`.
+- `easyar_generate_android_device_runbook`: generate an Android install, launch, logcat, and safe run-result evidence sequence for a focused sample.
+- `easyar_write_android_device_runbook`: write the Android runbook to `Assets/EasyARGenerated/<sampleId>/ANDROID_DEVICE_RUNBOOK.md`.
 - `easyar_generate_run_result`: generate a focused sample run result summary for compile, build, or device validation attempts.
 - `easyar_write_run_result`: write the focused run result to `Assets/EasyARGenerated/<sampleId>/RUN_RESULT.md`.
 - `easyar_generate_completion_report`: summarize final focused sample completion status across preflight, device validation, `RUN_RESULT.md`, and latest Unity log evidence.

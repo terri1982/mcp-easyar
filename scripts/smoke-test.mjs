@@ -241,6 +241,8 @@ try {
     "easyar_write_focused_scope_status should be listed"
   );
   for (const androidTool of [
+    "easyar_generate_android_device_runbook",
+    "easyar_write_android_device_runbook",
     "easyar_android_device_status",
     "easyar_android_install_apk",
     "easyar_android_start_app",
@@ -1735,6 +1737,38 @@ exit 0
   assert(fakeDeviceLog.includes("EasyAR ImageTarget detected"), "Device log should include filtered EasyAR evidence");
   assert(!fakeDeviceLog.includes("secret-api-key-value"), "Device log should redact apiKey values");
 
+  const androidDeviceRunbook = await callTool("easyar_generate_android_device_runbook", {
+    projectPath,
+    sampleId: "image-tracking",
+    adbPath: fakeAdbPath,
+    deviceSerial: "FAKE123",
+    bundleIdentifier: "com.easyar.testsample"
+  });
+  assertTextIncludes(androidDeviceRunbook, "\"readyForInstall\": true");
+  assertTextIncludes(androidDeviceRunbook, "easyar_android_install_apk");
+  assertTextIncludes(androidDeviceRunbook, "com.easyar.testsample");
+  assert(!extractText(androidDeviceRunbook).includes("secret-api-key-value"), "Android runbook should not include secret values");
+
+  const writtenAndroidDeviceRunbook = await callTool("easyar_write_android_device_runbook", {
+    projectPath,
+    sampleId: "image-tracking",
+    adbPath: fakeAdbPath,
+    deviceSerial: "FAKE123",
+    bundleIdentifier: "com.easyar.testsample"
+  });
+  assertTextIncludes(writtenAndroidDeviceRunbook, "ANDROID_DEVICE_RUNBOOK.md");
+  const androidDeviceRunbookMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "ANDROID_DEVICE_RUNBOOK.md"),
+    "utf8"
+  );
+  assert(androidDeviceRunbookMarkdown.includes("EasyAR Android Device Runbook - Image Tracking"), "Android runbook markdown should include title");
+  assert(androidDeviceRunbookMarkdown.includes("Command Sequence"), "Android runbook markdown should include command sequence");
+  assert(androidDeviceRunbookMarkdown.includes("easyar_android_collect_logcat"), "Android runbook markdown should include logcat tool");
+  assert(androidDeviceRunbookMarkdown.includes("Safe Draft easyar_write_run_result Arguments"), "Android runbook markdown should include safe draft run result");
+  assert(androidDeviceRunbookMarkdown.includes("Passed easyar_write_run_result Template"), "Android runbook markdown should include passed template");
+  assert(!androidDeviceRunbookMarkdown.includes("env-test-account-token"), "Android runbook markdown should not include account token values");
+  assert(!androidDeviceRunbookMarkdown.includes("env-test-license-key"), "Android runbook markdown should not include license values");
+
   const notRunCompletionReport = await callTool("easyar_generate_completion_report", {
     projectPath,
     sampleId: "image-tracking",
@@ -2605,6 +2639,7 @@ exit 0
   assert(artifactIndexMarkdown.includes("PREFLIGHT.md"), "Artifact index markdown should list focused preflight");
   assert(artifactIndexMarkdown.includes("SAMPLE_IMPORT_GUIDE.md"), "Artifact index markdown should list sample import guide");
   assert(artifactIndexMarkdown.includes("DEVICE_RUN_RESULT_FORM.md"), "Artifact index markdown should list device run result form");
+  assert(artifactIndexMarkdown.includes("ANDROID_DEVICE_RUNBOOK.md"), "Artifact index markdown should list Android device runbook");
   assert(artifactIndexMarkdown.includes("COMPLETION_REPORT.md"), "Artifact index markdown should list completion report");
   assert(artifactIndexMarkdown.includes("ISSUE_REPORT.md"), "Artifact index markdown should list issue report");
   assert(artifactIndexMarkdown.includes("PROGRAMMING_CONTEXT.md"), "Artifact index markdown should list programming context");
