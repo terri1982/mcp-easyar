@@ -42,7 +42,7 @@ easyar_check_client_setup client=claude-desktop entrypointMode=local-dist server
 Use this for the current local-key MVP GitHub Release. This installs the package binary without waiting for npm registry publishing.
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.10/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.11/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

@@ -98,7 +98,7 @@ For package-based clients after publishing, use `npm install -g mcp-easyar` with
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.10/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.11/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
