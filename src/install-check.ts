@@ -36,6 +36,7 @@ const requiredPrompts = [
 const requiredResources = [
   "easyar://official/api-contract",
   "easyar://official/openapi",
+  "easyar://client/acceptance",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
@@ -136,6 +137,11 @@ try {
       "official-openapi-contract",
       resourceTexts.get("easyar://official/openapi")?.includes("\"openapi\": \"3.1.0\"") ?? false,
       "Official OpenAPI contract resource is readable."
+    ),
+    check(
+      "client-acceptance",
+      resourceTexts.get("easyar://client/acceptance")?.includes("mcp-easyar Client Acceptance Checklist") ?? false,
+      "Client acceptance checklist resource is readable."
     ),
     check(
       "github-release-install",

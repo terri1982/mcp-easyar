@@ -201,6 +201,7 @@ const resourceCatalog = [
   "easyar://official/info",
   "easyar://official/api-contract",
   "easyar://official/openapi",
+  "easyar://client/acceptance",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
@@ -378,6 +379,20 @@ server.resource(
         uri: uri.href,
         mimeType: "application/json",
         text: await readFile(officialOpenApiPath, "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-client-acceptance",
+  "easyar://client/acceptance",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8")
       }
     ]
   })
@@ -6538,6 +6553,7 @@ async function buildReleaseManifest() {
     "docs/openapi/easyar-mcp-account-api.openapi.json",
     "docs/release-evidence/focused-scope.android.json",
     "docs/release-notes/local-key-mvp.md",
+    "docs/CLIENT_ACCEPTANCE.md",
     "docs/client-setup.md",
     "docs/install-from-github-release.md",
     "docs/ROADMAP.md",

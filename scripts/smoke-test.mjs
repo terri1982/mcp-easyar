@@ -514,6 +514,13 @@ try {
   assertResourceIncludes(officialOpenApiResource, "\"/mcp/cloud-recognition/credentials\"");
   assertResourceIncludes(officialOpenApiResource, "\"EasyARBearerAuth\"");
 
+  const clientAcceptanceResource = await request("resources/read", {
+    uri: "easyar://client/acceptance"
+  });
+  assertResourceIncludes(clientAcceptanceResource, "mcp-easyar Client Acceptance Checklist");
+  assertResourceIncludes(clientAcceptanceResource, "Package-Bin Client Config");
+  assertResourceIncludes(clientAcceptanceResource, "First Client Calls");
+
   const githubReleaseInstallResource = await request("resources/read", {
     uri: "easyar://install/github-release"
   });
@@ -895,7 +902,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.14"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.15"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -962,6 +969,7 @@ try {
   assertTextIncludes(releaseManifest, "docs/OFFICIAL_API_HANDOFF.md");
   assertTextIncludes(releaseManifest, "docs/openapi/easyar-mcp-account-api.openapi.json");
   assertTextIncludes(releaseManifest, "docs/release-notes/local-key-mvp.md");
+  assertTextIncludes(releaseManifest, "docs/CLIENT_ACCEPTANCE.md");
   assertTextIncludes(releaseManifest, "docs/client-setup.md");
   assertTextIncludes(releaseManifest, "docs/install-from-github-release.md");
   assertTextIncludes(releaseManifest, "docs/ROADMAP.md");
@@ -972,6 +980,7 @@ try {
     "utf8"
   );
   assert(committedReleaseManifest.includes("mcp-easyar Release Manifest"), "Committed release manifest should include title");
+  assert(committedReleaseManifest.includes("docs/CLIENT_ACCEPTANCE.md"), "Committed release manifest should include client acceptance guide");
   assert(committedReleaseManifest.includes("docs/ROADMAP.md"), "Committed release manifest should include roadmap");
   assert(committedReleaseManifest.includes("docs/SAMPLE_EXPANSION.md"), "Committed release manifest should include sample expansion guide");
   assert(committedReleaseManifest.includes("easyar_check_client_setup"), "Committed release manifest should include first calls/client setup tools");

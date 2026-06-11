@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.14/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.14";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.15/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.15";
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -36,6 +36,7 @@ try {
   assert(check.stdout.includes("OK tools"), "Release check bin should verify tools.");
   assert(check.stdout.includes("OK prompts"), "Release check bin should verify prompts.");
   assert(check.stdout.includes("OK resources"), "Release check bin should verify resources.");
+  assert(check.stdout.includes("OK client-acceptance"), "Release check bin should verify client acceptance resource.");
   assert(check.stdout.includes("OK github-release-install"), "Release check bin should verify GitHub Release install resource.");
   assert(check.stdout.includes("OK local-key-release-notes"), "Release check bin should verify local-key release notes resource.");
   assert(check.stdout.includes("OK roadmap"), "Release check bin should verify roadmap resource.");
@@ -44,6 +45,7 @@ try {
 
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");
   const installGuide = await readFile(path.join(packageRoot, "docs", "install-from-github-release.md"), "utf8");
+  const clientAcceptance = await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8");
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
   const sampleExpansionGuide = await readFile(path.join(packageRoot, "docs", "SAMPLE_EXPANSION.md"), "utf8");
   const codexConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
@@ -59,6 +61,9 @@ try {
   assert(installGuide.includes(expectedReleaseTag), "Install guide should point to the expected GitHub Release tag.");
   assert(installGuide.includes("For Codex:"), "Install guide should include a Codex package-bin config section.");
   assert(installGuide.includes("\"command\": \"easyar-mcp\""), "Install guide should use the package-bin easyar-mcp command.");
+  assert(clientAcceptance.includes("mcp-easyar Client Acceptance Checklist"), "Package should include client acceptance checklist.");
+  assert(clientAcceptance.includes("Package-Bin Client Config"), "Client acceptance checklist should include package-bin config acceptance.");
+  assert(clientAcceptance.includes("First Client Calls"), "Client acceptance checklist should include first client calls.");
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");

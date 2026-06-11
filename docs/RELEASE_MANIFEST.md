@@ -137,6 +137,7 @@ Entrypoint mode: `npx`
 - OK docs/openapi/easyar-mcp-account-api.openapi.json
 - OK docs/release-evidence/focused-scope.android.json
 - OK docs/release-notes/local-key-mvp.md
+- OK docs/CLIENT_ACCEPTANCE.md
 - OK docs/client-setup.md
 - OK docs/install-from-github-release.md
 - OK docs/ROADMAP.md
@@ -159,6 +160,7 @@ Entrypoint mode: `npx`
 - docs/openapi/easyar-mcp-account-api.openapi.json
 - docs/release-evidence
 - docs/release-notes
+- docs/CLIENT_ACCEPTANCE.md
 - docs/client-setup.md
 - docs/install-from-github-release.md
 - docs/ROADMAP.md
