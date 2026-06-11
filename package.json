@@ -31,12 +31,13 @@
     "scripts/official-api-stub.mjs",
     ".env.example",
     "README.md",
+    "README.zh-CN.md",
     "CHANGELOG.md",
     "LICENSE",
     "SECURITY.md"
   ],
   "scripts": {
-    "bin:smoke": "npm run build && MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs",
+    "bin:smoke": "npm run build && MCP_EASYAR_TOOL_PROFILE=full MCP_EASYAR_SMOKE_COMMAND=./dist/index.js node scripts/smoke-test.mjs",
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "github-release:smoke": "node scripts/github-release-install-smoke.mjs",
@@ -50,7 +51,7 @@
     "release:check": "node scripts/release-check.mjs",
     "security:check": "node scripts/security-check.mjs",
     "start": "node dist/index.js",
-    "test": "npm run build && node scripts/smoke-test.mjs && node scripts/official-api-fixture-smoke.mjs && node scripts/official-api-stub-smoke.mjs && node scripts/openapi-contract-smoke.mjs",
+    "test": "npm run build && MCP_EASYAR_TOOL_PROFILE=full node scripts/smoke-test.mjs && MCP_EASYAR_TOOL_PROFILE=full node scripts/official-api-fixture-smoke.mjs && MCP_EASYAR_TOOL_PROFILE=full node scripts/official-api-stub-smoke.mjs && node scripts/openapi-contract-smoke.mjs",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

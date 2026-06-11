@@ -4,6 +4,8 @@
 
 # mcp-easyar
 
+English | [简体中文](README.zh-CN.md)
+
 [![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
 
 `mcp-easyar` helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
@@ -80,6 +82,18 @@ The server is intentionally built for official, authorized use. Production deplo
 
 This project must not be used to bypass EasyAR login, license checks, download authorization, enterprise gates, rate limits, or any other access control.
 
+## Tool Profiles
+
+`mcp-easyar` starts in the `core` tool profile by default. This keeps the enabled tool count below common MCP client warning thresholds while preserving the normal Image Tracking, CRS/Cloud Recognition, onboarding, local config, Unity programming, Android device, and release validation workflows.
+
+To expose every maintenance and backend-integration tool, start the server with:
+
+```bash
+MCP_EASYAR_TOOL_PROFILE=full easyar-mcp
+```
+
+Use the full profile for repository maintenance, official API contract work, or deep debugging. For Codex and Claude daily use, the default core profile is recommended.
+
 Official references used by this MVP:
 
 - EasyAR sample apps: https://www.easyar.cn/doc/en/develop/samples.html
@@ -98,7 +112,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.29/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.30/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

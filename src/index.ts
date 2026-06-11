@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.29";
+const currentGitHubReleaseTag = "v0.1.0-local-key.30";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -198,6 +198,73 @@ const toolCatalog = [
   "easyar_android_collect_logcat"
 ] as const;
 
+const coreToolCatalog = [
+  "easyar_server_status",
+  "easyar_list_samples",
+  "easyar_auth_status",
+  "easyar_authorization_strategy",
+  "easyar_account_onboarding",
+  "easyar_account_materials",
+  "easyar_generate_client_config",
+  "easyar_check_client_setup",
+  "easyar_production_validation",
+  "easyar_first_run_guide",
+  "easyar_write_first_run_guide",
+  "easyar_write_project_handoff",
+  "easyar_remaining_work_report",
+  "easyar_generate_sample_plan",
+  "easyar_generate_sample_expansion_plan",
+  "easyar_write_focused_preflight",
+  "easyar_next_workflow_step",
+  "easyar_write_workflow_state",
+  "easyar_write_sample_import_guide",
+  "easyar_import_sample_from_package_cache",
+  "easyar_write_run_sequence",
+  "easyar_write_artifact_index",
+  "easyar_write_focused_handoff_pack",
+  "easyar_write_run_report",
+  "easyar_write_scene_audit",
+  "easyar_write_support_bundle",
+  "easyar_write_device_validation_checklist",
+  "easyar_write_device_run_result_form",
+  "easyar_write_android_device_runbook",
+  "easyar_write_run_result",
+  "easyar_write_completion_report",
+  "easyar_write_focused_scope_status",
+  "easyar_write_issue_report",
+  "easyar_inspect_unity_project",
+  "easyar_check_sample_readiness",
+  "easyar_validate_local_config",
+  "easyar_write_local_config_form",
+  "easyar_write_local_config_from_env",
+  "easyar_write_local_config_handoff",
+  "easyar_analyze_unity_log",
+  "easyar_analyze_latest_unity_log",
+  "easyar_prepare_unity_project",
+  "easyar_write_code_plan",
+  "easyar_create_mono_behaviour",
+  "easyar_write_csharp_file",
+  "easyar_write_config_integration_audit",
+  "easyar_write_programming_context",
+  "easyar_write_code_change_summary",
+  "easyar_review_csharp_scripts",
+  "easyar_unity_environment",
+  "easyar_write_unity_environment_report",
+  "easyar_run_unity_compile_check",
+  "easyar_run_unity_method",
+  "easyar_android_device_status",
+  "easyar_android_install_apk",
+  "easyar_android_start_app",
+  "easyar_android_collect_logcat"
+] as const;
+
+const toolProfile = process.env.MCP_EASYAR_TOOL_PROFILE === "full" ? "full" : "core";
+const coreToolNames = new Set<string>(coreToolCatalog);
+
+function activeToolCatalog() {
+  return toolProfile === "full" ? [...toolCatalog] : [...coreToolCatalog];
+}
+
 const resourceCatalog = [
   "easyar://samples/catalog",
   "easyar://official/info",
@@ -318,6 +385,14 @@ const server = new McpServer({
   name: serverName,
   version: serverVersion
 });
+
+const registerTool = (server.tool as (...args: any[]) => unknown).bind(server);
+(server as any).tool = (name: string, ...args: any[]) => {
+  if (toolProfile === "core" && !coreToolNames.has(name)) {
+    return undefined;
+  }
+  return registerTool(name, ...args);
+};
 
 function promptText(description: string, text: string) {
   return {
@@ -777,7 +852,10 @@ server.tool(
         samples: samples.map((sample) => sample.id),
         focusedSamples: focusedSamples().map((sample) => sample.id),
         deferredSamples: deferredSamples().map((sample) => sample.id),
-        tools: toolCatalog,
+        toolProfile,
+        toolsEnabled: activeToolCatalog().length,
+        toolsAvailableInFullProfile: toolCatalog.length,
+        tools: activeToolCatalog(),
         resources: resourceCatalog,
         unityAutomation: [
           "inspect project",
