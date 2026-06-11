@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.31";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.32/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.32";
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Current scoped objective: about 90%"
@@ -123,7 +123,8 @@ try {
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");
   if (expectChineseDocs) {
-    assert(chineseReadme.includes("完整中文文档"), "Package should include Chinese README with full docs link.");
+    assert(chineseReadme.includes("中文文档目录"), "Package should include Chinese README with docs directory.");
+    assert(chineseReadme.includes("docs/zh-CN/quickstart.md"), "Package should include Chinese README quickstart link.");
     assert(chineseDocsIndex.includes("mcp-easyar 中文文档"), "Package should include full Chinese docs index.");
     assert(chineseDocsIndex.includes("Image Tracking"), "Chinese docs should include Image Tracking scope.");
     assert(chineseDocsIndex.includes("CRS"), "Chinese docs should include CRS scope.");

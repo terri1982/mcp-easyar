@@ -892,7 +892,14 @@ try {
     serverPath: "/tmp/mcp-easyar/dist/index.js"
   });
   assertTextIncludes(clientConfig, "\"mcpServers\"");
-  assertTextIncludes(clientConfig, "your_registered_user_token");
+  assert(!extractText(clientConfig).includes("EASYAR_API_TOKEN"), "Default client config should not ask users for EASYAR_API_TOKEN");
+
+  const advancedClientConfig = await callTool("easyar_generate_client_config", {
+    client: "claude-desktop",
+    serverPath: "/tmp/mcp-easyar/dist/index.js",
+    includeTokenPlaceholder: true
+  });
+  assertTextIncludes(advancedClientConfig, "official_api_token_from_secret_store");
 
   const npxClientConfig = await callTool("easyar_generate_client_config", {
     client: "codex",
@@ -902,7 +909,7 @@ try {
   assertTextIncludes(npxClientConfig, "\"entrypointMode\": \"npx\"");
   assertTextIncludes(npxClientConfig, "\"command\": \"npx\"");
   assertTextIncludes(npxClientConfig, "mcp-easyar");
-  assert(!extractText(npxClientConfig).includes("your_registered_user_token"), "npx client config should omit token placeholder when requested");
+  assert(!extractText(npxClientConfig).includes("official_api_token_from_secret_store"), "npx client config should omit token placeholder when requested");
 
   const clientSetup = await callTool("easyar_check_client_setup", {
     client: "claude-desktop",
@@ -951,7 +958,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.31"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.32"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -967,7 +974,8 @@ try {
     path.join(process.cwd(), "docs", "zh-CN", "README.md"),
     "utf8"
   );
-  assert(committedChineseReadme.includes("完整中文文档"), "Chinese README should link to the full Chinese docs index");
+  assert(committedChineseReadme.includes("中文文档目录"), "Chinese README should include the Chinese docs directory");
+  assert(committedChineseReadme.includes("docs/zh-CN/quickstart.md"), "Chinese README should directly link to Chinese quickstart");
   assert(committedChineseDocsIndex.includes("mcp-easyar 中文文档"), "Chinese docs index should include title");
   assert(committedChineseDocsIndex.includes("Image Tracking"), "Chinese docs index should include focused Image Tracking scope");
   assert(committedChineseDocsIndex.includes("CRS"), "Chinese docs index should include focused CRS scope");

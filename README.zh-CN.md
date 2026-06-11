@@ -4,7 +4,7 @@
 
 # mcp-easyar
 
-[English](README.md) | 简体中文 | [完整中文文档](docs/zh-CN/README.md)
+[English](README.md) | 简体中文
 
 `mcp-easyar` 帮助 EasyAR 注册用户通过 Codex、Claude 等 AI 工具，安全地完成 EasyAR Unity Sample 的配置、构建、真机验证和项目编程辅助。
 
@@ -12,7 +12,7 @@
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.31`
+- 当前 GitHub 预发布版：`v0.1.0-local-key.32`
 - 当前已跑通并发布验证的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
@@ -28,7 +28,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.32/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -89,7 +89,25 @@ easyar://workflow/programming
 
 MCP 不应绕过 EasyAR 登录、license 检查、下载授权、企业权限或限流规则。
 
-## 重要文档
+## 中文文档目录
+
+- [中文文档索引](docs/zh-CN/README.md)
+- [快速开始](docs/zh-CN/quickstart.md)
+- [从 GitHub Release 安装](docs/zh-CN/install-from-github-release.md)
+- [客户端配置](docs/zh-CN/client-setup.md)
+- [新 Unity 项目验收](docs/zh-CN/FRESH_PROJECT_ACCEPTANCE.md)
+- [当前状态](docs/zh-CN/STATUS.md)
+- [剩余工作](docs/zh-CN/REMAINING_WORK.md)
+- [完整目标计划](docs/zh-CN/FULL_GOAL_PLAN.md)
+- [路线图](docs/zh-CN/ROADMAP.md)
+- [问题排查](docs/zh-CN/troubleshooting.md)
+- [客户端验收清单](docs/zh-CN/CLIENT_ACCEPTANCE.md)
+- [Release Manifest](docs/zh-CN/RELEASE_MANIFEST.md)
+- [local-key MVP 发布说明](docs/zh-CN/release-notes/local-key-mvp.md)
+- [官方 API 合同](docs/zh-CN/OFFICIAL_API_CONTRACT.md)
+- [官方 API 接入交接](docs/zh-CN/OFFICIAL_API_HANDOFF.md)
+
+## 英文文档
 
 - [新项目验收](docs/FRESH_PROJECT_ACCEPTANCE.md)
 - [当前状态](docs/STATUS.md)

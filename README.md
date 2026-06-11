@@ -4,7 +4,7 @@
 
 # mcp-easyar
 
-English | [简体中文](README.zh-CN.md) | [完整中文文档](docs/zh-CN/README.md)
+English | [简体中文](README.zh-CN.md)
 
 [![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
 
@@ -78,7 +78,7 @@ Current delivery path: use local-key MVP first. Users register/log in/download/c
 - generate release/install manifests for users and AI tools
 - generate first-run onboarding reports across client setup, official access, release metadata, and focused workflow state
 
-The server is intentionally built for official, authorized use. Production deployments should connect `EASYAR_API_BASE_URL` and `EASYAR_API_TOKEN` to EasyAR account/license APIs before serving private SDK downloads or account-scoped content.
+The server is intentionally built for official, authorized use. The current local-key MVP does not require a user-provided `EASYAR_API_TOKEN`; future production deployments should use EasyAR-managed official authentication before serving private SDK downloads or account-scoped content.
 
 This project must not be used to bypass EasyAR login, license checks, download authorization, enterprise gates, rate limits, or any other access control.
 
@@ -112,7 +112,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.31/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.32/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -160,10 +160,9 @@ EASYAR_CLOUD_API_KEY=<set locally for Cloud Recognition>
 EASYAR_CLOUD_API_SECRET=<set locally for Cloud Recognition>
 ```
 
-Production official API variables are optional until EasyAR-owned account endpoints are available:
+Production official API endpoints are optional until EasyAR-owned account services are available. Local-key MVP users do not need an `EASYAR_API_TOKEN`; do not ask users to provide one.
 
 ```bash
-EASYAR_API_TOKEN=your_official_api_token_after_easyar_backend_support_exists
 EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
 EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
 EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
@@ -175,7 +174,7 @@ EASYAR_STUB_PORT=8787
 EASYAR_STUB_TOKEN=your_local_stub_token
 ```
 
-Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, tokens, license keys, and Cloud Recognition credentials local.
+Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, license keys, and Cloud Recognition credentials local.
 
 `EASYAR_ACCOUNT_STATUS_ENDPOINT`, `EASYAR_LICENSE_VALIDATE_ENDPOINT`, `EASYAR_DOWNLOADS_ENDPOINT`, and `EASYAR_CLOUD_CREDENTIALS_ENDPOINT` are intentionally configurable. Connect them to authorized EasyAR account APIs in production; the open-source default does not guess or bypass private EasyAR endpoints.
 
@@ -271,7 +270,7 @@ npm run release:check
 
 Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_EVIDENCE_PATH`/`EASYAR_RELEASE_PLATFORM` so the GitHub runner can verify focused sample evidence without reading a local Unity project. Local release checks may use `EASYAR_RELEASE_PROJECT_PATH` instead. If the release is intentionally limited to the local-key MVP, keep strict production publishing disabled and document the remaining official API blockers in the release notes.
 
-After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with `EASYAR_API_TOKEN`, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
+After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with service-managed official authentication, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
 
 When backend routing is still being wired, run `npm run official-api:stub` to start a local contract-compatible endpoint stub. Use it only for local gateway/canary validation; production must connect to real EasyAR account, license, downloads, and Cloud Recognition services.
 
@@ -319,7 +318,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_auth_status`: check EasyAR API environment configuration without returning secrets.
 - `easyar_authorization_strategy`: choose the safe authorization path across local key mode, manual browser handoff, official API, local packages, and stub mode without bypassing EasyAR access controls.
 - `easyar_write_authorization_strategy`: write `AUTHORIZATION_STRATEGY.md`, explaining that Unity runs from the installed official plugin plus local license/API keys while website login is only for obtaining authorized packages and keys.
-- `easyar_check_account`: call a configured official EasyAR account-status endpoint with `EASYAR_API_TOKEN`.
+- `easyar_check_account`: call a configured official EasyAR account-status endpoint when an official production authentication path exists.
 - `easyar_validate_license`: call a configured official EasyAR license-validation endpoint using local config or explicit input without returning secrets.
 - `easyar_discover_downloads`: call a configured official downloads endpoint for account-scoped SDK/sample package discovery without returning tokens.
 - `easyar_discover_cloud_credentials`: call a configured official Cloud Recognition endpoint for account-scoped credential metadata without returning secrets.

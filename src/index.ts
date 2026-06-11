@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.31";
+const currentGitHubReleaseTag = "v0.1.0-local-key.32";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -363,7 +363,7 @@ const quickstartWorkflow = [
   "",
   "1. Build the server with `npm install && npm run build`.",
   "2. Use `easyar_generate_client_config` to create a Codex or Claude Desktop MCP config snippet.",
-  "3. For the current local-key MVP, configure only local Unity/project paths and local license/CRS values; `EASYAR_API_TOKEN` and official endpoint vars are optional production API settings.",
+  "3. For the current local-key MVP, configure only local Unity/project paths and local license/CRS values; do not ask users for `EASYAR_API_TOKEN`.",
   "4. Use `easyar_check_account` and `easyar_validate_license` only after official EasyAR endpoints are configured.",
   "5. Read `easyar://acceptance/fresh-project` before a fresh Unity project run so the client keeps the current Image Tracking + CRS/Cloud Recognition scope and safety boundary.",
   "6. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
@@ -1229,7 +1229,7 @@ server.tool(
 
 server.tool(
   "easyar_check_account",
-  "Call a configured official EasyAR account-status endpoint with EASYAR_API_TOKEN without exposing secrets.",
+  "Call a configured official EasyAR account-status endpoint when official production authentication is available, without exposing secrets.",
   {},
   async () => jsonText(await easyarApi.checkAccount())
 );
@@ -1521,7 +1521,7 @@ server.tool(
     client: z.enum(clientKinds).describe("Target MCP client config style."),
     entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
     serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint."),
-    includeTokenPlaceholder: z.boolean().default(true).describe("Whether to include EASYAR_API_TOKEN placeholder text.")
+    includeTokenPlaceholder: z.boolean().default(false).describe("Advanced official-API deployment only: whether to include EASYAR_API_TOKEN placeholder text. Keep false for local-key MVP users.")
   },
   async ({ client, entrypointMode, serverPath, includeTokenPlaceholder }) => {
     const env = {
@@ -1530,7 +1530,7 @@ server.tool(
       EASYAR_LICENSE_VALIDATE_ENDPOINT: process.env.EASYAR_LICENSE_VALIDATE_ENDPOINT ?? "https://www.easyar.cn/path/to/official/license/validate",
       EASYAR_DOWNLOADS_ENDPOINT: process.env.EASYAR_DOWNLOADS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/downloads",
       EASYAR_CLOUD_CREDENTIALS_ENDPOINT: process.env.EASYAR_CLOUD_CREDENTIALS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/cloud-recognition/credentials",
-      ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
+      ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "official_api_token_from_secret_store" } : {})
     };
     const launch = buildClientLaunch(entrypointMode, serverPath);
     const config = buildClientConfig(client, launch, env);
@@ -1542,7 +1542,9 @@ server.tool(
       args: launch.args,
       env,
       config,
-      note: "Replace token placeholders with locally stored official EasyAR account credentials. Do not commit secrets."
+      note: includeTokenPlaceholder
+        ? "Advanced official-API deployment only: store tokens in local secret storage. Do not ask users to paste tokens into chat or commit secrets."
+        : "Local-key MVP config omits official account token fields. Users should configure EasyAR license and CRS keys inside their local Unity project, not in MCP client chat."
     });
   }
 );
@@ -1554,7 +1556,7 @@ server.tool(
     client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
     entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
     serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
-    includeTokenPlaceholder: z.boolean().default(true).describe("Whether the generated config should include EASYAR_API_TOKEN placeholder text.")
+    includeTokenPlaceholder: z.boolean().default(false).describe("Advanced official-API deployment only: whether the generated config should include EASYAR_API_TOKEN placeholder text. Keep false for local-key MVP users.")
   },
   async ({ client, entrypointMode, serverPath, includeTokenPlaceholder }) => jsonText(await buildClientSetupReport(client, entrypointMode, serverPath, includeTokenPlaceholder))
 );
@@ -1567,7 +1569,7 @@ server.tool(
     client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
     entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
     serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
-    includeTokenPlaceholder: z.boolean().default(true).describe("Whether the generated config should include EASYAR_API_TOKEN placeholder text."),
+    includeTokenPlaceholder: z.boolean().default(false).describe("Advanced official-API deployment only: whether the generated config should include EASYAR_API_TOKEN placeholder text. Keep false for local-key MVP users."),
     relativePath: z.string().optional().describe("Optional report path inside outputRoot. Defaults to EasyARGenerated/CLIENT_SETUP.md."),
     overwrite: z.boolean().default(true).describe("Whether to replace an existing client setup report.")
   },
@@ -2109,8 +2111,8 @@ server.tool(
       "",
       "Authorized access:",
       auth.hasToken
-        ? `- EASYAR_API_TOKEN is configured for ${auth.apiBaseUrl}.`
-        : `- Configure EASYAR_API_TOKEN for ${auth.apiBaseUrl} before downloading account-scoped SDKs or cloud data.`,
+        ? `- Official production authentication is configured for ${auth.apiBaseUrl}.`
+        : `- Local-key MVP does not require MCP account authentication. Use the official website manually for downloads and keys.`,
       "",
       "Preparation:",
       ...sample.setupNotes.map((note) => `- ${note}`),
@@ -4933,7 +4935,7 @@ function deploymentNextActions(
 ): string[] {
   const actions = new Set<string>();
   if (!auth.hasToken) {
-    actions.add("Set EASYAR_API_TOKEN from an official registered EasyAR account secret store.");
+    actions.add("For local-key MVP, no MCP account token is required. Future official API deployments should provide service-managed authentication outside user chat.");
   }
   if (!auth.accountStatusEndpointConfigured || !auth.licenseValidationEndpointConfigured || !auth.downloadsEndpointConfigured || !auth.cloudCredentialsEndpointConfigured) {
     actions.add("Configure official EasyAR account, license, downloads, and Cloud Recognition endpoint environment variables.");
@@ -5515,8 +5517,8 @@ function buildAccountOnboardingBlockers(
   if (!auth.hasToken) {
     blockers.push({
       id: "mcp-api-token",
-      detail: "EASYAR_API_TOKEN is not configured for account-scoped MCP endpoint calls.",
-      action: "After login/API key setup, place an official token in the MCP client environment or secret store."
+      detail: "Official MCP account authentication is not configured.",
+      action: "For local-key MVP, ignore this and continue with browser login/download/key creation on the EasyAR website. Do not ask users for EASYAR_API_TOKEN."
     });
   }
   if (root && !(localConfig?.checks.find((check) => check.id === "file-exists")?.ok ?? false)) {
@@ -6394,7 +6396,7 @@ async function buildOfficialAccessReport(
       : Promise.resolve(null)
   ]);
   const checks = [
-    officialAccessCheck("api-token", auth.hasToken, true, "EASYAR_API_TOKEN is configured for official account-scoped requests.", auth.hasToken ? "Token is present and redacted." : "EASYAR_API_TOKEN is missing."),
+    officialAccessCheck("api-token", auth.hasToken, true, "Official production authentication is configured for account-scoped requests.", auth.hasToken ? "Authentication material is present and redacted." : "Official production authentication is not configured; local-key MVP can proceed without it."),
     officialAccessRemoteCheck("account-status", true, account),
     officialAccessRemoteCheck("license-validation", true, license),
     officialAccessRemoteCheck("downloads-discovery", true, downloads),
@@ -6703,7 +6705,7 @@ async function buildClientSetupReport(
     EASYAR_LICENSE_VALIDATE_ENDPOINT: process.env.EASYAR_LICENSE_VALIDATE_ENDPOINT ?? "https://www.easyar.cn/path/to/official/license/validate",
     EASYAR_DOWNLOADS_ENDPOINT: process.env.EASYAR_DOWNLOADS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/downloads",
     EASYAR_CLOUD_CREDENTIALS_ENDPOINT: process.env.EASYAR_CLOUD_CREDENTIALS_ENDPOINT ?? "https://www.easyar.cn/path/to/official/cloud-recognition/credentials",
-    ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "your_registered_user_token" } : {})
+    ...(includeTokenPlaceholder ? { EASYAR_API_TOKEN: "official_api_token_from_secret_store" } : {})
   };
   const checks = [
     clientSetupCheck("node-version", nodeMajor >= 20, true, `Current Node.js version is ${process.versions.node}; mcp-easyar requires >=20.`),
@@ -6714,7 +6716,7 @@ async function buildClientSetupReport(
     clientSetupCheck("server-path-absolute", entrypointMode !== "local-dist" || Boolean(entrypoint && path.isAbsolute(entrypoint)), true, entrypoint ? `Resolved server path is ${entrypoint}.` : "No local server path is required for this entrypoint mode."),
     clientSetupCheck("server-path-exists", entrypointMode !== "local-dist" || Boolean(entrypoint && await exists(entrypoint)), true, entrypoint ? `Configured server path ${entrypoint} exists.` : "No local server path is required for this entrypoint mode."),
     clientSetupCheck("api-base-url", Boolean(auth.apiBaseUrl), true, `EASYAR_API_BASE_URL resolves to ${auth.apiBaseUrl}.`),
-    clientSetupCheck("api-token-placeholder", includeTokenPlaceholder || auth.hasToken, false, includeTokenPlaceholder ? "Generated config includes EASYAR_API_TOKEN placeholder." : "Generated config omits token placeholder; set token through client secret/env configuration."),
+    clientSetupCheck("api-token-placeholder", true, false, includeTokenPlaceholder ? "Generated config includes an advanced official-API token placeholder." : "Generated config omits official account token fields for local-key MVP users."),
     clientSetupCheck("official-endpoints", auth.accountStatusEndpointConfigured && auth.licenseValidationEndpointConfigured && auth.downloadsEndpointConfigured && auth.cloudCredentialsEndpointConfigured, false, "Official account, license, downloads, and Cloud Recognition endpoint environment variables are configured.")
   ];
   const blockers = checks.filter((check) => check.required && !check.ok);
@@ -6815,7 +6817,7 @@ function buildClientTroubleshooting(client: typeof clientKinds[number], entrypoi
         ? "If package-bin fails, run easyar-mcp-check from the same shell environment used to launch the MCP client."
         : "If npx fails after npm publishing, check npm registry access and try npx -y mcp-easyar in a terminal. Before npm publishing, use the GitHub Release package profile.",
     "If tools/list is empty, restart the MCP client and verify the JSON nesting under mcpServers/easyar.",
-    "If account calls fail, check EASYAR_API_TOKEN and official endpoint env vars in the MCP client environment.",
+    "If official account calls fail, local-key MVP users can ignore them; production deployments should check official endpoint env vars and service-managed authentication.",
     `${client} logs should be inspected only for startup errors; remove any copied private token or license values before sharing logs.`
   ];
 }
@@ -12303,7 +12305,7 @@ async function buildLocalConfigForm(
       label: "EasyAR account/API token",
       required: false,
       present: checkOk("account-token"),
-      source: "Optional local account material if a selected EasyAR Unity workflow requires it. Production MCP account APIs use EASYAR_API_TOKEN separately.",
+      source: "Optional local account material if a selected EasyAR Unity workflow requires it. Current Image Tracking/CRS local-key MVP runs should leave this empty.",
       envNames: ["EASYAR_ACCOUNT_TOKEN"],
       placeholder: "",
       sharePolicy: "Optional secret. Leave empty for current focused local-key sample runs unless a local workflow explicitly requires it.",

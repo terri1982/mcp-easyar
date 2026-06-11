@@ -99,10 +99,9 @@ EASYAR_CLOUD_API_KEY=<set locally for Cloud Recognition>
 EASYAR_CLOUD_API_SECRET=<set locally for Cloud Recognition>
 ```
 
-Official account API variables are for the production automation track, not for the current local-key sample run-through:
+Official account API variables are for the production automation track, not for the current local-key sample run-through. Local-key MVP users do not need an `EASYAR_API_TOKEN`; do not ask users to provide one.
 
 ```bash
-EASYAR_API_TOKEN=your_official_api_token_after_easyar_backend_support_exists
 EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/status
 EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
 EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
@@ -114,7 +113,7 @@ EASYAR_STUB_PORT=8787
 EASYAR_STUB_TOKEN=your_local_stub_token
 ```
 
-The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, API KEY/API Secret, `appKey`, or `appSecret`.
+The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR license keys, API KEY/API Secret, `appKey`, or `appSecret`.
 
 The official backend/API contract is published in `docs/OFFICIAL_API_CONTRACT.md`. The machine-readable OpenAPI contract for gateway import, backend stubs, and client generation is `docs/openapi/easyar-mcp-account-api.openapi.json`. The Markdown contract can be regenerated with:
 
@@ -249,7 +248,7 @@ export EASYAR_CLOUD_API_KEY=your_cloud_recognition_api_key
 export EASYAR_CLOUD_API_SECRET=your_cloud_recognition_api_secret
 ```
 
-Use `EASYAR_ACCOUNT_TOKEN` here only as local Unity config material if the selected EasyAR workflow requires it. It is separate from `EASYAR_API_TOKEN`, which is reserved for future official MCP account API calls.
+Use `EASYAR_ACCOUNT_TOKEN` here only as optional local Unity config material if the selected EasyAR workflow has its own local account-token consumer. Current Image Tracking and CRS local-key MVP runs do not require it.
 
 ```text
 easyar_write_local_config_from_env projectPath=/path/to/UnityProject sampleId=cloud-recognition targetPlatform=android

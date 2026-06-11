@@ -157,7 +157,7 @@ async function callOfficialEndpoint(options: {
       statusCode: null,
       summary: options.missingTokenSummary,
       nextActions: [
-        "Set EASYAR_API_TOKEN to an official registered-user token before calling account-scoped endpoints."
+        "Local-key MVP users can ignore this account-scoped endpoint. Future official API deployments should provide service-managed authentication outside user chat."
       ]
     };
   }
