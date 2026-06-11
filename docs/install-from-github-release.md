@@ -32,7 +32,7 @@ For package-bin mode, the MCP server command is:
 easyar-mcp
 ```
 
-For Claude Desktop or another stdio client:
+For Claude Desktop:
 
 ```json
 {
@@ -48,7 +48,23 @@ For Claude Desktop or another stdio client:
 }
 ```
 
-For Codex, use the same stdio command `easyar-mcp` in the workspace or user MCP configuration.
+For Codex:
+
+```json
+{
+  "mcpServers": {
+    "easyar": {
+      "command": "easyar-mcp",
+      "args": [],
+      "env": {
+        "EASYAR_API_BASE_URL": "https://www.easyar.cn"
+      }
+    }
+  }
+}
+```
+
+Other stdio MCP clients should use the same command, args, and env shape.
 
 ## 3. Start With Local-Key MVP
 

@@ -37,16 +37,16 @@ easyar_generate_client_config client=claude-desktop entrypointMode=local-dist se
 easyar_check_client_setup client=claude-desktop entrypointMode=local-dist serverPath=/absolute/path/to/mcp-easyar/dist/index.js
 ```
 
-### Global package
+### GitHub Release package
 
-Use this after the package is published to npm.
+Use this for the current local-key MVP GitHub Release. This installs the package binary without waiting for npm registry publishing.
 
 ```bash
-npm install -g mcp-easyar
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.6/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
-MCP launch:
+Claude Desktop MCP launch:
 
 ```json
 {
@@ -62,12 +62,40 @@ MCP launch:
 }
 ```
 
-Generate a global package config snippet:
+Codex MCP launch uses the same stdio shape:
+
+```json
+{
+  "mcpServers": {
+    "easyar": {
+      "command": "easyar-mcp",
+      "args": [],
+      "env": {
+        "EASYAR_API_BASE_URL": "https://www.easyar.cn"
+      }
+    }
+  }
+}
+```
+
+Generate a package-bin config snippet:
 
 ```text
 easyar_generate_client_config client=claude-desktop entrypointMode=package-bin
+easyar_generate_client_config client=codex entrypointMode=package-bin includeTokenPlaceholder=false
 easyar_check_client_setup client=claude-desktop entrypointMode=package-bin
 ```
+
+### Global npm package
+
+Use this after the package is published to npm.
+
+```bash
+npm install -g mcp-easyar
+easyar-mcp-check
+```
+
+After installation, use the same `package-bin` MCP launch config shown above.
 
 ### npx package
 

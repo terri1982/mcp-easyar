@@ -42,6 +42,8 @@ try {
   const installGuide = await readFile(path.join(packageRoot, "docs", "install-from-github-release.md"), "utf8");
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
   assert(installGuide.includes(expectedReleaseTag), "Install guide should point to the expected GitHub Release tag.");
+  assert(installGuide.includes("For Codex:"), "Install guide should include a Codex package-bin config section.");
+  assert(installGuide.includes("\"command\": \"easyar-mcp\""), "Install guide should use the package-bin easyar-mcp command.");
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");

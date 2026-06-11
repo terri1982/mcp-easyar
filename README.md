@@ -158,11 +158,10 @@ See [`docs/OFFICIAL_API_CONTRACT.md`](docs/OFFICIAL_API_CONTRACT.md) or the mach
 {
   "mcpServers": {
     "easyar": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-easyar/dist/index.js"],
+      "command": "easyar-mcp",
+      "args": [],
       "env": {
-        "EASYAR_API_BASE_URL": "https://www.easyar.cn",
-        "EASYAR_API_TOKEN": "your_registered_user_token"
+        "EASYAR_API_BASE_URL": "https://www.easyar.cn"
       }
     }
   }
@@ -171,10 +170,20 @@ See [`docs/OFFICIAL_API_CONTRACT.md`](docs/OFFICIAL_API_CONTRACT.md) or the mach
 
 ## Codex
 
-Use the same stdio command:
+Use the same package-bin stdio command:
 
-```bash
-node /absolute/path/to/mcp-easyar/dist/index.js
+```json
+{
+  "mcpServers": {
+    "easyar": {
+      "command": "easyar-mcp",
+      "args": [],
+      "env": {
+        "EASYAR_API_BASE_URL": "https://www.easyar.cn"
+      }
+    }
+  }
+}
 ```
 
 You can also ask the MCP server for a config snippet with `easyar_generate_client_config`. The default `entrypointMode=local-dist` uses `node /absolute/path/to/dist/index.js`; `entrypointMode=package-bin` uses the installed `easyar-mcp` bin; `entrypointMode=npx` uses `npx -y mcp-easyar`.
