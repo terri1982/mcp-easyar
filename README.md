@@ -98,7 +98,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.21/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.22/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -378,7 +378,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar_validate_local_config`: validate `ProjectSettings/EasyAR/easyar.local.json` without returning secrets.
 - `easyar_generate_local_config_form`: generate a fillable `easyar.local.json` form with field sources, placeholders, environment alternatives, and validation calls.
 - `easyar_write_local_config_form`: write the local config form to `Assets/EasyARGenerated/LOCAL_CONFIG_FORM.md` without writing secret values.
-- `easyar_write_local_config_from_env`: write `ProjectSettings/EasyAR/easyar.local.json` from local environment variables such as `EASYAR_API_TOKEN`, `EASYAR_LICENSE_KEY`, and Cloud Recognition env vars without returning secret values.
+- `easyar_write_local_config_from_env`: write `ProjectSettings/EasyAR/easyar.local.json` from local environment variables such as `EASYAR_ACCOUNT_TOKEN`, `EASYAR_LICENSE_KEY`, and Cloud Recognition env vars without returning secret values.
 - `easyar_local_config_handoff`: generate a first-run handoff from EasyAR website registration/login to safe local `easyar.local.json` setup and validation.
 - `easyar_write_local_config_handoff`: write the first-run local config handoff to `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`.
 - `easyar_generate_sample_plan`: create a practical setup/run plan for a sample.

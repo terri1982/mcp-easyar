@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.21/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.21";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.22/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.22";
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -78,7 +78,7 @@ try {
   assert(clientAcceptance.includes("First Client Calls"), "Client acceptance checklist should include first client calls.");
   assert(currentStatus.includes("mcp-easyar Current Status"), "Package should include current status guide.");
   assert(currentStatus.includes("Current scoped objective: about 90%"), "Current status guide should include scoped objective progress.");
-  assert(currentStatus.includes("Local-key MVP public usability: about 92%"), "Current status guide should include local-key MVP progress.");
+  assert(currentStatus.includes("Local-key MVP public usability: about 93%"), "Current status guide should include local-key MVP progress.");
   assert(remainingWork.includes("mcp-easyar Remaining Work"), "Package should include remaining work guide.");
   assert(remainingWork.includes("Remaining For Current Scoped Target"), "Remaining work guide should include current scoped gaps.");
   assert(remainingWork.includes("Remaining For Full Production Goal"), "Remaining work guide should include production gaps.");

@@ -6,19 +6,19 @@ It is not a completion claim for every EasyAR sample. The current goal has been 
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.21`
+Current GitHub prerelease: `v0.1.0-local-key.22`
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.21/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.22/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
 ## Evidence-Weighted Progress
 
 - Current scoped objective: about 90%
-- Local-key MVP public usability: about 92%
+- Local-key MVP public usability: about 93%
 
 These percentages are evidence-weighted estimates. They are based on published package checks, focused sample evidence, client setup coverage, and known remaining polish work.
 

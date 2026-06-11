@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.21";
+const currentGitHubReleaseTag = "v0.1.0-local-key.22";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -11909,7 +11909,7 @@ async function buildLocalConfigFromEnvReport(
   const needsCloudRecognition = sample.id === "cloud-recognition";
   const envValues = {
     apiBaseUrl: envFirst(["EASYAR_API_BASE_URL"]) ?? "https://www.easyar.cn",
-    accountToken: envFirst(["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"]),
+    accountToken: envFirst(["EASYAR_ACCOUNT_TOKEN"]),
     licenseKey: envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"]),
     cloudAppId: envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"]),
     cloudServerAddress: envFirst(["EASYAR_CLOUD_SERVER_ADDRESS", "EASYAR_CLOUD_RECOGNITION_SERVER_ADDRESS", "EASYAR_CRS_SERVER_ADDRESS", "EASYAR_CRS_RECOGNITION_URL"]),
@@ -11919,7 +11919,7 @@ async function buildLocalConfigFromEnvReport(
   };
   const envPresence = [
     envPresenceItem("easyar.apiBaseUrl", ["EASYAR_API_BASE_URL"], isNonPlaceholderString(envValues.apiBaseUrl), "defaulted to https://www.easyar.cn when unset"),
-    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"], isNonPlaceholderString(envValues.accountToken), "required by local validation"),
+    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN"], isNonPlaceholderString(envValues.accountToken), "optional local Unity config material; not required for current focused sample runs"),
     envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envValues.licenseKey), "required for focused sample runs"),
     envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envValues.bundleIdentifier), bundleIdentifierInput ? "provided as non-secret tool argument" : "defaults to focused sample identifier when unset"),
     envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envValues.cloudAppId), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
@@ -11929,8 +11929,7 @@ async function buildLocalConfigFromEnvReport(
   ];
   const requiredMissing = envPresence
     .filter((item) =>
-      (item.field === "easyar.accountToken"
-        || item.field === "easyar.licenseKey"
+      (item.field === "easyar.licenseKey"
         || (needsCloudRecognition && (item.field === "easyar.cloudRecognition.appId" || item.field === "easyar.cloudRecognition.serverAddress" || item.field === "easyar.cloudRecognition.apiKey" || item.field === "easyar.cloudRecognition.apiSecret"))) &&
       !item.present
     )
@@ -12028,13 +12027,13 @@ async function buildLocalConfigForm(
       id: "account-token",
       jsonPath: "easyar.accountToken",
       label: "EasyAR account/API token",
-      required: true,
+      required: false,
       present: checkOk("account-token"),
-      source: "Official EasyAR account API token or account-scoped secret store after registration/login.",
-      envNames: ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"],
-      placeholder: "<paste locally from EasyAR account secret store>",
-      sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source files.",
-      userAction: "Store locally in easyar.local.json or use the environment-backed writer."
+      source: "Optional local account material if a selected EasyAR Unity workflow requires it. Production MCP account APIs use EASYAR_API_TOKEN separately.",
+      envNames: ["EASYAR_ACCOUNT_TOKEN"],
+      placeholder: "",
+      sharePolicy: "Optional secret. Leave empty for current focused local-key sample runs unless a local workflow explicitly requires it.",
+      userAction: "Leave empty for Image Tracking/CRS local-key MVP unless the project has a local account-token consumer."
     }),
     localConfigFormField({
       id: "license-key",
@@ -12151,7 +12150,7 @@ async function buildLocalConfigForm(
     sampleName: sample.name,
     easyar: {
       apiBaseUrl: "https://www.easyar.cn",
-      accountToken: "<paste locally; never send to MCP chat>",
+      accountToken: "",
       licenseKey: "<paste locally; never send to MCP chat>",
       cloudRecognition: {
         appId: needsCloudRecognition ? "<paste locally; required for Cloud Recognition>" : "",
@@ -12265,7 +12264,7 @@ async function buildLocalConfigHandoffReport(
   const needsCloudRecognition = sample.id === "cloud-recognition";
   const envPresence = [
     envPresenceItem("easyar.apiBaseUrl", ["EASYAR_API_BASE_URL"], isNonPlaceholderString(envFirst(["EASYAR_API_BASE_URL"]) ?? "https://www.easyar.cn"), "defaults to https://www.easyar.cn when unset"),
-    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"], isNonPlaceholderString(envFirst(["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"])), "required by local validation"),
+    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN"], isNonPlaceholderString(envFirst(["EASYAR_ACCOUNT_TOKEN"])), "optional local Unity config material; not required for current focused sample runs"),
     envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"])), "required for focused sample runs"),
     envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)), "defaults to focused sample identifier when unset"),
     envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"])), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
@@ -12296,8 +12295,7 @@ async function buildLocalConfigHandoffReport(
       targetPlatform: platform
     },
     requiredEnv: envPresence
-      .filter((item) => item.field === "easyar.accountToken"
-        || item.field === "easyar.licenseKey"
+      .filter((item) => item.field === "easyar.licenseKey"
         || (needsCloudRecognition && (item.field === "easyar.cloudRecognition.appId" || item.field === "easyar.cloudRecognition.apiKey")))
       .flatMap((item) => item.envNames)
   };
@@ -12429,8 +12427,8 @@ function validateLocalConfig(config: unknown) {
     },
     {
       id: "account-token",
-      ok: isNonPlaceholderString(easyar.accountToken),
-      detail: "easyar.accountToken is present and not a placeholder."
+      ok: isOptionalNonPlaceholderString(easyar.accountToken),
+      detail: "easyar.accountToken is empty or configured; it is optional for current local-key sample runs."
     },
     {
       id: "license-key",
@@ -12463,7 +12461,7 @@ function localConfigAction(checkId: string): string {
     return "Set easyar.apiBaseUrl to https://www.easyar.cn or the official EasyAR API base URL.";
   }
   if (checkId === "account-token") {
-    return "Set easyar.accountToken from the registered EasyAR account; do not commit this file.";
+    return "Leave easyar.accountToken empty for current local-key sample runs unless this Unity project has a local account-token consumer.";
   }
   if (checkId === "license-key") {
     return "Set easyar.licenseKey from the official EasyAR account/license configuration.";
@@ -16375,7 +16373,7 @@ function buildLocalConfigExample(sample: SampleInfo): string {
         ],
         envAlternative: {
           tool: "easyar_write_local_config_from_env",
-          accountToken: ["EASYAR_ACCOUNT_TOKEN", "EASYAR_API_TOKEN"],
+          accountToken: ["EASYAR_ACCOUNT_TOKEN"],
           licenseKey: ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"],
           bundleIdentifier: ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"],
           cloudAppId: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
@@ -16389,7 +16387,7 @@ function buildLocalConfigExample(sample: SampleInfo): string {
       sampleName: sample.name,
       easyar: {
         apiBaseUrl: "https://www.easyar.cn",
-        accountToken: "paste-official-registered-user-token-here",
+        accountToken: "",
         licenseKey: "paste-easyar-license-key-here",
         cloudRecognition: {
           appId: "",

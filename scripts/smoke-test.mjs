@@ -527,7 +527,7 @@ try {
   assertResourceIncludes(currentStatusResource, "mcp-easyar Current Status");
   assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
   assertResourceIncludes(currentStatusResource, "Current scoped objective: about 90%");
-  assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 92%");
+  assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 93%");
 
   const remainingWorkStatusResource = await request("resources/read", {
     uri: "easyar://status/remaining-work"
@@ -912,7 +912,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.21"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.22"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -1574,6 +1574,8 @@ try {
   assert(imageLocalConfigExample.includes("neverShareInChat"), "Local config example should include secret sharing policy");
   assert(imageLocalConfigExample.includes("easyar_write_local_config_from_env"), "Local config example should include env-backed writer");
   assert(imageLocalConfigExample.includes("EASYAR_LICENSE_KEY"), "Local config example should list license env var");
+  assert(!imageLocalConfigExample.includes("paste-official-registered-user-token-here"), "Local config example should not require an account token placeholder");
+  assert(!imageLocalConfigExample.includes("\"EASYAR_API_TOKEN\""), "Local config example should not use production API token as local accountToken env alternative");
 
   const imageTrackingRunbook = await readFile(
     path.join(projectPath, "Assets", "EasyARGenerated", "image-tracking", "RUNBOOK.md"),
@@ -1622,6 +1624,31 @@ try {
   });
   assertTextIncludes(placeholderConfig, "\"valid\": false");
   assertTextIncludes(placeholderConfig, "easyar.licenseKey is present and not a placeholder");
+
+  await writeFile(
+    path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
+    JSON.stringify({
+      easyar: {
+        apiBaseUrl: "https://www.easyar.cn",
+        licenseKey: "test-license-key",
+        cloudRecognition: {
+          appId: "",
+          appKey: "",
+          appSecret: ""
+        }
+      },
+      unity: {
+        targetPlatform: "android",
+        bundleIdentifier: "com.easyar.testsample"
+      }
+    }),
+    "utf8"
+  );
+  const noAccountTokenConfig = await callTool("easyar_validate_local_config", {
+    projectPath
+  });
+  assertTextIncludes(noAccountTokenConfig, "\"valid\": true");
+  assertTextIncludes(noAccountTokenConfig, "easyar.accountToken is empty or configured");
 
   await writeFile(
     path.join(projectPath, "ProjectSettings", "EasyAR", "easyar.local.json"),
