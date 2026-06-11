@@ -584,6 +584,14 @@ try {
   assertResourceIncludes(roadmapResource, "Current State");
   assertResourceIncludes(roadmapResource, "Remaining For Scoped Goal");
 
+  const fullGoalPlanResource = await request("resources/read", {
+    uri: "easyar://roadmap/full-goal"
+  });
+  assertResourceIncludes(fullGoalPlanResource, "mcp-easyar Full Goal Plan");
+  assertResourceIncludes(fullGoalPlanResource, "Expansion Track 1: More EasyAR Samples");
+  assertResourceIncludes(fullGoalPlanResource, "Expansion Track 2: Official API Production Integration");
+  assertResourceIncludes(fullGoalPlanResource, "Expansion Track 3: Unity Programming Service");
+
   const focusedScopeResource = await request("resources/read", {
     uri: "easyar://workflow/focused-scope"
   });
@@ -939,7 +947,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.26"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.27"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");

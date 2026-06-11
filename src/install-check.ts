@@ -43,6 +43,7 @@ const requiredResources = [
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
+  "easyar://roadmap/full-goal",
   "easyar://workflow/focused-scope",
   "easyar://workflow/programming",
   "easyar://workflow/quickstart"
@@ -174,6 +175,11 @@ try {
       "roadmap",
       resourceTexts.get("easyar://roadmap")?.includes("mcp-easyar Roadmap") ?? false,
       "Roadmap resource is readable."
+    ),
+    check(
+      "full-goal-plan",
+      resourceTexts.get("easyar://roadmap/full-goal")?.includes("mcp-easyar Full Goal Plan") ?? false,
+      "Full goal plan resource is readable."
     ),
     check(
       "focused-scope-workflow",

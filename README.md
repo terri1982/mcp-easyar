@@ -98,7 +98,7 @@ For the current public prerelease, use the GitHub Release tarball with `entrypoi
 For the current GitHub local-key MVP release, install the tarball directly:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.26/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.27/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -107,7 +107,7 @@ See [docs/CLIENT_ACCEPTANCE.md](docs/CLIENT_ACCEPTANCE.md) for the Codex/Claude 
 See [docs/FRESH_PROJECT_ACCEPTANCE.md](docs/FRESH_PROJECT_ACCEPTANCE.md) for the fresh Unity project acceptance path for Image Tracking and CRS/Cloud Recognition.
 See [docs/STATUS.md](docs/STATUS.md) for the current evidence-weighted progress, ready scope, and known remaining work.
 See [docs/REMAINING_WORK.md](docs/REMAINING_WORK.md) or MCP resource `easyar://status/remaining-work` for the current scoped gaps and full production blockers.
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the current local-key MVP boundary and remaining work toward the full EasyAR MCP service goal.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the current local-key MVP boundary, and [docs/FULL_GOAL_PLAN.md](docs/FULL_GOAL_PLAN.md) for the staged path toward the full EasyAR MCP service goal.
 
 To verify the published GitHub Release tarball from a fresh temporary consumer project:
 
@@ -425,6 +425,7 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar://install/github-release`
 - `easyar://release/local-key-mvp`
 - `easyar://roadmap`
+- `easyar://roadmap/full-goal`
 - `easyar://unity/checklist`
 - `easyar://workflow/quickstart`
 - `easyar://workflow/focused-scope`

@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.26/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.26";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.27/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.27";
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Current scoped objective: about 90%"
@@ -15,6 +15,7 @@ const expectedLocalKeyProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_LOCA
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Local-key MVP public usability: about 93%"
     : "Local-key MVP public usability: about 95%");
+const expectFullGoalPlan = !["v0.1.0-local-key.25", "v0.1.0-local-key.26"].includes(expectedReleaseTag);
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -51,6 +52,9 @@ try {
   assert(check.stdout.includes("OK github-release-install"), "Release check bin should verify GitHub Release install resource.");
   assert(check.stdout.includes("OK local-key-release-notes"), "Release check bin should verify local-key release notes resource.");
   assert(check.stdout.includes("OK roadmap"), "Release check bin should verify roadmap resource.");
+  if (expectFullGoalPlan) {
+    assert(check.stdout.includes("OK full-goal-plan"), "Release check bin should verify full goal plan resource.");
+  }
   assert(check.stdout.includes("Secret values are not required"), "Release install check should state that secrets are not needed.");
 
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");
@@ -59,6 +63,7 @@ try {
   const freshProjectAcceptance = await readFile(path.join(packageRoot, "docs", "FRESH_PROJECT_ACCEPTANCE.md"), "utf8");
   const currentStatus = await readFile(path.join(packageRoot, "docs", "STATUS.md"), "utf8");
   const remainingWork = await readFile(path.join(packageRoot, "docs", "REMAINING_WORK.md"), "utf8");
+  const fullGoalPlan = expectFullGoalPlan ? await readFile(path.join(packageRoot, "docs", "FULL_GOAL_PLAN.md"), "utf8") : "";
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
   const codexConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
     client: "codex",
@@ -98,6 +103,12 @@ try {
   assert(remainingWork.includes("mcp-easyar Remaining Work"), "Package should include remaining work guide.");
   assert(remainingWork.includes("Remaining For Current Scoped Target"), "Remaining work guide should include current scoped gaps.");
   assert(remainingWork.includes("Remaining For Full Production Goal"), "Remaining work guide should include production gaps.");
+  if (expectFullGoalPlan) {
+    assert(fullGoalPlan.includes("mcp-easyar Full Goal Plan"), "Package should include full goal plan.");
+    assert(fullGoalPlan.includes("Expansion Track 1: More EasyAR Samples"), "Full goal plan should include sample expansion track.");
+    assert(fullGoalPlan.includes("Expansion Track 2: Official API Production Integration"), "Full goal plan should include official API track.");
+    assert(fullGoalPlan.includes("Expansion Track 3: Unity Programming Service"), "Full goal plan should include Unity programming track.");
+  }
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");

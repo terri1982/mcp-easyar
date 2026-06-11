@@ -2,14 +2,16 @@
 
 This roadmap tracks the current scoped local-key MVP goal: Image Tracking and CRS/Cloud Recognition only.
 
+For the broader service objective across more samples, official API production integration, and Unity programming service hardening, read [FULL_GOAL_PLAN.md](FULL_GOAL_PLAN.md) or MCP resource `easyar://roadmap/full-goal`.
+
 ## Current State
 
-Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.26`.
+Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.27`.
 
 The current release can be installed from GitHub Releases:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.26/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.27/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

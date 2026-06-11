@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.26";
+const currentGitHubReleaseTag = "v0.1.0-local-key.27";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -209,6 +209,7 @@ const resourceCatalog = [
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
+  "easyar://roadmap/full-goal",
   "easyar://unity/checklist",
   "easyar://workflow/quickstart",
   "easyar://workflow/focused-scope",
@@ -481,6 +482,20 @@ server.resource(
         uri: uri.href,
         mimeType: "text/markdown",
         text: await readFile(path.join(packageRoot, "docs", "ROADMAP.md"), "utf8")
+      }
+    ]
+  })
+);
+
+server.resource(
+  "easyar-full-goal-plan",
+  "easyar://roadmap/full-goal",
+  async (uri) => ({
+    contents: [
+      {
+        uri: uri.href,
+        mimeType: "text/markdown",
+        text: await readFile(path.join(packageRoot, "docs", "FULL_GOAL_PLAN.md"), "utf8")
       }
     ]
   })
@@ -6614,6 +6629,7 @@ async function buildReleaseManifest() {
     "docs/install-from-github-release.md",
     "docs/REMAINING_WORK.md",
     "docs/ROADMAP.md",
+    "docs/FULL_GOAL_PLAN.md",
     "docs/STATUS.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
