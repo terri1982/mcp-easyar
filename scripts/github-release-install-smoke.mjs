@@ -5,8 +5,8 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.8/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.8";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.9/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.9";
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -41,12 +41,26 @@ try {
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");
   const installGuide = await readFile(path.join(packageRoot, "docs", "install-from-github-release.md"), "utf8");
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
+  const codexConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
+    client: "codex",
+    entrypointMode: "package-bin",
+    includeTokenPlaceholder: false
+  });
+  const claudeConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
+    client: "claude-desktop",
+    entrypointMode: "package-bin",
+    includeTokenPlaceholder: false
+  });
   assert(installGuide.includes(expectedReleaseTag), "Install guide should point to the expected GitHub Release tag.");
   assert(installGuide.includes("For Codex:"), "Install guide should include a Codex package-bin config section.");
   assert(installGuide.includes("\"command\": \"easyar-mcp\""), "Install guide should use the package-bin easyar-mcp command.");
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");
+  assert(codexConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Codex package-bin config.");
+  assert(codexConfig.includes("\"client\": \"codex\""), "Installed MCP should identify Codex config.");
+  assert(claudeConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Claude package-bin config.");
+  assert(claudeConfig.includes("\"client\": \"claude-desktop\""), "Installed MCP should identify Claude config.");
 
   console.log("GitHub Release install smoke test passed.");
   console.log(`Release tarball: ${releaseTarballUrl}`);
@@ -98,4 +112,89 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function callInstalledTool(serverBin, cwd, name, args) {
+  const child = spawn(serverBin, [], {
+    cwd,
+    env: {
+      ...process.env,
+      EASYAR_API_BASE_URL: "https://www.easyar.cn",
+      EASYAR_API_TOKEN: "",
+      EASYAR_ACCOUNT_STATUS_ENDPOINT: "",
+      EASYAR_LICENSE_VALIDATE_ENDPOINT: "",
+      EASYAR_DOWNLOADS_ENDPOINT: "",
+      EASYAR_CLOUD_CREDENTIALS_ENDPOINT: ""
+    },
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+  let nextId = 1;
+  const pending = new Map();
+  let stdoutBuffer = "";
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdoutBuffer += chunk;
+    const lines = stdoutBuffer.split(/\r?\n/);
+    stdoutBuffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue;
+      }
+      const message = JSON.parse(line);
+      const resolver = pending.get(message.id);
+      if (resolver) {
+        pending.delete(message.id);
+        resolver(message);
+      }
+    }
+  });
+
+  function request(method, params) {
+    const id = nextId++;
+    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error(`Timed out waiting for ${method}. stderr=${stderr.trim()}`));
+      }, 10000);
+      pending.set(id, (message) => {
+        clearTimeout(timeout);
+        if (message.error) {
+          reject(new Error(JSON.stringify(message.error)));
+        } else {
+          resolve(message);
+        }
+      });
+    });
+  }
+
+  function notify(method, params) {
+    child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method, params })}\n`);
+  }
+
+  return (async () => {
+    try {
+      await request("initialize", {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: {
+          name: "mcp-easyar-github-release-smoke",
+          version: "0.0.1"
+        }
+      });
+      notify("notifications/initialized", {});
+      const response = await request("tools/call", {
+        name,
+        arguments: args
+      });
+      return response.result.content.map((item) => item.text ?? "").join("\n");
+    } finally {
+      child.kill();
+    }
+  })();
 }

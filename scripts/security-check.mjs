@@ -57,6 +57,7 @@ try {
   const tarList = await run("tar", ["-tzf", tarballPath], { cwd: root });
   const packageFiles = tarList.stdout.split(/\r?\n/).filter(Boolean);
   const allowedPackagedScripts = new Set([
+    "package/scripts/github-release-install-smoke.mjs",
     "package/scripts/official-api-canary.mjs",
     "package/scripts/official-api-stub.mjs"
   ]);

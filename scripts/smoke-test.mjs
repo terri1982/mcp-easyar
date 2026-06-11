@@ -867,7 +867,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.8"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.9"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -951,6 +951,7 @@ try {
   assert(committedReleaseManifest.includes("official-api:canary"), "Committed release manifest should include official API canary");
   assert(committedReleaseManifest.includes("official-api:stub"), "Committed release manifest should include official API stub");
   assert(committedReleaseManifest.includes("official-api:stub-smoke"), "Committed release manifest should include official API stub smoke");
+  assert(committedReleaseManifest.includes("scripts/github-release-install-smoke.mjs"), "Committed release manifest should include GitHub Release install smoke script");
   assert(committedReleaseManifest.includes("npm run release:check"), "Committed release manifest should include release check");
   assert(committedReleaseManifest.includes("npm run github-release:smoke"), "Committed release manifest should include GitHub Release tarball smoke check");
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");

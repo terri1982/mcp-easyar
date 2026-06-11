@@ -163,6 +163,7 @@ Entrypoint mode: `npx`
 - docs/RELEASE_MANIFEST.md
 - docs/troubleshooting.md
 - assets/easyar-icon.png
+- scripts/github-release-install-smoke.mjs
 - scripts/official-api-canary.mjs
 - scripts/official-api-stub.mjs
 - .env.example
