@@ -6190,6 +6190,14 @@ async function buildReleaseManifest() {
       "EASYAR_RELEASE_PROJECT_PATH",
       "EASYAR_RELEASE_PLATFORM"
     ],
+    validationEnvironment: [
+      "EASYAR_RELEASE_REQUIRE_PRODUCTION_READY",
+      "EASYAR_CANARY_PROJECT_PATH",
+      "EASYAR_CANARY_PLATFORM",
+      "EASYAR_STUB_HOST",
+      "EASYAR_STUB_PORT",
+      "EASYAR_STUB_TOKEN"
+    ],
     firstCalls: [
       "easyar_server_status",
       "easyar_release_manifest",
@@ -14512,6 +14520,10 @@ function buildReleaseManifestMarkdown(manifest: Awaited<ReturnType<typeof buildR
     "## Required Environment",
     "",
     ...manifest.requiredEnvironment.map((name) => `- \`${name}\``),
+    "",
+    "## Validation Environment",
+    "",
+    ...manifest.validationEnvironment.map((name) => `- \`${name}\``),
     "",
     "## Required Files",
     "",

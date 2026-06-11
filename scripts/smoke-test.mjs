@@ -901,6 +901,9 @@ try {
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_PROJECT_PATH"), "Committed release manifest should include release project evidence path env");
+  assert(committedReleaseManifest.includes("Validation Environment"), "Committed release manifest should include validation helper environment section");
+  assert(committedReleaseManifest.includes("EASYAR_CANARY_PROJECT_PATH"), "Committed release manifest should include canary project evidence path env");
+  assert(committedReleaseManifest.includes("EASYAR_STUB_TOKEN"), "Committed release manifest should include stub token env placeholder");
   assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
   assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");
   assert(committedReleaseManifest.includes("docs/openapi/easyar-mcp-account-api.openapi.json"), "Committed release manifest should include OpenAPI contract");

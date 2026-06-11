@@ -79,8 +79,15 @@ EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/st
 EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
 EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
 EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
-EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
+EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity
 EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
+EASYAR_RELEASE_PROJECT_PATH=/path/to/UnityProject
+EASYAR_RELEASE_PLATFORM=android
+EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject
+EASYAR_CANARY_PLATFORM=android
+EASYAR_STUB_HOST=127.0.0.1
+EASYAR_STUB_PORT=8787
+EASYAR_STUB_TOKEN=your_local_stub_token
 ```
 
 The repository includes `.env.example` as a non-secret template. Copy values into your MCP client environment, OS keychain, CI secrets, or a local untracked `.env`; never commit real EasyAR tokens, license keys, `appKey`, or `appSecret`.
@@ -340,6 +347,8 @@ EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject EASYAR_CANARY_PLATFORM=android 
 The canary uses the same endpoint env vars as the MCP server, checks both focused samples, and prints only safe blocker ids.
 
 For local endpoint-contract wiring before real backend services exist, run `npm run official-api:stub` in one shell, export the endpoint variables it prints in another shell, then run `npm run official-api:canary`. The stub returns fixture metadata only and must not be used as a production account service.
+
+Use `.env.example` as the full non-secret variable checklist. Keep `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` for final release tags, npm publishing, or protected CI environments; keep it unset or `0` while iterating locally.
 
 After importing official EasyAR assets and configuring Build Settings, run the generated Unity-side focused sample validator:
 

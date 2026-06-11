@@ -111,8 +111,15 @@ EASYAR_ACCOUNT_STATUS_ENDPOINT=https://www.easyar.cn/path/to/official/account/st
 EASYAR_LICENSE_VALIDATE_ENDPOINT=https://www.easyar.cn/path/to/official/license/validate
 EASYAR_DOWNLOADS_ENDPOINT=https://www.easyar.cn/path/to/official/downloads
 EASYAR_CLOUD_CREDENTIALS_ENDPOINT=https://www.easyar.cn/path/to/official/cloud-recognition/credentials
-EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f1/Unity.app/Contents/MacOS/Unity
+EASYAR_UNITY_PATH=/Applications/Unity/Hub/Editor/2022.3.62f3/Unity.app/Contents/MacOS/Unity
 EASYAR_UNITY_CANDIDATE_DIRS=/Applications/Unity/Hub/Editor
+EASYAR_RELEASE_PROJECT_PATH=/path/to/UnityProject
+EASYAR_RELEASE_PLATFORM=android
+EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject
+EASYAR_CANARY_PLATFORM=android
+EASYAR_STUB_HOST=127.0.0.1
+EASYAR_STUB_PORT=8787
+EASYAR_STUB_TOKEN=your_local_stub_token
 ```
 
 Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, tokens, license keys, and Cloud Recognition credentials local.
@@ -201,6 +208,8 @@ Npm publishing should use the manual GitHub Actions `Release` workflow. It runs 
 After staging or production EasyAR account endpoints are configured, run `npm run official-api:canary` with `EASYAR_API_TOKEN`, the four official endpoint variables, and `EASYAR_CANARY_PROJECT_PATH` or `EASYAR_RELEASE_PROJECT_PATH`. The canary checks account status, Image Tracking official access, Cloud Recognition official access, and production validation while printing only blocker ids.
 
 When backend routing is still being wired, run `npm run official-api:stub` to start a local contract-compatible endpoint stub. Use it only for local gateway/canary validation; production must connect to real EasyAR account, license, downloads, and Cloud Recognition services.
+
+The release and canary project path variables should point to a Unity project that already contains focused sample evidence under `Assets/EasyARGenerated`. The stub variables are local development placeholders only; do not configure them in production.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
