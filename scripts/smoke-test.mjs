@@ -24,7 +24,10 @@ const child = spawn(command, args, {
     EASYAR_LICENSE_VALIDATE_ENDPOINT: "",
     EASYAR_DOWNLOADS_ENDPOINT: "",
     EASYAR_CLOUD_CREDENTIALS_ENDPOINT: "",
-    EASYAR_UNITY_CANDIDATE_DIRS: unityCandidateRoot
+    EASYAR_UNITY_PATH: "",
+    EASYAR_UNITY_CANDIDATE_DIRS: unityCandidateRoot,
+    EASYAR_RELEASE_PROJECT_PATH: "",
+    EASYAR_RELEASE_PLATFORM: ""
   },
   stdio: ["pipe", "pipe", "pipe"]
 });
@@ -891,10 +894,15 @@ try {
   assert(committedReleaseManifest.includes("npm run release:check"), "Committed release manifest should include release check");
   assert(committedReleaseManifest.includes("npm run security:check"), "Committed release manifest should include security check");
   assert(committedReleaseManifest.includes("EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1"), "Committed release manifest should include strict production gate");
+  assert(committedReleaseManifest.includes("EASYAR_RELEASE_PROJECT_PATH"), "Committed release manifest should include release project evidence path env");
   assert(committedReleaseManifest.includes(".env.example"), "Committed release manifest should include env example");
   assert(committedReleaseManifest.includes("docs/OFFICIAL_API_HANDOFF.md"), "Committed release manifest should include official API handoff");
   assert(committedReleaseManifest.includes("docs/openapi/easyar-mcp-account-api.openapi.json"), "Committed release manifest should include OpenAPI contract");
   assert(committedReleaseManifest.includes("docs/client-setup.md"), "Committed release manifest should include client setup guide");
+
+  const releaseCheckScript = await readFile(path.join(process.cwd(), "scripts", "release-check.mjs"), "utf8");
+  assert(releaseCheckScript.includes("EASYAR_RELEASE_PROJECT_PATH"), "release:check should accept a focused sample evidence project path");
+  assert(releaseCheckScript.includes("EASYAR_RELEASE_PLATFORM"), "release:check should accept a focused sample evidence platform");
 
   const releaseManifestRoot = await createUnityProject();
   const writtenReleaseManifest = await callTool("easyar_write_release_manifest", {

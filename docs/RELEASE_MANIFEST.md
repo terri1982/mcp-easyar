@@ -1,6 +1,6 @@
 # mcp-easyar Release Manifest
 
-Generated at: 2026-06-11T02:29:07.891Z
+Generated at: 2026-06-11T02:32:42.568Z
 Package: mcp-easyar 0.1.0
 Bin: easyar-mcp
 Node: >=20
@@ -89,6 +89,8 @@ Entrypoint mode: `npx`
 - `EASYAR_DOWNLOADS_ENDPOINT`
 - `EASYAR_CLOUD_CREDENTIALS_ENDPOINT`
 - `EASYAR_UNITY_PATH`
+- `EASYAR_RELEASE_PROJECT_PATH`
+- `EASYAR_RELEASE_PLATFORM`
 
 ## Required Files
 

@@ -6186,7 +6186,9 @@ async function buildReleaseManifest() {
       "EASYAR_LICENSE_VALIDATE_ENDPOINT",
       "EASYAR_DOWNLOADS_ENDPOINT",
       "EASYAR_CLOUD_CREDENTIALS_ENDPOINT",
-      "EASYAR_UNITY_PATH"
+      "EASYAR_UNITY_PATH",
+      "EASYAR_RELEASE_PROJECT_PATH",
+      "EASYAR_RELEASE_PLATFORM"
     ],
     firstCalls: [
       "easyar_server_status",

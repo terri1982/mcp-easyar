@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 
 const root = process.cwd();
 const requireProductionReady = process.env.EASYAR_RELEASE_REQUIRE_PRODUCTION_READY === "1";
+const releaseProjectPath = nonEmpty(process.env.EASYAR_RELEASE_PROJECT_PATH);
+const releasePlatform = nonEmpty(process.env.EASYAR_RELEASE_PLATFORM) ?? "android";
 const verificationCommands = [
   ["npm", ["run", "typecheck"]],
   ["npm", ["test"]],
@@ -14,13 +16,23 @@ const verificationCommands = [
 
 try {
   console.log("mcp-easyar release check");
+  if (!["android", "ios"].includes(releasePlatform)) {
+    throw new Error(`EASYAR_RELEASE_PLATFORM must be "android" or "ios", got "${releasePlatform}".`);
+  }
   for (const [command, args] of verificationCommands) {
     await run(command, args, { cwd: root, inherit: true });
   }
 
-  const productionValidation = await callMcpTool("easyar_production_validation", {
-    verificationEvidence: "passed"
-  });
+  const productionValidationArgs = {
+    verificationEvidence: "passed",
+    platform: releasePlatform
+  };
+  if (releaseProjectPath) {
+    productionValidationArgs.projectPath = releaseProjectPath;
+  }
+  console.log(`Production validation project: ${releaseProjectPath ?? "not provided"}`);
+  console.log(`Production validation platform: ${releasePlatform}`);
+  const productionValidation = await callMcpTool("easyar_production_validation", productionValidationArgs);
   const validationText = extractText(productionValidation);
   const validation = JSON.parse(validationText);
   console.log(`Production ready: ${validation.productionReady ? "yes" : "no"}`);
@@ -41,6 +53,10 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
+}
+
+function nonEmpty(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
 function run(command, args, options = {}) {

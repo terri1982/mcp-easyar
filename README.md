@@ -194,9 +194,9 @@ npm run security:check
 npm run release:check
 ```
 
-`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command.
+`release:check` runs the package/repository verification commands and then calls `easyar_production_validation`. It exits successfully while production evidence is still incomplete, but prints the blockers. Set `EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1` before a real release tag or npm publish to make incomplete production readiness fail the command. For the strict gate, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project that contains the focused `RUN_RESULT.md`, `COMPLETION_REPORT.md`, and `FOCUSED_SCOPE_STATUS.md` evidence; set `EASYAR_RELEASE_PLATFORM` when the evidence is not Android.
 
-Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment.
+Npm publishing should use the manual GitHub Actions `Release` workflow. It runs the strict production gate first, then publishes with npm provenance from the protected `npm-publish` environment. Configure the protected environment with the official EasyAR endpoint vars plus `EASYAR_RELEASE_PROJECT_PATH`/`EASYAR_RELEASE_PLATFORM` so the gate can verify both account APIs and focused sample evidence.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
