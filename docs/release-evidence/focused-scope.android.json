@@ -9,7 +9,7 @@
     "image-tracking",
     "cloud-recognition"
   ],
-  "deferredSampleIds": [
+  "outOfScopeSampleIds": [
     "hello-ar",
     "surface-tracking"
   ],

@@ -526,7 +526,7 @@ try {
   });
   assertResourceIncludes(currentStatusResource, "mcp-easyar Current Status");
   assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
-  assertResourceIncludes(currentStatusResource, "Full objective: about 66%");
+  assertResourceIncludes(currentStatusResource, "Current scoped objective: about 88%");
 
   const githubReleaseInstallResource = await request("resources/read", {
     uri: "easyar://install/github-release"
@@ -547,7 +547,7 @@ try {
   });
   assertResourceIncludes(roadmapResource, "mcp-easyar Roadmap");
   assertResourceIncludes(roadmapResource, "Current State");
-  assertResourceIncludes(roadmapResource, "Remaining For Full Goal");
+  assertResourceIncludes(roadmapResource, "Remaining For Scoped Goal");
 
   const focusedScopeResource = await request("resources/read", {
     uri: "easyar://workflow/focused-scope"
@@ -563,13 +563,6 @@ try {
   assertResourceIncludes(programmingWorkflowResource, "easyar_write_config_integration_audit");
   assertResourceIncludes(programmingWorkflowResource, "CODE_CHANGE.md");
   assertResourceIncludes(programmingWorkflowResource, "Never hardcode EasyAR license keys");
-
-  const sampleExpansionResource = await request("resources/read", {
-    uri: "easyar://workflow/sample-expansion"
-  });
-  assertResourceIncludes(sampleExpansionResource, "EasyAR Sample Expansion Guide");
-  assertResourceIncludes(sampleExpansionResource, "Expansion Requirements");
-  assertResourceIncludes(sampleExpansionResource, "Current Next Sample Policy");
 
   const authStatus = await callTool("easyar_auth_status", {});
   assertTextIncludes(authStatus, "\"hasToken\": false");
@@ -980,7 +973,6 @@ try {
   assertTextIncludes(releaseManifest, "docs/client-setup.md");
   assertTextIncludes(releaseManifest, "docs/install-from-github-release.md");
   assertTextIncludes(releaseManifest, "docs/ROADMAP.md");
-  assertTextIncludes(releaseManifest, "docs/SAMPLE_EXPANSION.md");
   assertTextIncludes(releaseManifest, "docs/STATUS.md");
 
   const committedReleaseManifest = await readFile(
@@ -990,7 +982,6 @@ try {
   assert(committedReleaseManifest.includes("mcp-easyar Release Manifest"), "Committed release manifest should include title");
   assert(committedReleaseManifest.includes("docs/CLIENT_ACCEPTANCE.md"), "Committed release manifest should include client acceptance guide");
   assert(committedReleaseManifest.includes("docs/ROADMAP.md"), "Committed release manifest should include roadmap");
-  assert(committedReleaseManifest.includes("docs/SAMPLE_EXPANSION.md"), "Committed release manifest should include sample expansion guide");
   assert(committedReleaseManifest.includes("docs/STATUS.md"), "Committed release manifest should include current status guide");
   assert(committedReleaseManifest.includes("easyar_check_client_setup"), "Committed release manifest should include first calls/client setup tools");
   assert(committedReleaseManifest.includes("Install Profiles"), "Committed release manifest should include install profiles");

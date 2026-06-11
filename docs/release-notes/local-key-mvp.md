@@ -9,9 +9,9 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 - Connects Codex, Claude, and other stdio MCP clients to EasyAR Unity workflow tools.
 - Guides first-time or registered EasyAR users through browser-only registration/login/download/key setup.
 - Keeps EasyAR website passwords, verification codes, account tokens, license keys, API KEY/API Secret, appKey, and appSecret out of chat.
-- Supports the focused Unity sample run-through scope:
+- Supports the scoped Unity sample run-through target:
   - Image Tracking
-  - Cloud Recognition
+  - CRS/Cloud Recognition
 - Includes committed safe Android release evidence for the focused scope.
 - Provides Unity project assistance tools for local config, preflight, import guidance, build/run sequencing, log diagnostics, C# planning, script writing, and support bundles.
 
@@ -60,7 +60,7 @@ Website login is not needed at Unity runtime after the official plugin and local
 
 - Official EasyAR account/license/download/cloud entitlement APIs are not connected yet.
 - npm registry publishing is not enabled yet.
-- Hello AR, Surface Tracking, and other samples remain deferred until explicitly resumed.
+- Hello AR, Surface Tracking, and other samples are out of scope for this release target.
 - This release does not bypass EasyAR login, license checks, download authorization, enterprise gates, or rate limits.
 
 ## Verification
@@ -73,7 +73,7 @@ The release gate requires:
 - package install smoke test
 - npm pack dry run
 - repository security check
-- local-key MVP evidence for focused Image Tracking and Cloud Recognition
+- local-key MVP evidence for Image Tracking and CRS/Cloud Recognition
 
 Additional published-asset check:
 

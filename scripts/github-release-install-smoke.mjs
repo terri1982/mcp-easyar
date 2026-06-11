@@ -41,7 +41,6 @@ try {
   assert(check.stdout.includes("OK github-release-install"), "Release check bin should verify GitHub Release install resource.");
   assert(check.stdout.includes("OK local-key-release-notes"), "Release check bin should verify local-key release notes resource.");
   assert(check.stdout.includes("OK roadmap"), "Release check bin should verify roadmap resource.");
-  assert(check.stdout.includes("OK sample-expansion-workflow"), "Release check bin should verify sample expansion workflow resource.");
   assert(check.stdout.includes("Secret values are not required"), "Release install check should state that secrets are not needed.");
 
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");
@@ -49,7 +48,6 @@ try {
   const clientAcceptance = await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8");
   const currentStatus = await readFile(path.join(packageRoot, "docs", "STATUS.md"), "utf8");
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
-  const sampleExpansionGuide = await readFile(path.join(packageRoot, "docs", "SAMPLE_EXPANSION.md"), "utf8");
   const codexConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
     client: "codex",
     entrypointMode: "package-bin",
@@ -67,14 +65,11 @@ try {
   assert(clientAcceptance.includes("Package-Bin Client Config"), "Client acceptance checklist should include package-bin config acceptance.");
   assert(clientAcceptance.includes("First Client Calls"), "Client acceptance checklist should include first client calls.");
   assert(currentStatus.includes("mcp-easyar Current Status"), "Package should include current status guide.");
-  assert(currentStatus.includes("Full objective: about 66%"), "Current status guide should include full objective progress.");
-  assert(currentStatus.includes("Local-key MVP public usability: about 88%"), "Current status guide should include local-key MVP progress.");
+  assert(currentStatus.includes("Current scoped objective: about 88%"), "Current status guide should include scoped objective progress.");
+  assert(currentStatus.includes("Local-key MVP public usability: about 90%"), "Current status guide should include local-key MVP progress.");
   assert(releaseNotes.includes(expectedReleaseTag), "Release notes should point to the expected GitHub Release tag.");
   assert(releaseNotes.includes("Local-key MVP ready: yes"), "Release notes should state local-key MVP readiness.");
   assert(releaseNotes.includes("Production official API ready: no"), "Release notes should state production API readiness.");
-  assert(sampleExpansionGuide.includes("EasyAR Sample Expansion Guide"), "Package should include sample expansion guide.");
-  assert(sampleExpansionGuide.includes("Expansion Requirements"), "Sample expansion guide should include acceptance requirements.");
-  assert(sampleExpansionGuide.includes("Current Next Sample Policy"), "Sample expansion guide should include current next sample policy.");
   assert(codexConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Codex package-bin config.");
   assert(codexConfig.includes("\"client\": \"codex\""), "Installed MCP should identify Codex config.");
   assert(claudeConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Claude package-bin config.");

@@ -8,7 +8,7 @@
 
 `mcp-easyar` helps registered EasyAR users connect AI coding tools such as Codex and Claude to authorized EasyAR Unity workflows.
 
-This MVP focuses on local Unity project assistance. The current sample run-through scope is intentionally limited to Image Tracking and Cloud Recognition; Hello AR, Surface Tracking, and other samples are cataloged for later expansion.
+This MVP focuses on local Unity project assistance. The current sample run-through target is intentionally limited to Image Tracking and CRS/Cloud Recognition; Hello AR, Surface Tracking, and other samples are out of scope for this goal.
 
 Current readiness is split into two tracks:
 
@@ -38,7 +38,7 @@ Current delivery path: use local-key MVP first. Users register/log in/download/c
 - generate redacted GitHub issue reports for focused sample failures
 - plan scoped Unity C# changes before Codex or Claude writes sample scripts
 - summarize Unity C# code changes after script edits and before Unity compilation
-- list common EasyAR Unity sample categories with focused/deferred status
+- list EasyAR sample categories while making the supported target scope explicit
 - generate an Editor runner script for opening sample scenes
 - generate an Editor helper for Android/iOS player settings and camera permissions
 - generate an Editor helper for adding sample scenes to Unity Build Settings
@@ -106,7 +106,6 @@ See [docs/install-from-github-release.md](docs/install-from-github-release.md) f
 See [docs/CLIENT_ACCEPTANCE.md](docs/CLIENT_ACCEPTANCE.md) for the Codex/Claude client acceptance checklist after installing the package.
 See [docs/STATUS.md](docs/STATUS.md) for the current evidence-weighted progress, ready scope, and known remaining work.
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the current local-key MVP boundary and remaining work toward the full EasyAR MCP service goal.
-See [docs/SAMPLE_EXPANSION.md](docs/SAMPLE_EXPANSION.md) for the acceptance bar before adding more EasyAR samples to the supported scope.
 
 To verify the published GitHub Release tarball from a fresh temporary consumer project:
 
@@ -413,7 +412,6 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar://workflow/quickstart`
 - `easyar://workflow/focused-scope`
 - `easyar://workflow/programming`
-- `easyar://workflow/sample-expansion`
 
 ## Prompts
 

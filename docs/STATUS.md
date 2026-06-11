@@ -2,7 +2,7 @@
 
 This status page summarizes the current evidence-backed state of `mcp-easyar`.
 
-It is not a completion claim for the full EasyAR MCP service goal. The full goal remains open until more EasyAR samples and production official API automation are verified.
+It is not a completion claim for every EasyAR sample. The current goal has been narrowed to Image Tracking and CRS/Cloud Recognition only.
 
 ## Current Release
 
@@ -17,10 +17,10 @@ easyar-mcp-check
 
 ## Evidence-Weighted Progress
 
-- Full objective: about 66%
-- Local-key MVP public usability: about 88%
+- Current scoped objective: about 88%
+- Local-key MVP public usability: about 90%
 
-These percentages are evidence-weighted estimates. They are based on published package checks, focused sample evidence, client setup coverage, and known remaining blockers.
+These percentages are evidence-weighted estimates. They are based on published package checks, focused sample evidence, client setup coverage, and known remaining polish work.
 
 ## What Is Ready
 
@@ -29,19 +29,18 @@ These percentages are evidence-weighted estimates. They are based on published p
 - Codex, Claude Desktop, and generic MCP client config generation are implemented.
 - Client acceptance guidance is available through `docs/CLIENT_ACCEPTANCE.md` and `easyar://client/acceptance`.
 - Local-key onboarding is implemented without collecting EasyAR website passwords or secret keys in chat.
-- Focused Image Tracking and Cloud Recognition workflows are implemented.
-- Safe committed Android evidence exists for the focused Image Tracking and Cloud Recognition scope.
+- Focused Image Tracking and CRS/Cloud Recognition workflows are implemented.
+- Safe committed Android evidence exists for the Image Tracking and CRS/Cloud Recognition target scope.
 - Unity project programming assistance exists for focused preflight, scene audit, run sequence, device validation, log analysis, C# planning, script writing, review, and handoff artifacts.
-- Sample expansion criteria are documented in `docs/SAMPLE_EXPANSION.md` and `easyar://workflow/sample-expansion`.
 
 ## Active Scope
 
-Currently focused samples:
+Current target samples:
 
 - Image Tracking
-- Cloud Recognition
+- CRS/Cloud Recognition
 
-Deferred until the project owner resumes broader sample coverage:
+Out of scope for the current goal:
 
 - Hello AR
 - Surface Tracking
@@ -49,10 +48,9 @@ Deferred until the project owner resumes broader sample coverage:
 
 ## Known Remaining Work
 
-- Run through and verify additional official EasyAR samples.
-- Connect production official EasyAR APIs for account status, license validation, download entitlement, and Cloud Recognition credential discovery.
+- Keep Image Tracking and CRS/Cloud Recognition evidence, docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
-- Add more real-device and platform evidence if supported Unity versions or target platforms expand.
+- Add more real-device and platform evidence if supported Unity versions or target platforms expand for the two target samples.
 - Continue hardening Unity programming workflows with more real project cases.
 
 ## Safety Boundary
@@ -69,6 +67,6 @@ MCP must not ask users to paste EasyAR website passwords, verification codes, li
 ## Best Next Actions
 
 1. Keep the GitHub Release tarball and docs aligned with every public prerelease.
-2. If the next priority is more samples, pick exactly one deferred sample and apply `docs/SAMPLE_EXPANSION.md`.
-3. If the next priority is production automation, complete the official EasyAR API contract and staging endpoint validation.
-4. If the next priority is user adoption, test a fresh Codex and Claude Desktop setup using `docs/CLIENT_ACCEPTANCE.md`.
+2. Test a fresh Codex and Claude Desktop setup using `docs/CLIENT_ACCEPTANCE.md`.
+3. Run another clean install/build/device pass only for Image Tracking and CRS/Cloud Recognition when the Unity project changes.
+4. Decide whether npm publication is needed for this scoped local-key MVP.

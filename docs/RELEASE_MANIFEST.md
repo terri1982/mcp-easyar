@@ -141,7 +141,6 @@ Entrypoint mode: `npx`
 - OK docs/client-setup.md
 - OK docs/install-from-github-release.md
 - OK docs/ROADMAP.md
-- OK docs/SAMPLE_EXPANSION.md
 - OK docs/STATUS.md
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md
@@ -165,7 +164,6 @@ Entrypoint mode: `npx`
 - docs/client-setup.md
 - docs/install-from-github-release.md
 - docs/ROADMAP.md
-- docs/SAMPLE_EXPANSION.md
 - docs/STATUS.md
 - docs/quickstart.md
 - docs/RELEASE_MANIFEST.md

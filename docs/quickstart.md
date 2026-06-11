@@ -154,7 +154,7 @@ For now, use one of the focused sample workflows:
 - `image-tracking`
 - `cloud-recognition`
 
-Other EasyAR samples are intentionally deferred until the focused workflows are running cleanly.
+Other EasyAR samples are out of scope for the current Image Tracking and CRS/Cloud Recognition target.
 
 Call:
 

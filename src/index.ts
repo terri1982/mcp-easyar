@@ -209,8 +209,7 @@ const resourceCatalog = [
   "easyar://unity/checklist",
   "easyar://workflow/quickstart",
   "easyar://workflow/focused-scope",
-  "easyar://workflow/programming",
-  "easyar://workflow/sample-expansion"
+  "easyar://workflow/programming"
 ] as const;
 
 const samples: SampleInfo[] = [
@@ -570,20 +569,6 @@ server.resource(
           "5. `CODE_CHANGE.md`",
           "6. Latest Unity compile log summary or `SUPPORT_BUNDLE.md`"
         ].join("\n")
-      }
-    ]
-  })
-);
-
-server.resource(
-  "easyar-sample-expansion-workflow",
-  "easyar://workflow/sample-expansion",
-  async (uri) => ({
-    contents: [
-      {
-        uri: uri.href,
-        mimeType: "text/markdown",
-        text: await readFile(path.join(packageRoot, "docs", "SAMPLE_EXPANSION.md"), "utf8")
       }
     ]
   })
@@ -6572,7 +6557,6 @@ async function buildReleaseManifest() {
     "docs/client-setup.md",
     "docs/install-from-github-release.md",
     "docs/ROADMAP.md",
-    "docs/SAMPLE_EXPANSION.md",
     "docs/STATUS.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",

@@ -1,6 +1,6 @@
 # mcp-easyar Roadmap
 
-This roadmap tracks the gap between the current local-key MVP and the full EasyAR MCP service goal.
+This roadmap tracks the current scoped local-key MVP goal: Image Tracking and CRS/Cloud Recognition only.
 
 ## Current State
 
@@ -21,33 +21,29 @@ easyar-mcp-check
 - Install checks, package smoke tests, GitHub Release install smoke tests, and security checks are implemented.
 - Local-key onboarding is implemented: users register, log in, download, and create keys on the official EasyAR website in their own browser.
 - MCP guides local Unity configuration without collecting website passwords, verification codes, account tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
-- Focused Image Tracking and Cloud Recognition workflows are implemented and have safe committed Android evidence.
+- Focused Image Tracking and CRS/Cloud Recognition workflows are implemented and have safe committed Android evidence.
 - Unity project programming assistance exists for focused sample preflight, scene audit, run sequence, device validation, log collection, C# planning, script writing, and handoff artifacts.
 
 ## Active Scope
 
-The active sample scope remains intentionally focused:
+The active sample target is intentionally limited to:
 
 - Image Tracking
-- Cloud Recognition
+- CRS/Cloud Recognition
 
-Other EasyAR samples remain deferred until explicitly resumed.
+Hello AR, Surface Tracking, and other EasyAR samples are not part of the current goal.
 
-## Remaining For Full Goal
+## Remaining For Scoped Goal
 
-### More Samples
+### Target Samples
 
-Run through, document, and verify additional EasyAR samples after the focused scope is accepted:
+- Keep Image Tracking and CRS/Cloud Recognition release evidence aligned with every public prerelease.
+- Keep install docs, client acceptance docs, and smoke tests aligned with the latest GitHub Release.
+- Continue hardening Unity programming workflows using real Image Tracking and CRS project cases.
 
-- Hello AR
-- Surface Tracking
-- Additional EasyAR Sense Unity samples exposed by the official plugin package
+### Official API Integration
 
-Each added sample should include project preflight, sample import guidance, build/run sequencing, device validation checklist, safe run evidence, and release gate coverage.
-
-### Production Official API Integration
-
-The local-key MVP does not require official EasyAR account APIs. Production automation still needs official service support or an approved internal API contract for:
+The scoped local-key MVP does not require official EasyAR account APIs. If production automation is later required, it still needs official service support or an approved internal API contract for:
 
 - Account status
 - License validation
@@ -66,7 +62,7 @@ Until those APIs exist, the safe path is browser handoff plus local Unity keys.
 ### Unity Coverage
 
 - Keep the verified Unity baseline at Unity `2022.3.62f3` unless the supported version range is expanded.
-- Add repeatable evidence for each supported platform and sample.
+- Add repeatable evidence for each supported platform and target sample.
 - Prefer real-device evidence for AR success; emulators can verify install/startup but cannot prove camera-based tracking success.
 
 ## Safety Rules
@@ -78,6 +74,6 @@ Until those APIs exist, the safe path is browser handoff plus local Unity keys.
 ## Next Best Actions
 
 1. Keep local-key MVP docs and release smoke tests aligned with the latest GitHub Release.
-2. Add a repeatable acceptance checklist for the next sample only when the user explicitly resumes broader sample coverage.
-3. Define and validate official EasyAR API contracts before enabling production account automation.
-4. Decide whether npm publication should wait for production official API readiness or ship as a clearly marked prerelease.
+2. Keep client acceptance checks green for Codex and Claude.
+3. Keep Unity programming support focused on Image Tracking and CRS/Cloud Recognition.
+4. Decide whether npm publication should ship as a clearly marked local-key MVP or wait.

@@ -2,12 +2,12 @@
 
 This guide is for the current local-key MVP release path. It helps a registered or first-time EasyAR user connect Codex, Claude, or another MCP client to local Unity workflows without giving MCP the EasyAR website password.
 
-Current focused scope:
+Current target scope:
 
 - Image Tracking
-- Cloud Recognition
+- CRS/Cloud Recognition
 
-Deferred until later:
+Out of scope for this release target:
 
 - Hello AR
 - Surface Tracking
