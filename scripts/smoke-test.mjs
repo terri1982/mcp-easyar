@@ -551,8 +551,8 @@ try {
   });
   assertResourceIncludes(currentStatusResource, "mcp-easyar Current Status");
   assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
-  assertResourceIncludes(currentStatusResource, "Current scoped objective: about 90%");
-  assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 93%");
+  assertResourceIncludes(currentStatusResource, "Current scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.");
+  assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 95%");
 
   const remainingWorkStatusResource = await request("resources/read", {
     uri: "easyar://status/remaining-work"

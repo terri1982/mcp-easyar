@@ -7,6 +7,14 @@ import { spawn } from "node:child_process";
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
   ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.25/mcp-easyar-0.1.0.tgz";
 const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.25";
+const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
+  ?? (expectedReleaseTag === "v0.1.0-local-key.25"
+    ? "Current scoped objective: about 90%"
+    : "Current scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.");
+const expectedLocalKeyProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_LOCAL_KEY_PROGRESS
+  ?? (expectedReleaseTag === "v0.1.0-local-key.25"
+    ? "Local-key MVP public usability: about 93%"
+    : "Local-key MVP public usability: about 95%");
 const tempRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-github-release-smoke-"));
 const consumerDir = path.join(tempRoot, "consumer");
 
@@ -85,8 +93,8 @@ try {
   assert(freshProjectAcceptance.includes("ProjectSettings/EasyAR/easyar.local.json"), "Fresh project guide should include local config path.");
   assert(freshProjectAcceptance.includes("allFocusedSamplesComplete=true"), "Fresh project guide should include focused completion criterion.");
   assert(currentStatus.includes("mcp-easyar Current Status"), "Package should include current status guide.");
-  assert(currentStatus.includes("Current scoped objective: about 90%"), "Current status guide should include scoped objective progress.");
-  assert(currentStatus.includes("Local-key MVP public usability: about 93%"), "Current status guide should include local-key MVP progress.");
+  assert(currentStatus.includes(expectedScopedProgress), "Current status guide should include scoped objective progress.");
+  assert(currentStatus.includes(expectedLocalKeyProgress), "Current status guide should include local-key MVP progress.");
   assert(remainingWork.includes("mcp-easyar Remaining Work"), "Package should include remaining work guide.");
   assert(remainingWork.includes("Remaining For Current Scoped Target"), "Remaining work guide should include current scoped gaps.");
   assert(remainingWork.includes("Remaining For Full Production Goal"), "Remaining work guide should include production gaps.");

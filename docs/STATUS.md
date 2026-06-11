@@ -17,10 +17,10 @@ easyar-mcp-check
 
 ## Evidence-Weighted Progress
 
-- Current scoped objective: about 90%
-- Local-key MVP public usability: about 93%
+- Current scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
+- Local-key MVP public usability: about 95%
 
-These percentages are evidence-weighted estimates. They are based on published package checks, focused sample evidence, client setup coverage, and known remaining polish work.
+These percentages are evidence-weighted estimates. The scoped objective is complete for the currently approved two-sample target, while the broader production official API goal remains incomplete.
 
 ## What Is Ready
 
