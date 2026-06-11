@@ -15,6 +15,8 @@ Current readiness is split into two tracks:
 - Local-key MVP: ready for focused Image Tracking and Cloud Recognition assistance when the official EasyAR Sense Unity Plugin is installed and local license/API keys are filled in the Unity project.
 - Production official API automation: still requires EasyAR-owned account, license, download, and Cloud Recognition endpoints before private account-scoped distribution can be automated.
 
+Current delivery path: use local-key MVP first. Users register/log in/download/create keys on the official EasyAR website in their own browser, then MCP guides local Unity configuration, validates redacted presence, and runs the focused Unity workflow without handling website passwords.
+
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample

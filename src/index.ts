@@ -5495,6 +5495,21 @@ function buildOfficialApiContract(baseUrl: string | undefined, includeExamples: 
       ]
     },
     endpoints,
+    authorizationBoundary: {
+      localKeyMvp: "Unity sample execution can run after the user installs the official EasyAR Sense Unity Plugin and fills local license/API key material in the Unity project. Website login is not needed at Unity runtime.",
+      whyOfficialSupportIsRequired: [
+        "Account status is authoritative only inside the EasyAR account system; MCP cannot prove registration, account state, organization membership, or product entitlement from local files.",
+        "License validation must be checked against EasyAR server-side license records to prove product, platform, expiration, and Unity bundle/package identifier compatibility.",
+        "Download discovery must respect EasyAR login, entitlement, enterprise, and rate-limit gates; MCP must not invent private download URLs or reuse browser sessions.",
+        "Cloud Recognition credential discovery belongs to the user's EasyAR cloud project; MCP should receive only metadata and presence flags unless the user stores runtime keys locally."
+      ],
+      notAccepted: [
+        "Scraping EasyAR website pages or browser cookies as a production authorization mechanism.",
+        "Asking users to paste EasyAR website passwords, verification codes, account tokens, license keys, API KEY/API Secret, appKey, or appSecret into chat.",
+        "Treating local config presence as proof of account entitlement or private download authorization."
+      ],
+      acceptedFallback: "When official API endpoints are not available, use browser-only handoff plus local-key validation. MCP records account stage and non-secret evidence, while the user obtains plugin/key materials from the official EasyAR website."
+    },
     examples: includeExamples ? buildOfficialApiContractExamples(resolvedBaseUrl) : [],
     responsePolicy: [
       "Responses may include account metadata, package metadata, and presence flags.",
@@ -5823,6 +5838,7 @@ function buildOfficialApiHandoff(baseUrl: string | undefined, includeCurl: boole
       repository: "https://github.com/terri1982/mcp-easyar"
     },
     environment: contract.environment,
+    whyOfficialSupportIsRequired: contract.authorizationBoundary,
     endpointMapping,
     rollout: [
       "Confirm the EasyAR account system can issue or validate a registered-user bearer token for MCP clients.",
@@ -14853,6 +14869,17 @@ function buildOfficialApiContractMarkdown(contract: ReturnType<typeof buildOffic
     "",
     ...contract.authentication.tokenPolicy.map((policy) => `- ${policy}`),
     "",
+    "## Authorization Boundary",
+    "",
+    `Local-key MVP: ${contract.authorizationBoundary.localKeyMvp}`,
+    `Accepted fallback: ${contract.authorizationBoundary.acceptedFallback}`,
+    "",
+    "Why official support is required for production automation:",
+    ...contract.authorizationBoundary.whyOfficialSupportIsRequired.map((item) => `- ${item}`),
+    "",
+    "Not accepted:",
+    ...contract.authorizationBoundary.notAccepted.map((item) => `- ${item}`),
+    "",
     "## Endpoints",
     "",
     ...contract.endpoints.flatMap((endpoint) => [
@@ -14934,6 +14961,17 @@ function buildOfficialApiHandoffMarkdown(handoff: ReturnType<typeof buildOfficia
     "",
     "Current configuration:",
     ...Object.entries(handoff.environment.configured).map(([name, configured]) => `- ${name}: ${configured ? "yes" : "no"}`),
+    "",
+    "## Authorization Boundary",
+    "",
+    `Local-key MVP: ${handoff.whyOfficialSupportIsRequired.localKeyMvp}`,
+    `Accepted fallback: ${handoff.whyOfficialSupportIsRequired.acceptedFallback}`,
+    "",
+    "Why official support is required for production automation:",
+    ...handoff.whyOfficialSupportIsRequired.whyOfficialSupportIsRequired.map((item) => `- ${item}`),
+    "",
+    "Not accepted:",
+    ...handoff.whyOfficialSupportIsRequired.notAccepted.map((item) => `- ${item}`),
     "",
     "## Endpoint Mapping",
     "",

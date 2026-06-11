@@ -736,6 +736,8 @@ try {
   );
   assert(officialApiContractMarkdown.includes("mcp-easyar Official API Contract"), "Official API contract markdown should include title");
   assert(officialApiContractMarkdown.includes("cloud-credentials-discovery"), "Official API contract markdown should include cloud endpoint");
+  assert(officialApiContractMarkdown.includes("Local-key MVP"), "Official API contract markdown should describe the local-key boundary");
+  assert(officialApiContractMarkdown.includes("Website login is not needed at Unity runtime"), "Official API contract markdown should clarify Unity runtime behavior");
   assert(officialApiContractMarkdown.includes("Responses must not include raw license keys"), "Official API contract markdown should include response policy");
 
   const officialOpenApiContract = await callTool("easyar_generate_official_openapi_contract", {});
@@ -766,6 +768,8 @@ try {
   assertTextIncludes(officialApiHandoff, "license-validation");
   assertTextIncludes(officialApiHandoff, "downloads-discovery");
   assertTextIncludes(officialApiHandoff, "cloud-credentials-discovery");
+  assertTextIncludes(officialApiHandoff, "\"localKeyMvp\"");
+  assertTextIncludes(officialApiHandoff, "browser-only handoff plus local-key validation");
   assertTextIncludes(officialApiHandoff, "curl -fsS");
   assertTextIncludes(officialApiHandoff, "Response never includes raw API KEY/API Secret, appKey, or appSecret values");
   assert(!extractText(officialApiHandoff).includes("fixture-token"), "Official API handoff should not include fixture token values");
@@ -783,6 +787,8 @@ try {
   );
   assert(officialApiHandoffMarkdown.includes("mcp-easyar Official API Handoff"), "Official API handoff markdown should include title");
   assert(officialApiHandoffMarkdown.includes("Endpoint Mapping"), "Official API handoff markdown should include endpoint mapping");
+  assert(officialApiHandoffMarkdown.includes("Authorization Boundary"), "Official API handoff markdown should include authorization boundary");
+  assert(officialApiHandoffMarkdown.includes("Treating local config presence as proof of account entitlement"), "Official API handoff markdown should reject local config as entitlement proof");
   assert(officialApiHandoffMarkdown.includes("Acceptance Gates"), "Official API handoff markdown should include acceptance gates");
   assert(officialApiHandoffMarkdown.includes("Do not fall back to scraping EasyAR website sessions"), "Official API handoff markdown should include no-bypass policy");
   assert(!officialApiHandoffMarkdown.includes("fixture-token"), "Official API handoff markdown should not include fixture token values");

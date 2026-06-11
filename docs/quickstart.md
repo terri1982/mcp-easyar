@@ -7,6 +7,8 @@ Current status:
 - Local-key MVP is ready for the focused Image Tracking and Cloud Recognition workflow after the official EasyAR Sense Unity Plugin is installed and local keys are configured.
 - Official EasyAR account APIs are still a production automation track. They are needed for server-side account/license/download/cloud entitlement checks, but they are not required for Unity-side sample execution once authorized plugin and keys are local.
 
+Default path now: run the local-key MVP. The user completes registration/login/download/key creation on the official EasyAR website in a browser. MCP guides those steps, writes local forms and handoff files, validates only redacted local config presence, and then proceeds with Unity import, build, and device validation.
+
 ## 1. Build The Server
 
 ```bash
