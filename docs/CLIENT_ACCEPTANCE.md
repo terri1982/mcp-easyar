@@ -61,6 +61,7 @@ Expected result:
 - The server reports name `mcp-easyar`.
 - Focused samples include `image-tracking` and `cloud-recognition`.
 - Resources include `easyar://status/current`, `easyar://workflow/focused-scope`, and `easyar://workflow/programming`.
+- `easyar://status/remaining-work` reports current scoped gaps and full production blockers without secrets.
 - `easyar_auth_status` reports secret presence only as booleans or redacted previews.
 
 ## Unity Project Handoff

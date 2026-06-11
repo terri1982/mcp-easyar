@@ -1,0 +1,67 @@
+# mcp-easyar Remaining Work
+
+This page gives Codex, Claude Desktop, and other MCP clients a stable, non-secret view of what remains for the current focused release target.
+
+## Current Scope
+
+The current user-approved target is limited to:
+
+- Image Tracking
+- CRS/Cloud Recognition
+
+Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out of scope for the current release target until the user explicitly asks to continue.
+
+## Current Evidence
+
+- Current public prerelease: `v0.1.0-local-key.19`
+- Current scoped objective: about 90%
+- Local-key MVP public usability: about 92%
+- Android real-device evidence exists for Image Tracking and CRS/Cloud Recognition.
+- GitHub Release tarball install smoke passes, including Codex and Claude Desktop `package-bin` client setup checks.
+- Security checks pass without committed local config secrets, runtime secrets, APKs, Unity packages, or obvious secret-like values.
+
+## Remaining For Current Scoped Target
+
+- Keep release links, status docs, install checks, and GitHub Release smoke tests aligned with each new prerelease.
+- Re-run Image Tracking and CRS/Cloud Recognition device evidence when the Unity project, EasyAR Sense Unity Plugin version, supported Unity version, or target platform changes.
+- Keep onboarding text clear for users who have not registered on www.easyar.cn yet.
+- Continue hardening Unity programming workflows with real Image Tracking and CRS project cases.
+
+## Not Required For Current Scoped Target
+
+- Running Hello AR, Surface Tracking, or other EasyAR samples.
+- Collecting EasyAR website passwords, verification codes, license keys, CRS API KEY/API Secret, `appKey`, or `appSecret` in chat.
+- Calling real EasyAR official account APIs for automated license/download/cloud credential discovery.
+- Publishing to npm as a production release.
+
+## Remaining For Full Production Goal
+
+- EasyAR-owned account status endpoint.
+- EasyAR-owned license validation endpoint.
+- EasyAR-owned downloads entitlement endpoint.
+- EasyAR-owned CRS/Cloud Recognition credential metadata endpoint that returns presence flags and metadata without raw secrets.
+- Production token issuance and verification policy for registered EasyAR users.
+- Strict production release gate using real official API evidence.
+
+## Best Next MCP Calls
+
+For a new user or fresh client setup:
+
+```text
+easyar_server_status
+easyar_check_client_setup client=codex entrypointMode=package-bin includeTokenPlaceholder=false
+easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android
+easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition platform=android
+```
+
+For a Unity project:
+
+```text
+easyar_write_project_handoff projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
+easyar_write_remaining_work_report projectPath=/path/to/UnityProject platform=android verificationEvidence=passed
+easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=android
+```
+
+## Safety Boundary
+
+The current release follows the local-key MVP route. Users register, log in, download official packages, create license/CRS keys, and fill local Unity project config in their own browser and filesystem. MCP reports only redacted presence, status, artifact paths, and next actions.

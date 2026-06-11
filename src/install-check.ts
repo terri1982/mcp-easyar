@@ -38,6 +38,7 @@ const requiredResources = [
   "easyar://official/openapi",
   "easyar://client/acceptance",
   "easyar://status/current",
+  "easyar://status/remaining-work",
   "easyar://install/github-release",
   "easyar://release/local-key-mvp",
   "easyar://roadmap",
@@ -147,6 +148,11 @@ try {
       "current-status",
       resourceTexts.get("easyar://status/current")?.includes("mcp-easyar Current Status") ?? false,
       "Current status resource is readable."
+    ),
+    check(
+      "remaining-work-status",
+      resourceTexts.get("easyar://status/remaining-work")?.includes("mcp-easyar Remaining Work") ?? false,
+      "Remaining work status resource is readable."
     ),
     check(
       "github-release-install",

@@ -529,6 +529,15 @@ try {
   assertResourceIncludes(currentStatusResource, "Current scoped objective: about 90%");
   assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 92%");
 
+  const remainingWorkStatusResource = await request("resources/read", {
+    uri: "easyar://status/remaining-work"
+  });
+  assertResourceIncludes(remainingWorkStatusResource, "mcp-easyar Remaining Work");
+  assertResourceIncludes(remainingWorkStatusResource, "Remaining For Current Scoped Target");
+  assertResourceIncludes(remainingWorkStatusResource, "Image Tracking");
+  assertResourceIncludes(remainingWorkStatusResource, "CRS/Cloud Recognition");
+  assertResourceIncludes(remainingWorkStatusResource, "Remaining For Full Production Goal");
+
   const githubReleaseInstallResource = await request("resources/read", {
     uri: "easyar://install/github-release"
   });
@@ -903,7 +912,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.18"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.19"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
