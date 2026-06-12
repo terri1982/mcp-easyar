@@ -340,15 +340,17 @@ const samples: SampleInfo[] = [
   {
     id: "mega",
     name: "Mega",
-    description: "Run an EasyAR Mega Unity sample with a configured cloud localization library and Mega Block on a real device.",
+    description: "Run an EasyAR Mega Unity sample with a configured cloud localization library and Mega Block on a real device, including Android phone and PICO 4 Ultra Enterprise validation paths.",
     implementationStatus: "focused",
-    unityScenes: ["Mega", "MegaBlock", "MegaLocalization", "TiantanSkyPalace"],
-    requiredCapabilities: ["Camera permission", "Location/network access", "EasyAR Mega license key", "Mega Block cloud localization library"],
+    unityScenes: ["Mega", "MegaBlock", "MegaLocalization", "TiantanSkyPalace", "Pico"],
+    requiredCapabilities: ["Camera permission", "Location/network access", "EasyAR Mega license key", "Mega Block cloud localization library", "PICO Unity Integration SDK 3.1.0+ for PICO headsets"],
     setupNotes: [
       "Install the official EasyAR Sense Unity Plugin for Mega from the EasyAR download page.",
+      "For PICO 4 Ultra Enterprise, also install the official EasyAR Unity XR device extension package and PICO Unity Integration SDK 3.1.0 or newer.",
       "Use the user's logged-in EasyAR website or Mega Studio session to find non-secret library and block identifiers.",
       "Keep license keys and service credentials in local EasyAR settings or local config files; do not paste secrets into chat.",
-      "Build and validate on a real Android device; editor or emulator launch is not enough to prove cloud localization."
+      "Use Onsite location input for Android phone validation. For PICO 4 Ultra Enterprise, Simulator location input is the verified headset path because the headset does not expose an Android GPS provider.",
+      "Build and validate on a real Android phone or PICO headset; editor or emulator launch is not enough to prove cloud localization."
     ]
   }
 ];
@@ -12035,6 +12037,15 @@ async function readMegaLocationInputModeSummary(root: string) {
   };
 }
 
+async function hasPicoHeadsetMegaSignals(root: string): Promise<boolean> {
+  const hints = await findFiles(root, ["Assets", "Packages"], /(?:pico|picoxr|PXR|PicoFrameSource|com\.easyar\.sense\.ext\.pico|com\.unity\.xr\.picoxr)/i, 60);
+  if (hints.length > 0) { return true; }
+  const manifestPath = path.join(root, "Packages", "manifest.json");
+  if (!await exists(manifestPath)) { return false; }
+  const manifest = await readFile(manifestPath, "utf8");
+  return /com\.unity\.xr\.picoxr|com\.easyar\.sense\.ext\.pico/i.test(manifest);
+}
+
 async function readMegaBlockRootSummary(root: string) {
   const sceneCandidates = await findFiles(root, ["Assets"], /(?:mega|megablock|cloudlocalizer).*\.unity$/i, 40);
   const holders: Array<{ path: string; source: "External" | "Internal" | "Mixed" | "Unknown"; rawSource: number; hasBlockRoot: boolean }> = [];
@@ -12119,6 +12130,8 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
     const megaSettings = await readMegaSettingsSummary(root);
     const megaLocationInputMode = await readMegaLocationInputModeSummary(root);
     const megaBlockRoot = await readMegaBlockRootSummary(root);
+    const picoHeadset = await hasPicoHeadsetMegaSignals(root);
+    const locationInputModeOk = megaLocationInputMode.hasOnsite || (picoHeadset && megaLocationInputMode.hasSimulator);
     const missingMegaSettings = [
       megaSettings.licensePresent ? null : "license",
       megaSettings.appIdPresent ? null : "GlobalMegaBlock.AppID",
@@ -12145,12 +12158,14 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
       },
       {
         id: "mega-location-input-mode",
-        ok: megaLocationInputMode.hasOnsite,
+        ok: locationInputModeOk,
         detail: megaLocationInputMode.modes.length > 0
           ? megaLocationInputMode.hasOnsite
             ? `Mega scene LocationInputMode includes Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}.`
-            : `Mega scene LocationInputMode was found but not Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. Use Onsite for real-device validation; Simulator is only for editor/remote debugging.`
-          : "No serialized Mega locationInputMode was found in Mega scene assets. Open the Mega sample scene and set Location Input Mode to Onsite for real-device validation."
+            : picoHeadset && megaLocationInputMode.hasSimulator
+              ? `Mega scene LocationInputMode is Simulator in a PICO headset project: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. This is the verified PICO 4 Ultra Enterprise path because the headset does not expose an Android GPS provider; document the EasyAR diagnostics caution in the run result.`
+              : `Mega scene LocationInputMode was found but not Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. Use Onsite for Android phone validation. Use Simulator only for editor/remote debugging or the documented PICO 4 Ultra Enterprise headset path.`
+          : "No serialized Mega locationInputMode was found in Mega scene assets. Open the Mega sample scene and set Location Input Mode to Onsite for Android phone validation, or Simulator for the documented PICO 4 Ultra Enterprise headset path."
       },
       {
         id: "mega-block-root",
@@ -16560,12 +16575,34 @@ ${sampleValidation}
             var match = Regex.Match(scene, @"locationInputMode:\\s*(\\d+)");
             if (!match.Success)
             {
-                throw new InvalidOperationException("Mega scene does not serialize locationInputMode. Set Location Input Mode to Onsite before real-device validation.");
+                throw new InvalidOperationException("Mega scene does not serialize locationInputMode. Set Location Input Mode to Onsite for Android phone validation, or Simulator for the documented PICO 4 Ultra Enterprise headset path.");
             }
-            if (match.Groups[1].Value != "0")
+            if (match.Groups[1].Value == "0")
             {
-                throw new InvalidOperationException("Mega LocationInputMode must be Onsite (0) for real-device validation. Simulator is only for editor or remote debugging.");
+                return;
             }
+            if (match.Groups[1].Value == "1" && IsPicoHeadsetProject())
+            {
+                UnityEngine.Debug.Log("Mega LocationInputMode is Simulator in a PICO headset project. This is accepted for PICO 4 Ultra Enterprise because the headset does not expose an Android GPS provider; the EasyAR Simulator diagnostics caution should be recorded in run evidence.");
+                return;
+            }
+            throw new InvalidOperationException("Mega LocationInputMode must be Onsite (0) for Android phone validation. Simulator (1) is accepted only for the documented PICO 4 Ultra Enterprise headset path.");
+        }
+
+        private static bool IsPicoHeadsetProject()
+        {
+            var manifestPath = Path.Combine(Directory.GetCurrentDirectory(), "Packages", "manifest.json");
+            var manifest = File.Exists(manifestPath) ? File.ReadAllText(manifestPath) : string.Empty;
+            if (manifest.IndexOf("com.unity.xr.picoxr", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                manifest.IndexOf("com.easyar.sense.ext.pico", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+            return Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Assets"), "*", SearchOption.AllDirectories)
+                .Any(path => path.IndexOf("PicoFrameSource", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             path.IndexOf("PXR_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             path.IndexOf("picoxr", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
         }
 
         private static void ValidateMegaBlockRoot(string scenePath)
@@ -17114,7 +17151,7 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           serverAddress: needsMega ? "local-only-placeholder-fill-from-local-mega-settings" : "",
           apiKey: needsMega ? "local-only-placeholder-fill-locally-never-share" : "",
           apiSecret: needsMega ? "local-only-placeholder-fill-locally-never-share" : "",
-          locationInputMode: needsMega ? "Onsite for real-device validation; Simulator only for remote/editor debugging" : ""
+          locationInputMode: needsMega ? "Onsite for Android phone validation; Simulator for documented PICO 4 Ultra Enterprise headset validation" : ""
         }
       },
       unity: {
@@ -17201,16 +17238,17 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
       "2. Use the already logged-in EasyAR website or Mega Studio session to locate the cloud localization library, Mega Block storage, Mega Block name, and Block ID.",
       "3. Load or bind the selected Mega Block in Unity/Mega Studio before building.",
       "4. Configure `Assets/XR/Settings/EasyAR Settings.asset` locally with the package-bound Sense license plus Global Mega Block AppID, server address, API Key, and API Secret. Do not paste those values into chat.",
-      "5. Set Mega `LocationInputMode` to `Onsite` for real-device validation. Use `Simulator` only for editor or remote debugging.",
+      "5. Set Mega `LocationInputMode` to `Onsite` for Android phone validation. For PICO 4 Ultra Enterprise, use the official EasyAR Unity XR device extension package, keep only `PicoFrameSource`, and use `Simulator` location input because the headset does not expose an Android GPS provider.",
       "6. Confirm Android minSdk is at least 24 when ONNX Runtime is included, and prefer ARM64 for device builds.",
       "7. If the project uses HybridCLR, run the HybridCLR Installer and `HybridCLR/Generate/All` for the same build target before APK packaging.",
-      "8. Validate on a real device in or near the mapped environment; emulator/editor launch does not prove Mega localization.",
+      "8. For PICO 4 Ultra Enterprise, install PICO Unity Integration SDK 3.1.0 or newer, use a `4.x XR正式版` EasyAR license whose package name matches the APK, and validate while wearing/activating the headset in the mapped environment.",
+      "9. Validate on a real Android phone or PICO headset in or near the mapped environment; emulator/editor launch does not prove Mega localization.",
       "",
       "Expected readiness checks:",
       "",
       "- `mega-assets` should find Mega, MegaBlock, CloudLocalizer, or project-specific Mega scene assets.",
       "- `mega-settings` should report local license and Global Mega Block credential presence without printing secret values.",
-      "- `mega-location-input-mode` should report `Onsite` for a real-device validation build.",
+      "- `mega-location-input-mode` should report `Onsite` for Android phone validation, or `Simulator` with PICO headset signals for the documented PICO 4 Ultra Enterprise path.",
       "- `sample-scene` should find an official or project Mega scene.",
       "- `RUN_RESULT.md` should record build success plus real-device localization evidence without secret values."
     ].join("\n") + "\n";
@@ -17272,7 +17310,9 @@ async function writeFocusedSampleSupportFiles(root: string, sample: SampleInfo, 
         "",
         "Configure `Assets/XR/Settings/EasyAR Settings.asset` locally with the package-bound Sense license and Global Mega Block AppID/server/API Key/API Secret. Keep those values local.",
         "",
-        "For real-device validation, set the Mega sample scene `LocationInputMode` to `Onsite`; `Simulator` is only for editor or remote debugging.",
+        "For Android phone validation, set the Mega sample scene `LocationInputMode` to `Onsite`. For PICO 4 Ultra Enterprise, use `Simulator` location input with the official EasyAR Unity XR device extension package and `PicoFrameSource`; the headset does not expose an Android GPS provider.",
+        "",
+        "PICO 4 Ultra Enterprise verified baseline: Unity 2022.3.62f3, EasyAR Sense Unity Plugin 4002.0.0, EasyAR Mega 2.12.6, EasyAR Unity XR device extension package 4000.0.0, PICO Unity Integration SDK 3.4.0, package name `com.easyar.mega.xrtest`, and a matching `4.x XR正式版` license.",
         "",
         "Keep EasyAR license keys, API keys, account tokens, and any service credentials in local Unity settings or ignored local config files. Do not paste them into chat or commit them.",
         "",

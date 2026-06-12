@@ -1,8 +1,8 @@
 # mcp-easyar 中文文档索引
 
-本目录提供 `mcp-easyar` 公开文档的中文版入口。英文文档仍是字段名、命令、API contract 和自动化测试的权威来源；中文版用于安装、使用、交接和验收阅读。
+本目录提供 `mcp-easyar` 公开文档的中文版入口。GitHub 默认 README 已切换为中文；英文文档仍保留用于命令、API contract、自动化测试和海外用户阅读。
 
-当前已发布 GitHub prerelease 仍是两样本版本：图像跟踪（Image Tracking）和 CRS / Cloud Recognition。当前工作树已有一轮 Mega Sample 的 Android 真机定位跟踪证据，并新增 fresh project APK 启动与定位/跟踪证据，可作为下一版三样本 local-key release 的刷新依据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
+当前目标只覆盖图像跟踪（Image Tracking）、CRS / Cloud Recognition 和 Mega Sample。当前工作树已有 Mega Android 手机 Onsite 路径和 PICO 4 Ultra Enterprise 眼镜 Simulator 路径的验证证据，可作为下一版 local-key release 的刷新依据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
 
 ## 快速入口
 
@@ -14,12 +14,17 @@
 - [剩余工作](REMAINING_WORK.md)
 - [路线图](ROADMAP.md)
 - [问题排查](troubleshooting.md)
+- [腾讯云 MCP 提交材料](tencent-cloud-mcp-submission.md)
+- [EasyAR Mega 微信小程序 MCP 设计](easyar-mega-wechat-miniprogram-mcp.md)
 
 ## 发布与验收
 
 - [客户端验收清单](CLIENT_ACCEPTANCE.md)
 - [Release Manifest](RELEASE_MANIFEST.md)
 - [local-key MVP 发布说明](release-notes/local-key-mvp.md)
+- [Mega Android 真机证据](release-evidence/mega-android-device-summary.md)
+- [Mega fresh project Android 证据](release-evidence/mega-fresh-project-android-startup.md)
+- [Mega PICO 4 Ultra Enterprise 证据](release-evidence/mega-pico4-ultra-enterprise-summary.md)
 
 ## 官方 API 生产接入
 

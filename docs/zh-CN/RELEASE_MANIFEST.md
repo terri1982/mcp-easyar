@@ -24,15 +24,26 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 
 ## 发布模型
 
-- `local-key-mvp`：当前 GitHub prerelease gate。已发布的两样本证据覆盖 Image Tracking 和 CRS / Cloud Recognition；当前工作树已补 Mega 真机安装、启动、定位跟踪和 safe release evidence。另有 fresh project Mega APK 启动与定位/跟踪证据，可用于下一版 local-key release gate。
+- `local-key-mvp`：当前 GitHub prerelease gate。已发布的两样本证据覆盖 Image Tracking 和 CRS / Cloud Recognition；当前工作树已补 Mega Android 真机安装、启动、定位跟踪、fresh project Mega APK 启动与定位/跟踪证据，并新增 PICO 4 Ultra Enterprise 眼镜 sample 的 APK 打包、安装、PICO VST、眼镜内实景透视、Mega `Found` 和办公室 block 定位证据。
 - `production`：未来官方 API 接入后使用。
 
 ## 包内容
 
-包内包含英文 README、中文 README、核心 docs、release evidence、official API contract、安装 smoke 脚本和 MCP binary。
+包内包含默认中文 README、英文 README、核心 docs、中文 docs、release evidence、official API contract、安装 smoke 脚本和 MCP binary。
 
 ## 当前 focused scope
 
 - Image Tracking
 - CRS / Cloud Recognition
-- Mega（已有历史真机定位 evidence；fresh project 还需现场定位 evidence 后再发布新版本）
+- Mega（Android 手机 Onsite 路径与 PICO 4 Ultra Enterprise 眼镜 Simulator 路径均已有验证证据）
+
+## local-key 用户配置
+
+普通用户不需要提供 `EASYAR_API_TOKEN`。用户在自己的浏览器中完成 EasyAR 官网注册、登录、下载、license 创建、CRS key 创建和 Mega 云定位库/Block 信息查找，然后在本机 Unity 工程里填写本地配置。
+
+未来只有在 EasyAR 官方账号 API 接入生产环境后，`EASYAR_API_TOKEN`、账号状态、license 校验、下载权限和 CRS 凭证发现等变量才属于高级官方 API 部署配置。
+
+## 新增证据
+
+- 英文：`docs/release-evidence/mega-pico4-ultra-enterprise-summary.md`
+- 中文：`docs/zh-CN/release-evidence/mega-pico4-ultra-enterprise-summary.md`

@@ -7,7 +7,7 @@
 
 当前开发扩展目标：
 
-- Mega（当前工作树已有 Android 真机定位跟踪证据；fresh project 已完成官方包导入、APK 打包、真机安装启动、Onsite 模式就绪，并在对应办公室映射场景抓到定位/跟踪日志信号。新项目仍需按自身 license / package name / Mega Block 做同样的现场验证）
+- Mega（当前工作树已有 Android 手机真机定位跟踪证据；fresh project 已完成官方包导入、APK 打包、真机安装启动、Onsite 模式就绪，并在对应办公室映射场景抓到定位/跟踪日志信号；PICO 4 Ultra Enterprise 眼镜 sample 已完成 APK 打包、安装、PICO VST、眼镜内实景透视、Mega `Found` 和办公室 block 定位。新项目仍需按自身 license / package name / Mega Block 做同样的现场验证）
 
 Hello AR、Surface Tracking 和其他 Sample 需要用户明确要求继续后，再按扩展计划纳入。
 
@@ -47,10 +47,12 @@ easyar-mcp-check
 - 官方 EasyAR Sense Unity Plugin for Mega 已安装。
 - 已在已登录的 EasyAR 网页端或 Mega Studio 中找到云定位库、Mega Block storage、Block 名称和 Block ID。
 - Unity 工程已加载或绑定选定 Mega Block。
-- Mega sample 场景 `LocationInputMode` 已设为 `Onsite`，`Simulator` 只用于远程或 Editor 调试。
+- Android 手机/平板验证时，Mega sample 场景 `LocationInputMode` 设为 `Onsite`。
+- PICO 4 Ultra Enterprise 眼镜验证时，安装官方 EasyAR Unity XR 设备扩展包和 PICO Unity Integration SDK `3.1.0` 或更新版本，只保留 `PicoFrameSource`，并使用 `LocationInputMode=Simulator`。这是已验证的头显路径，因为 PICO 不提供 Android GPS provider。
 - Android APK 打包成功。
 - 真机安装启动成功，已授予相机、定位和网络权限。
 - 在选定 Mega Block 对应环境中真机定位成功。
+- PICO 眼镜验收以眼镜内 VST 实景可见、Mega 返回 `Found`、定位到对应 Block 为准；`adb screencap` 可能抓不到 PICO 透视合成层。
 - 生成 `RUN_RESULT.md` 和 `COMPLETION_REPORT.md`，并写入安全 release evidence。
 
 ## 完成标准

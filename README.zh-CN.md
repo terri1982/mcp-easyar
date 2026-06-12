@@ -4,7 +4,7 @@
 
 # mcp-easyar
 
-[English](README.md) | 简体中文
+[English](README.en.md) | 简体中文
 
 `mcp-easyar` 帮助 EasyAR 注册用户通过 Codex、Claude 等 AI 工具，安全地完成 EasyAR Unity Sample 的配置、构建、真机验证和项目编程辅助。
 
@@ -16,7 +16,7 @@
 - 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
-  - Mega（已有 Unity 2022.3.62f3 Android 真机定位跟踪日志证据；fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式就绪，并已抓到定位/跟踪日志信号）
+  - Mega（已有 Unity 2022.3.62f3 Android 手机真机定位跟踪日志证据；fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式定位/跟踪信号；另新增 PICO 4 Ultra Enterprise 眼镜 sample，已验证 APK 打包、安装、PICO VST、Mega `Found` 和办公室 block 定位）
 - 暂缓目标：
   - Hello AR
   - Surface Tracking
@@ -89,6 +89,20 @@ easyar://workflow/programming
 - APK、Unity package、含密钥的本地日志
 
 MCP 不应绕过 EasyAR 登录、license 检查、下载授权、企业权限或限流规则。
+
+## Mega PICO 4 Ultra Enterprise
+
+PICO 4 Ultra Enterprise sample 已验证的基线：
+
+- Unity `2022.3.62f3`
+- 包名 `com.easyar.mega.xrtest`
+- EasyAR Sense Unity Plugin `4002.0.0`
+- EasyAR Mega `2.12.6`
+- EasyAR Unity XR 设备扩展包 `4000.0.0`
+- PICO Unity Integration SDK `3.4.0`（EasyAR 文档要求 `3.1.0` 或更新版本）
+- 官网 license 类型：`4.x XR正式版`
+
+注意：PICO 头显没有 Android GPS provider，所以 Mega 场景使用 `LocationInputMode=Simulator` 是当前已验证的头显路径。画面中的 EasyAR Simulator diagnostics caution 是预期提示，不代表定位失败；验收以眼镜内 VST 实景可见、Mega 返回 `Found`、并定位到对应办公室 block 为准。`adb screencap` 可能抓不到 PICO 的透视合成层。
 
 ## 中文文档目录
 

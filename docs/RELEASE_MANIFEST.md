@@ -9,7 +9,7 @@ Ready for install docs: yes
 
 ## Readiness Model
 
-- Local-key MVP: ready for focused Image Tracking, Cloud Recognition, and Mega assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided through `docs/release-evidence/focused-scope.android.json`. The published two-sample prerelease has Image Tracking and Cloud Recognition evidence; the current worktree includes committed safe Mega real-device install/localization evidence plus a separate fresh-project APK startup/localization evidence file.
+- Local-key MVP: ready for focused Image Tracking, Cloud Recognition, and Mega assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided through `docs/release-evidence/focused-scope.android.json`. The published two-sample prerelease has Image Tracking and Cloud Recognition evidence; the current worktree includes safe Mega Android real-device install/localization evidence, fresh-project APK startup/localization evidence, and a PICO 4 Ultra Enterprise headset validation summary.
 - Production official API: not ready until EasyAR account, license, downloads, and Cloud Recognition endpoint variables are connected to authorized EasyAR services and focused official access checks pass.
 - Unity runtime note: after the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses local license/API key configuration and does not require website login at runtime.
 
@@ -110,7 +110,18 @@ Availability: post-npm-publish only
 - `easyar_check_client_setup`
 - `easyar_write_client_setup`
 
-## Required Environment
+## Required Local-Key Environment
+
+- `EASYAR_UNITY_PATH`
+- `EASYAR_RELEASE_PROJECT_PATH`
+- `EASYAR_RELEASE_EVIDENCE_PATH`
+- `EASYAR_RELEASE_PLATFORM`
+
+Local-key MVP users do not need to provide `EASYAR_API_TOKEN`. They complete EasyAR website registration, login, downloads, license creation, CRS key creation, and Mega material lookup in their own browser, then fill local Unity project configuration.
+
+## Advanced Official API Environment
+
+These variables are only for a future EasyAR-owned production API integration and are not required for normal local-key users:
 
 - `EASYAR_API_BASE_URL`
 - `EASYAR_API_TOKEN`
@@ -118,10 +129,6 @@ Availability: post-npm-publish only
 - `EASYAR_LICENSE_VALIDATE_ENDPOINT`
 - `EASYAR_DOWNLOADS_ENDPOINT`
 - `EASYAR_CLOUD_CREDENTIALS_ENDPOINT`
-- `EASYAR_UNITY_PATH`
-- `EASYAR_RELEASE_PROJECT_PATH`
-- `EASYAR_RELEASE_EVIDENCE_PATH`
-- `EASYAR_RELEASE_PLATFORM`
 
 ## Validation Environment
 
@@ -139,6 +146,8 @@ Availability: post-npm-publish only
 ## Required Files
 
 - OK README.md
+- OK README.en.md
+- OK README.zh-CN.md
 - OK .env.example
 - OK CHANGELOG.md
 - OK LICENSE
@@ -148,6 +157,8 @@ Availability: post-npm-publish only
 - OK docs/OFFICIAL_API_HANDOFF.md
 - OK docs/openapi/easyar-mcp-account-api.openapi.json
 - OK docs/release-evidence/focused-scope.android.json
+- OK docs/release-evidence/mega-pico4-ultra-enterprise-summary.md
+- OK docs/zh-CN/release-evidence/mega-pico4-ultra-enterprise-summary.md
 - OK docs/release-notes/local-key-mvp.md
 - OK docs/CLIENT_ACCEPTANCE.md
 - OK docs/FRESH_PROJECT_ACCEPTANCE.md
@@ -157,6 +168,7 @@ Availability: post-npm-publish only
 - OK docs/STATUS.md
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md
+- OK docs/zh-CN/README.md
 - OK assets/easyar-icon.png
 - OK dist/index.js
 - OK dist/easyar-api.js
@@ -175,6 +187,7 @@ Availability: post-npm-publish only
 - docs/release-notes
 - docs/CLIENT_ACCEPTANCE.md
 - docs/FRESH_PROJECT_ACCEPTANCE.md
+- docs/tencent-cloud-mcp-submission.md
 - docs/client-setup.md
 - docs/install-from-github-release.md
 - docs/ROADMAP.md
@@ -182,12 +195,16 @@ Availability: post-npm-publish only
 - docs/quickstart.md
 - docs/RELEASE_MANIFEST.md
 - docs/troubleshooting.md
+- docs/zh-CN/README.md
+- docs/zh-CN core docs and release evidence, excluding internal WeChat Mini Program design material from packaged tarballs.
 - assets/easyar-icon.png
 - scripts/github-release-install-smoke.mjs
 - scripts/official-api-canary.mjs
 - scripts/official-api-stub.mjs
 - .env.example
 - README.md
+- README.en.md
+- README.zh-CN.md
 - CHANGELOG.md
 - LICENSE
 - SECURITY.md
