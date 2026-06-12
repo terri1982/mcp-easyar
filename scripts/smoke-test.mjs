@@ -1139,7 +1139,9 @@ try {
   assert(releaseCheckScript.includes("EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP"), "release:check should enforce the local-key MVP release gate");
   const serverSource = await readFile(path.join(process.cwd(), "src", "server.ts"), "utf8");
   const toolsSource = await readFile(path.join(process.cwd(), "src", "tools.ts"), "utf8");
-  const mcpSource = `${serverSource}\n${toolsSource}`;
+  const toolsRegistrySource = await readFile(path.join(process.cwd(), "src", "tools-registry.ts"), "utf8");
+  const toolServicesSource = await readFile(path.join(process.cwd(), "src", "tool-services.ts"), "utf8");
+  const mcpSource = `${serverSource}\n${toolsSource}\n${toolsRegistrySource}\n${toolServicesSource}`;
   assert(mcpSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
   assert(mcpSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");
   const officialApiCanaryScript = await readFile(path.join(process.cwd(), "scripts", "official-api-canary.mjs"), "utf8");
