@@ -2,7 +2,7 @@
 
 This plan keeps the original long-term goal visible while preserving the current released scope.
 
-Current public release: `v0.1.0-local-key.35`
+Current public release: `v0.1.0-local-key.36`
 
 ## Goal
 

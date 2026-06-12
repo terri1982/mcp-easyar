@@ -13,8 +13,8 @@ This document collects public, non-secret material for submitting `mcp-easyar` t
 - Repository: https://github.com/terri1982/mcp-easyar
 - Homepage: https://github.com/terri1982/mcp-easyar#readme
 - Chinese README: https://github.com/terri1982/mcp-easyar/blob/main/README.zh-CN.md
-- Release: https://github.com/terri1982/mcp-easyar/releases/tag/v0.1.0-local-key.35
-- Release tarball: https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
+- Release: https://github.com/terri1982/mcp-easyar/releases/tag/v0.1.0-local-key.36
+- Release tarball: https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.36/mcp-easyar-0.1.0.tgz
 - Logo: `assets/easyar-icon.png`
 
 ## Short Description
@@ -40,7 +40,7 @@ The server does not ask users for EasyAR website passwords, verification codes, 
 ## Install
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.36/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

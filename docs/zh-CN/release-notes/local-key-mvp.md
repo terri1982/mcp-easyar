@@ -1,6 +1,6 @@
 # mcp-easyar local-key MVP 发布说明
 
-当前版本：`v0.1.0-local-key.35`
+当前版本：`v0.1.0-local-key.36`
 
 ## 重点
 
@@ -9,11 +9,12 @@
 - full profile 保留全部维护工具。
 - 新增中文 README 和中文文档目录。
 - Image Tracking、CRS / Cloud Recognition 与 Mega 已完成 Android 真机验证。
+- 增加 Mega BlockRoot 配置检查，并记录已定位到 `大厅+办公室+阳台+GPS+0716`。
 
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.36/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

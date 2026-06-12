@@ -23,7 +23,7 @@ Safe evidence only. This summary intentionally excludes EasyAR website passwords
 
 A separate fresh Unity project pass was also recorded after the user asked not to continue with the Tiantan project. See `docs/release-evidence/mega-fresh-project-android-startup.md`.
 
-That fresh-project pass now proves official package import, APK build, real-device install/startup, EasyAR Sense initialization, `Onsite` mode readiness, and real-device Mega localization/tracking log signals from the selected mapped environment.
+That fresh-project pass now proves official package import, APK build, real-device install/startup, EasyAR Sense initialization, `Onsite` mode readiness, `BlockHolder.BlockRootSource=Internal` runtime stability, and real-device Mega localization/tracking log signals from the selected mapped environment. The localized block shown by on-screen diagnostics was `大厅+办公室+阳台+GPS+0716` with Block ID `a21e8f20-e1b9-4ac1-a5ed-335e74697e6a`.
 
 ## Local Evidence Files
 

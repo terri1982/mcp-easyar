@@ -14,6 +14,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
   - CRS/Cloud Recognition
   - Mega
 - Includes committed safe Android release evidence for the focused scope, including Mega APK install/startup and localization-tracking evidence.
+- Adds Mega BlockRoot readiness validation for the official sample scene and records the successful localized block `大厅+办公室+阳台+GPS+0716`.
 - Prompts for Image Tracking, CRS/Cloud Recognition, and focused close-out now tell clients to read `easyar://acceptance/fresh-project` first.
 - Server status, quickstart, install guide, and generated client setup now point fresh users to the same fresh project acceptance resource before Unity automation.
 - Provides Unity project assistance tools for local config, preflight, import guidance, build/run sequencing, log diagnostics, C# planning, script writing, and support bundles.
@@ -23,7 +24,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 Use Node.js 20 or newer:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.36/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

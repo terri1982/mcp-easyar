@@ -20,6 +20,7 @@ Safe evidence only. This summary intentionally excludes EasyAR website passwords
   - Mega Block storage: `ARMallBlock9.0`
   - Mega Block name: `大厅+办公室+阳台+GPS+0716`
 - The sample scene was switched from `Simulator` to `Onsite` mode for real-device validation.
+- The official `MegaBlock_Basic` scene was adjusted for the fresh project so `BlockHolder.BlockRootSource` uses `Internal`. This prevents the runtime fatal error `Block root not exist ... (BlockRootSource = External)` when a Mega Block is localized but no external BlockRoot was assigned in the editor.
 
 ## Verified Signals
 
@@ -36,25 +37,28 @@ Safe evidence only. This summary intentionally excludes EasyAR website passwords
   - no `Invalid Key`
   - no observed `401` or `400` service error during the startup window
   - no Android runtime crash
+  - no `Block root not exist`
+  - no `Session Broken: RunningFailed`
 - The real-device build no longer emitted the `Mega is running in Simulator mode` warning after switching `locationInputMode` to `Onsite`.
 - ARCore/camera startup logs showed live camera frame activity.
 
 ## Localization Evidence
 
-The fresh project was then tested on the same Android device while the phone camera was pointed at the selected mapped office scene. The device log for package `com.myarcommon.myar` captured repeated localization and tracking signals:
+The fresh project was then tested on the same Android device while the phone camera was pointed at the selected mapped office scene. The device log and on-screen diagnostics for package `com.myarcommon.myar` captured repeated localization and tracking signals:
 
 - `[VioEstimator] Vio start up successful initialization`
 - `[MLOC] NCam_Verified results of kLocalizationFullMap`
-- `World pose node changing to MapId:e7eb8ee0-2aaf-221e-807a-d483712fdca8`
+- `World pose node changing to MapId:315886d2-3094-27d0-8dbf-1686cdc2c8f9`
 - `[MLOC] NCam_Verified results of kMapTracking`
-- `[M] [Localizer] - loaded map e7eb8ee0-2aaf-221e-807a-d483712fdca8`
-- `[M] ADF ... successfully localized against ADF e7eb8ee0-2aaf-221e-807a-d483712fdca8`
+- `[M] [Localizer] - loaded map 315886d1-3094-27d0-8c86-ec6f18cb4d51`
+- `[M] ADF 315886d2-3094-27d0-8dbf-1686cdc2c8f9 successfully localized against ADF 315886d1-3094-27d0-8c86-ec6f18cb4d51`
+- On-screen sample diagnostics showed `Block: 大厅+办公室+阳台+GPS+0716 (a21e8f20-e1b9-4ac1-a5ed-335e74697e6a)` and device pose relative to the localized block.
 
-No license-invalid, AppID-invalid, unauthorized, forbidden, or Android runtime-crash blocker was observed in the successful localization window.
+No license-invalid, AppID-invalid, unauthorized, forbidden, `Block root not exist`, `Session Broken`, or Android runtime-crash blocker was observed in the successful localization window.
 
 ## Current Limitation
 
-This evidence proves fresh-project APK build, install, startup, EasyAR initialization, Onsite-mode readiness, and real-device Mega localization/tracking log signals for the selected mapped environment. It is still a local evidence summary: raw logs, screenshots, APKs, Unity package files, and secret-bearing Unity settings stay outside the repository.
+This evidence proves fresh-project APK build, install, startup, EasyAR initialization, Onsite-mode readiness, real-device Mega localization/tracking log signals, and on-screen localized Block identification for the selected mapped environment. It is still a local evidence summary: raw logs, screenshots, APKs, Unity package files, and secret-bearing Unity settings stay outside the repository.
 
 ## Local Evidence Files
 
@@ -62,6 +66,7 @@ The raw logs and Unity project remain local and should not be committed because 
 
 - Fresh Unity project: `/Users/tuyi/UnityProjects/EasyARMegaVerification`
 - Build log: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Logs/build-android-mega-onsite.log`
-- Device localization log: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Logs/mega-fresh-localization-live-20260612-101602.log`
-- Device screenshot: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Logs/mega-fresh-localization-success-20260612-101749.png`
+- Final BlockRoot fix build log: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Logs/build-android-mega-blockroot-internal.log`
+- Final device localization log: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Logs/mega-current-block-debug-20260612-123117.log`
+- Final device screenshot: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Logs/mega-current-block-debug-20260612-123120.png`
 - APK path: `/Users/tuyi/UnityProjects/EasyARMegaVerification/Builds/EasyARMegaVerification.apk`

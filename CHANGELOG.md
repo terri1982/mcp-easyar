@@ -5,6 +5,7 @@
 - Added focused Mega sample support to the MCP catalog, runbooks, readiness checks, device-validation checklist, MonoBehaviour template generation, and Unity log diagnostics.
 - Updated active local-key MVP scope text to Image Tracking, Cloud Recognition, and Mega with committed safe Mega real-device install/localization evidence for the next GitHub release.
 - Added fresh Unity project Mega startup and localization evidence using the official 4002 Mega package, Android APK install/startup, EasyAR initialization, Onsite-mode readiness, and real-device localization/tracking log signals without committing secrets or APKs.
+- Added Mega `BlockHolder.BlockRootSource` readiness validation and final localized block evidence for `大厅+办公室+阳台+GPS+0716`, preventing the `Block root not exist` runtime failure when the sample scene uses an empty external BlockRoot.
 
 ## 0.1.0 - 2026-06-10
 
