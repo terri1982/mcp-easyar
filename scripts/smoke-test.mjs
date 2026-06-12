@@ -555,8 +555,8 @@ try {
   });
   assertResourceIncludes(currentStatusResource, "mcp-easyar Current Status");
   assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
-  assertResourceIncludes(currentStatusResource, "Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.");
-  assertResourceIncludes(currentStatusResource, "Active Mega expansion: Android device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.");
+  assertResourceIncludes(currentStatusResource, "Published scoped objective: 100% for the approved Image Tracking, CRS/Cloud Recognition, and Mega target.");
+  assertResourceIncludes(currentStatusResource, "Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.");
   assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 98%");
 
   const sampleCatalog = await callTool("easyar_list_samples", {});

@@ -17,11 +17,11 @@ easyar-mcp-check
 
 ## Evidence-Weighted Progress
 
-- Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
-- Active Mega expansion: Android device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.
+- Published scoped objective: 100% for the approved Image Tracking, CRS/Cloud Recognition, and Mega target.
+- Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.
 - Local-key MVP public usability: about 98%
 
-These percentages are evidence-weighted estimates. The published prerelease is still the earlier two-sample release, while the current worktree has three-sample local-key evidence ready for the next release. The broader production official API goal remains incomplete.
+These percentages are evidence-weighted estimates. The published prerelease covers the three-sample local-key target: Image Tracking, CRS/Cloud Recognition, and Mega. The broader production official API goal remains incomplete.
 
 ## What Is Ready
 
@@ -52,7 +52,6 @@ Out of scope for the current goal:
 
 ## Known Remaining Work
 
-- Publish the next local-key GitHub Release after strict local-key release checks pass.
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
 - Add more real-device and platform evidence if supported Unity versions or target platforms expand for the two target samples.
