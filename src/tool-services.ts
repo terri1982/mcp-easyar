@@ -46,6 +46,78 @@ import {
   unityMethodStepName,
   unityMethodSuccessNextAction
 } from "./tool-file-utils.js";
+
+export {
+  readCloudRecognitionConfig,
+  readLogFile,
+  UnityLogCandidate,
+  findUnityLogCandidates,
+  readLogTail,
+  readJsonFile,
+  buildLocalConfigValidationReport,
+  buildLocalConfigFromEnvReport,
+  envFirst,
+  envPresenceItem,
+  validateLocalConfig,
+  localConfigAction,
+  isRecord,
+  isNonPlaceholderString,
+  isOptionalNonPlaceholderString,
+  isNonEmptyString,
+  sanitizeRunResultNotes,
+  sanitizeIssueText,
+  hasCloudRecognitionConfig,
+  hasCompleteCloudRecognitionConfig,
+  cloudRecognitionCredentialMode
+} from "./tool-local-config.js";
+
+export {
+  UnityLogRule,
+  analyzeUnityLog,
+  sampleSpecificLogRules,
+  findEvidence,
+  ScriptReviewIssue,
+  reviewCsharpScript,
+  buildScriptReviewReport,
+  buildScriptReviewActions,
+  chooseNextRunPhase
+} from "./tool-diagnostics.js";
+
+import {
+  UnityLogRule,
+  analyzeUnityLog,
+  sampleSpecificLogRules,
+  findEvidence,
+  ScriptReviewIssue,
+  reviewCsharpScript,
+  buildScriptReviewReport,
+  buildScriptReviewActions,
+  chooseNextRunPhase
+} from "./tool-diagnostics.js";
+
+import {
+  readCloudRecognitionConfig,
+  readLogFile,
+  UnityLogCandidate,
+  findUnityLogCandidates,
+  readLogTail,
+  readJsonFile,
+  buildLocalConfigValidationReport,
+  buildLocalConfigFromEnvReport,
+  envFirst,
+  envPresenceItem,
+  validateLocalConfig,
+  localConfigAction,
+  isRecord,
+  isNonPlaceholderString,
+  isOptionalNonPlaceholderString,
+  isNonEmptyString,
+  sanitizeRunResultNotes,
+  sanitizeIssueText,
+  hasCloudRecognitionConfig,
+  hasCompleteCloudRecognitionConfig,
+  cloudRecognitionCredentialMode
+} from "./tool-local-config.js";
 import {
   buildRunReportMarkdown,
   buildFocusedPreflightMarkdown,
@@ -7816,261 +7888,6 @@ export async function buildSampleSceneAuditSpecifics(root: string, sample: Sampl
   };
 }
 
-export async function readCloudRecognitionConfig(root: string): Promise<Record<string, unknown>> {
-  const target = path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
-  if (!await exists(target)) {
-    return {};
-  }
-  const parsed = await readJsonFile(target);
-  const value = isRecord(parsed) ? parsed : {};
-  const easyar = isRecord(value.easyar) ? value.easyar : {};
-  return isRecord(easyar.cloudRecognition) ? easyar.cloudRecognition : {};
-}
-
-export async function readLogFile(logPath: string): Promise<string> {
-  const resolved = path.resolve(process.cwd(), logPath);
-  const info = await stat(resolved);
-  if (!info.isFile()) {
-    throw new Error(`${resolved} is not a file.`);
-  }
-  if (info.size > 5 * 1024 * 1024) {
-    throw new Error("Log file is larger than 5 MiB. Pass a smaller excerpt with logText.");
-  }
-  return readFile(resolved, "utf8");
-}
-
-export type UnityLogCandidate = {
-  path: string;
-  source: string;
-  exists: boolean;
-  size: number | null;
-  modifiedAt: string | null;
-  mtimeMs: number;
-};
-
-export async function findUnityLogCandidates(root: string | null): Promise<UnityLogCandidate[]> {
-  const candidateSpecs: Array<{ path: string; source: string }> = [];
-  if (root) {
-    candidateSpecs.push(
-      { path: path.join(root, "Logs", "Editor.log"), source: "project Logs/Editor.log" },
-      { path: path.join(root, "Logs", "Unity.log"), source: "project Logs/Unity.log" },
-      { path: path.join(root, "Library", "Editor.log"), source: "project Library/Editor.log" }
-    );
-    const projectLogsDir = path.join(root, "Logs");
-    if (await exists(projectLogsDir)) {
-      for (const entry of await readdir(projectLogsDir, { withFileTypes: true })) {
-        if (entry.isFile() && /\.log$/i.test(entry.name)) {
-          candidateSpecs.push({
-            path: path.join(projectLogsDir, entry.name),
-            source: "project Logs/*.log"
-          });
-        }
-      }
-    }
-  }
-
-  const home = process.env.HOME;
-  if (home) {
-    candidateSpecs.push(
-      { path: path.join(home, "Library", "Logs", "Unity", "Editor.log"), source: "macOS Unity Editor.log" },
-      { path: path.join(home, ".config", "unity3d", "Editor.log"), source: "Linux Unity Editor.log" }
-    );
-  }
-  if (process.env.LOCALAPPDATA) {
-    candidateSpecs.push({
-      path: path.join(process.env.LOCALAPPDATA, "Unity", "Editor", "Editor.log"),
-      source: "Windows Unity Editor.log"
-    });
-  }
-
-  const unique = new Map<string, string>();
-  for (const candidate of candidateSpecs) {
-    unique.set(candidate.path, candidate.source);
-  }
-
-  const candidates = await Promise.all(
-    Array.from(unique.entries()).map(async ([candidatePath, source]) => {
-      try {
-        const info = await stat(candidatePath);
-        return {
-          path: candidatePath,
-          source,
-          exists: info.isFile(),
-          size: info.isFile() ? info.size : null,
-          modifiedAt: info.isFile() ? info.mtime.toISOString() : null,
-          mtimeMs: info.isFile() ? info.mtimeMs : 0
-        };
-      } catch {
-        return {
-          path: candidatePath,
-          source,
-          exists: false,
-          size: null,
-          modifiedAt: null,
-          mtimeMs: 0
-        };
-      }
-    })
-  );
-
-  return candidates.sort((left, right) => Number(right.exists) - Number(left.exists) || right.mtimeMs - left.mtimeMs);
-}
-
-export async function readLogTail(logPath: string, maxBytes: number): Promise<string> {
-  const info = await stat(logPath);
-  if (!info.isFile()) {
-    throw new Error(`${logPath} is not a file.`);
-  }
-  const bytesToRead = Math.min(info.size, maxBytes);
-  const file = await open(logPath, "r");
-  try {
-    const buffer = Buffer.alloc(bytesToRead);
-    await file.read(buffer, 0, bytesToRead, Math.max(0, info.size - bytesToRead));
-    return buffer.toString("utf8");
-  } finally {
-    await file.close();
-  }
-}
-
-export async function readJsonFile(filePath: string): Promise<unknown> {
-  try {
-    return JSON.parse(await readFile(filePath, "utf8"));
-  } catch (error) {
-    throw new Error(`Failed to parse JSON from ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-export async function buildLocalConfigValidationReport(root: string, configPath?: string) {
-  const target = configPath ?? path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
-  if (!await exists(target)) {
-    return {
-      configPath: target,
-      valid: false,
-      checks: [
-        {
-          id: "file-exists",
-          ok: false,
-          detail: "Local config file does not exist."
-        }
-      ],
-      security: "Secret values are not returned. This tool only reports presence and placeholder status.",
-      nextActions: [
-        "Run easyar_prepare_unity_project.",
-        "Copy ProjectSettings/EasyAR/easyar.local.json.example to ProjectSettings/EasyAR/easyar.local.json.",
-        "Fill the local file with official EasyAR account/license values."
-      ]
-    };
-  }
-
-  const parsed = await readJsonFile(target);
-  const checks = validateLocalConfig(parsed);
-  return {
-    configPath: target,
-    valid: checks.every((check) => check.ok),
-    checks,
-    security: "Secret values are not returned. This tool only reports presence and placeholder status.",
-    nextActions: checks
-      .filter((check) => !check.ok)
-      .map((check) => localConfigAction(check.id))
-  };
-}
-
-export async function buildLocalConfigFromEnvReport(
-  root: string,
-  sample: SampleInfo,
-  targetPlatform: "android" | "ios" | "standalone",
-  bundleIdentifierInput: string | undefined,
-  target: string,
-  overwrite: boolean,
-  allowPartial: boolean
-) {
-  const existingFile = await exists(target);
-  const needsCloudRecognition = sample.id === "cloud-recognition";
-  const envValues = {
-    apiBaseUrl: envFirst(["EASYAR_API_BASE_URL"]) ?? "https://www.easyar.cn",
-    accountToken: envFirst(["EASYAR_ACCOUNT_TOKEN"]),
-    licenseKey: envFirst(["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"]),
-    cloudAppId: envFirst(["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"]),
-    cloudServerAddress: envFirst(["EASYAR_CLOUD_SERVER_ADDRESS", "EASYAR_CLOUD_RECOGNITION_SERVER_ADDRESS", "EASYAR_CRS_SERVER_ADDRESS", "EASYAR_CRS_RECOGNITION_URL"]),
-    cloudApiKey: envFirst(["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"]),
-    cloudApiSecret: envFirst(["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]),
-    bundleIdentifier: bundleIdentifierInput ?? envFirst(["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"]) ?? defaultBundleIdentifier(sample)
-  };
-  const envPresence = [
-    envPresenceItem("easyar.apiBaseUrl", ["EASYAR_API_BASE_URL"], isNonPlaceholderString(envValues.apiBaseUrl), "defaulted to https://www.easyar.cn when unset"),
-    envPresenceItem("easyar.accountToken", ["EASYAR_ACCOUNT_TOKEN"], isNonPlaceholderString(envValues.accountToken), "optional local Unity config material; not required for current focused sample runs"),
-    envPresenceItem("easyar.licenseKey", ["EASYAR_LICENSE_KEY", "EASYAR_SENSE_LICENSE_KEY"], isNonPlaceholderString(envValues.licenseKey), "required for focused sample runs"),
-    envPresenceItem("unity.bundleIdentifier", ["EASYAR_BUNDLE_IDENTIFIER", "EASYAR_UNITY_BUNDLE_IDENTIFIER"], isNonPlaceholderString(envValues.bundleIdentifier), bundleIdentifierInput ? "provided as non-secret tool argument" : "defaults to focused sample identifier when unset"),
-    envPresenceItem("easyar.cloudRecognition.appId", ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"], isNonPlaceholderString(envValues.cloudAppId), needsCloudRecognition ? "required for Cloud Recognition" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.serverAddress", ["EASYAR_CLOUD_SERVER_ADDRESS", "EASYAR_CLOUD_RECOGNITION_SERVER_ADDRESS", "EASYAR_CRS_SERVER_ADDRESS", "EASYAR_CRS_RECOGNITION_URL"], isNonPlaceholderString(envValues.cloudServerAddress), needsCloudRecognition ? "required Cloud Recognition Client-end Target Recognition URL" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.apiKey", ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"], isNonPlaceholderString(envValues.cloudApiKey), needsCloudRecognition ? "required for Cloud Recognition Sense 4.1+ APPID + API KEY" : "optional for Image Tracking"),
-    envPresenceItem("easyar.cloudRecognition.apiSecret", ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"], isNonPlaceholderString(envValues.cloudApiSecret), needsCloudRecognition ? "required by EasyAR Unity CloudRecognizer API Key access" : "optional for Image Tracking")
-  ];
-  const requiredMissing = envPresence
-    .filter((item) =>
-      (item.field === "easyar.licenseKey"
-        || (needsCloudRecognition && (item.field === "easyar.cloudRecognition.appId" || item.field === "easyar.cloudRecognition.serverAddress" || item.field === "easyar.cloudRecognition.apiKey" || item.field === "easyar.cloudRecognition.apiSecret"))) &&
-      !item.present
-    )
-    .map((item) => item.field);
-  const existingParsed = existingFile ? await readJsonFile(target).catch(() => ({})) : {};
-  const existing = isRecord(existingParsed) ? existingParsed : {};
-  const existingEasyAR = isRecord(existing.easyar) ? existing.easyar : {};
-  const existingUnity = isRecord(existing.unity) ? existing.unity : {};
-  const config = {
-    ...existing,
-    sampleId: sample.id,
-    sampleName: sample.name,
-    easyar: {
-      ...existingEasyAR,
-      apiBaseUrl: envValues.apiBaseUrl,
-      accountToken: envValues.accountToken ?? (typeof existingEasyAR.accountToken === "string" ? existingEasyAR.accountToken : ""),
-      licenseKey: envValues.licenseKey ?? (typeof existingEasyAR.licenseKey === "string" ? existingEasyAR.licenseKey : ""),
-      cloudRecognition: {
-        ...(isRecord(existingEasyAR.cloudRecognition) ? existingEasyAR.cloudRecognition : {}),
-        appId: envValues.cloudAppId ?? "",
-        serverAddress: envValues.cloudServerAddress ?? "",
-        apiKey: envValues.cloudApiKey ?? "",
-        apiSecret: envValues.cloudApiSecret ?? "",
-        appKey: envValues.cloudApiKey ?? "",
-        appSecret: envValues.cloudApiSecret ?? "",
-        credentialMode: envValues.cloudApiKey ? "appId-apiKey" : ""
-      }
-    },
-    unity: {
-      ...existingUnity,
-      targetPlatform,
-      bundleIdentifier: envValues.bundleIdentifier,
-      notes: sample.setupNotes
-    }
-  };
-  const canWrite = (!existingFile || overwrite) && (allowPartial || requiredMissing.length === 0);
-  const contents = `${JSON.stringify(config, null, 2)}\n`;
-  const nextActions = canWrite
-    ? [
-        `Run easyar_validate_local_config projectPath=${root}.`,
-        `Run easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}.`,
-        targetPlatform === "standalone"
-          ? "Choose android or ios for device validation before calling easyar_next_workflow_step."
-          : `Run easyar_next_workflow_step projectPath=${root} sampleId=${sample.id} platform=${targetPlatform}.`
-      ]
-    : [
-        ...(existingFile && !overwrite ? ["The target local config already exists. Pass overwrite=true only after confirming it is safe to replace or merge from env."] : []),
-        ...(requiredMissing.length > 0 && !allowPartial ? requiredMissing.map((field) => `Set local environment variable(s) for ${field}, then rerun easyar_write_local_config_from_env.`) : []),
-        "Use easyar_account_materials to see each field source and share policy."
-      ];
-
-  return {
-    existingFile,
-    canWrite,
-    contents,
-    requiredMissing,
-    envPresence,
-    nextActions: Array.from(new Set(nextActions)),
-    security: "Secret values are read only from local environment variables and written only to ProjectSettings/EasyAR/easyar.local.json. Returned output lists field presence and env names, never secret values."
-  };
-}
-
 export async function buildLocalConfigForm(
   root: string,
   sample: SampleInfo,
@@ -8447,25 +8264,6 @@ export async function buildLocalConfigHandoffReport(
   };
 }
 
-export function envFirst(names: string[]): string | undefined {
-  for (const name of names) {
-    const value = process.env[name];
-    if (isNonPlaceholderString(value)) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-export function envPresenceItem(field: string, envNames: string[], present: boolean, note: string) {
-  return {
-    field,
-    envNames,
-    present,
-    note
-  };
-}
-
 export async function readLocalConfigForRemoteValidation(projectPath: string): Promise<{
   licenseKey?: string;
   bundleIdentifier?: string;
@@ -8485,106 +8283,6 @@ export async function readLocalConfigForRemoteValidation(projectPath: string): P
     licenseKey: typeof easyar.licenseKey === "string" ? easyar.licenseKey : undefined,
     bundleIdentifier: typeof unity.bundleIdentifier === "string" ? unity.bundleIdentifier : undefined
   };
-}
-
-export function validateLocalConfig(config: unknown) {
-  const value = isRecord(config) ? config : {};
-  const easyar = isRecord(value.easyar) ? value.easyar : {};
-  const cloudRecognition = isRecord(easyar.cloudRecognition) ? easyar.cloudRecognition : {};
-  const unity = isRecord(value.unity) ? value.unity : {};
-
-  return [
-    {
-      id: "json-object",
-      ok: isRecord(config),
-      detail: "Config root is a JSON object."
-    },
-    {
-      id: "api-base-url",
-      ok: isNonPlaceholderString(easyar.apiBaseUrl),
-      detail: "easyar.apiBaseUrl is configured."
-    },
-    {
-      id: "account-token",
-      ok: isOptionalNonPlaceholderString(easyar.accountToken),
-      detail: "easyar.accountToken is empty or configured; it is optional for current local-key sample runs."
-    },
-    {
-      id: "license-key",
-      ok: isNonPlaceholderString(easyar.licenseKey),
-      detail: "easyar.licenseKey is present and not a placeholder."
-    },
-    {
-      id: "target-platform",
-      ok: isNonPlaceholderString(unity.targetPlatform),
-      detail: "unity.targetPlatform is configured."
-    },
-    {
-      id: "bundle-identifier",
-      ok: isOptionalNonPlaceholderString(unity.bundleIdentifier),
-      detail: "unity.bundleIdentifier is empty or configured for remote license validation."
-    },
-    {
-      id: "cloud-recognition",
-      ok: hasCloudRecognitionConfig(cloudRecognition),
-      detail: "cloudRecognition credentials are either empty, configured as appId + serverAddress + apiKey + apiSecret, or configured with legacy appId + serverAddress + appSecret."
-    }
-  ];
-}
-
-export function localConfigAction(checkId: string): string {
-  if (checkId === "json-object") {
-    return "Replace the config file with valid JSON based on easyar.local.json.example.";
-  }
-  if (checkId === "api-base-url") {
-    return "Set easyar.apiBaseUrl to https://www.easyar.cn or the official EasyAR API base URL.";
-  }
-  if (checkId === "account-token") {
-    return "Leave easyar.accountToken empty for current local-key sample runs unless this Unity project has a local account-token consumer.";
-  }
-  if (checkId === "license-key") {
-    return "Log in to the EasyAR website in your own browser, find the license yourself, then set easyar.licenseKey only in local ignored Unity config.";
-  }
-  if (checkId === "target-platform") {
-    return "Set unity.targetPlatform to android, ios, or standalone.";
-  }
-  if (checkId === "bundle-identifier") {
-    return "Set unity.bundleIdentifier to the Android package name or iOS bundle identifier bound to the EasyAR license.";
-  }
-  if (checkId === "cloud-recognition") {
-    return "Either leave all cloudRecognition fields empty, or log in to the EasyAR website in your own browser, find appId, serverAddress, apiKey, and apiSecret yourself, then fill them only in local ignored Unity config.";
-  }
-  return "Review ProjectSettings/EasyAR/easyar.local.json.";
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function isNonPlaceholderString(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0 && !/paste-|placeholder|your_/i.test(value);
-}
-
-export function isOptionalNonPlaceholderString(value: unknown): boolean {
-  return value === undefined || value === null || value === "" || isNonPlaceholderString(value);
-}
-
-export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-export function sanitizeRunResultNotes(value: string | undefined): string | null {
-  return sanitizeIssueText(value);
-}
-
-export function sanitizeIssueText(value: string | undefined | null): string | null {
-  if (!value) {
-    return null;
-  }
-  return value.replace(
-    /(licenseKey|license|accountToken|apiToken|accessToken|token|credential|appKey|appSecret|password|secret|key)\s*[:=]\s*\S+/gi,
-    "$1=<redacted>"
-  );
 }
 
 export function defaultIssueReproductionSteps(sample: SampleInfo, platform: typeof mobilePlatforms[number]): string[] {
@@ -8607,32 +8305,6 @@ export function sampleExpectedIssueBehavior(sample: SampleInfo): string {
   return "The focused EasyAR sample should pass validation and run on a real device.";
 }
 
-export function hasCloudRecognitionConfig(value: Record<string, unknown>): boolean {
-  const fields = [value.appId, value.serverAddress, value.apiKey, value.apiSecret, value.appKey, value.appSecret];
-  const configuredCount = fields.filter(isNonPlaceholderString).length;
-  const emptyCount = fields.filter((field) => field === undefined || field === null || (typeof field === "string" && field.trim() === "")).length;
-  return hasCompleteCloudRecognitionConfig(value) || emptyCount === fields.length;
-}
-
-export function hasCompleteCloudRecognitionConfig(value: Record<string, unknown>): boolean {
-  const hasAppId = isNonPlaceholderString(value.appId);
-  const hasServerAddress = isNonPlaceholderString(value.serverAddress);
-  const hasModernApiKey = isNonPlaceholderString(value.apiKey);
-  const hasModernApiSecret = isNonPlaceholderString(value.apiSecret);
-  const hasLegacyAppSecret = isNonPlaceholderString(value.appSecret);
-  return hasAppId && hasServerAddress && ((hasModernApiKey && hasModernApiSecret) || hasLegacyAppSecret);
-}
-
-export function cloudRecognitionCredentialMode(value: Record<string, unknown>): "appId-apiKey" | "legacy-appSecret" | "empty-or-incomplete" {
-  if (isNonPlaceholderString(value.appId) && isNonPlaceholderString(value.serverAddress) && isNonPlaceholderString(value.apiKey) && isNonPlaceholderString(value.apiSecret)) {
-    return "appId-apiKey";
-  }
-  if (isNonPlaceholderString(value.appId) && isNonPlaceholderString(value.serverAddress) && isNonPlaceholderString(value.appSecret)) {
-    return "legacy-appSecret";
-  }
-  return "empty-or-incomplete";
-}
-
 export function summarizeLog(logText: string) {
   const lines = logText.split(/\r?\n/);
   return {
@@ -8643,453 +8315,6 @@ export function summarizeLog(logText: string) {
     mentionsAndroid: /android|gradle|apk/i.test(logText),
     mentionsIOS: /\bios\b|xcode|provisioning|codesign/i.test(logText)
   };
-}
-
-export type UnityLogRule = {
-  id: string;
-  severity: "high" | "medium" | "low";
-  pattern: RegExp;
-  title: string;
-  actions: string[];
-};
-
-export function analyzeUnityLog(logText: string, sample: SampleInfo | null = null) {
-  const rules: UnityLogRule[] = [
-    {
-      id: "easyar-license",
-      severity: "high",
-      pattern: /easyar[\s\S]{0,120}(license|key|credential|authorize|authorization|unauthorized|invalid)/i,
-      title: "EasyAR license or credential problem",
-      actions: [
-        "Run easyar_auth_status and confirm account environment variables are configured.",
-        "Check ProjectSettings/EasyAR/easyar.local.json for the official EasyAR license key and cloud credentials.",
-        "Verify the app bundle/package identifier matches the license configuration in the EasyAR account."
-      ]
-    },
-    {
-      id: "camera-permission",
-      severity: "high",
-      pattern: /\b(camera|webcam)\b[\s\S]{0,120}\b(permission\s+(denied|missing|disabled)|denied|not authorized|unauthorized)\b|\bpermission\b[\s\S]{0,120}\b(denied|missing|disabled|not authorized|unauthorized)\b[\s\S]{0,120}\b(camera|webcam)\b/i,
-      title: "Camera permission problem",
-      actions: [
-        "Enable camera permission in Android Player Settings or iOS Info.plist.",
-        "Build to a real device and grant camera permission when prompted.",
-        "Confirm the target sample requires camera access before testing in Editor."
-      ]
-    },
-    {
-      id: "missing-easyar-plugin",
-      severity: "high",
-      pattern: /(namespace|type).{0,80}EasyAR.{0,80}(does not exist|could not be found)|EasyAR.{0,80}(assembly|plugin).{0,80}(missing|not found)/i,
-      title: "EasyAR Unity plugin is missing or not imported correctly",
-      actions: [
-        "Import the official EasyAR Unity Plugin package from the EasyAR download page.",
-        "Run easyar_check_sample_readiness after import to verify EasyAR assets are visible.",
-        "Reopen Unity so assemblies and imported packages are recompiled."
-      ]
-    },
-    {
-      id: "compile-error",
-      severity: "high",
-      pattern: /\b(CS\d{4}|Compilation failed|compiler error|Script compilation failed)\b/i,
-      title: "Unity C# compilation error",
-      actions: [
-        "Fix the first C# compiler error before investigating runtime EasyAR behavior.",
-        "Use easyar_write_csharp_file or easyar_create_mono_behaviour to patch scripts in the Unity project.",
-        "Re-run Unity compilation after each focused fix."
-      ]
-    },
-    {
-      id: "android-gradle",
-      severity: "medium",
-      pattern: /(gradle|android).{0,200}(failed|failure|exception|error|could not|unable|manifest merger|minSdk|targetSdk|duplicate class)|\b(GradleInvokationException|FAILURE:\s*Build failed|Execution failed for task|Could not download)\b/i,
-      title: "Android/Gradle build problem",
-      actions: [
-        "Check Android SDK, Gradle, minSdkVersion, targetSdkVersion, and manifest permissions.",
-        "Confirm Unity Android Build Support is installed for the selected Unity version.",
-        "Run the generated Build Settings helper with platform=android before building."
-      ]
-    },
-    {
-      id: "ios-signing",
-      severity: "medium",
-      pattern: /(xcode|ios|codesign|provisioning|development team|bundle identifier).{0,160}(failed|error|missing|invalid)/i,
-      title: "iOS signing or Xcode build problem",
-      actions: [
-        "Check bundle identifier, signing team, provisioning profile, and camera usage description.",
-        "Run the generated Build Settings helper with platform=ios before exporting.",
-        "Open the generated Xcode project and inspect signing errors."
-      ]
-    },
-    {
-      id: "scene-missing",
-      severity: "medium",
-      pattern: /(scene|build settings).{0,160}(missing|not found|not.*enabled|could not be loaded)/i,
-      title: "Sample scene is missing from Build Settings or cannot be loaded",
-      actions: [
-        "Run easyar_create_build_settings_helper for the selected sample.",
-        "Run easyar_run_unity_method with EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings.",
-        "Run easyar_check_sample_readiness and confirm matchingScenes is not empty."
-      ]
-    }
-  ];
-  rules.push(...sampleSpecificLogRules(sample));
-
-  const lines = logText.split(/\r?\n/);
-  return rules
-    .filter((rule) => rule.pattern.test(logText))
-    .map((rule) => ({
-      id: rule.id,
-      severity: rule.severity,
-      title: rule.title,
-      evidence: findEvidence(lines, rule.pattern),
-      actions: rule.actions
-    }));
-}
-
-export function sampleSpecificLogRules(sample: SampleInfo | null): UnityLogRule[] {
-  if (!sample) {
-    return [];
-  }
-
-  if (sample.id === "image-tracking") {
-    return [
-      {
-        id: "image-tracking-target-load",
-        severity: "high",
-        pattern: /(image\s*target|imagetarget|target\s*(database|asset|image|file|data)).{0,160}(not\s*found|missing|load(ed)?\s*failed|cannot\s*load|invalid|empty)/i,
-        title: "Image Tracking target asset cannot be loaded",
-        actions: [
-          "Check Assets/EasyARGenerated/image-tracking/RUNBOOK.md.",
-          "Add official Image Tracking target images, target JSON/XML files, `.etd` files, or imported target assets under Assets.",
-          "Run easyar_check_sample_readiness with sampleId=image-tracking and confirm image-target-assets passes."
-        ]
-      },
-      {
-        id: "image-tracking-no-detection",
-        severity: "medium",
-        pattern: /(image\s*target|imagetarget|tracker|tracking).{0,160}(not\s*detected|lost|timeout|no\s*target|cannot\s*recognize)/i,
-        title: "Image Tracking target is not being detected",
-        actions: [
-          "Verify target physical size and target database/import settings in the official EasyAR workflow.",
-          "Test on a real device with stable lighting and a clear printed or screen-displayed target.",
-          "Confirm the Image Tracking sample scene is the active scene in Build Settings."
-        ]
-      }
-    ];
-  }
-
-  if (sample.id === "cloud-recognition") {
-    return [
-      {
-        id: "cloud-recognition-credentials",
-        severity: "high",
-        pattern: /(cloud\s*recognition|cloudrecognizer|cloud).{0,180}(appId|appKey|appSecret|credential|secret|key|unauthorized|forbidden|invalid|missing)/i,
-        title: "Cloud Recognition credentials are invalid or missing",
-        actions: [
-          "Fill easyar.cloudRecognition.appId and apiKey in ProjectSettings/EasyAR/easyar.local.json. Legacy appKey/appSecret is also accepted.",
-          "Run easyar_check_sample_readiness with sampleId=cloud-recognition and confirm cloud-recognition-credentials passes.",
-          "Verify the credentials and target library in the official EasyAR account."
-        ]
-      },
-      {
-        id: "cloud-recognition-network",
-        severity: "medium",
-        pattern: /(cloud\s*recognition|cloudrecognizer|cloud).{0,180}(network|timeout|dns|http|ssl|tls|connection|service unavailable|gateway)/i,
-        title: "Cloud Recognition network or service request failed",
-        actions: [
-          "Confirm the device has network access and platform Internet permission.",
-          "Verify the EasyAR cloud recognition service endpoint/region configured by the official sample.",
-          "Retry on a real device network and inspect device logs for HTTP status details."
-        ]
-      }
-    ];
-  }
-
-  if (sample.id === "mega") {
-    return [
-      {
-        id: "mega-block-config",
-        severity: "high",
-        pattern: /(mega|mega\s*block|block|cloud\s*locali[sz]ation|cloudlocalizer).{0,180}(not\s*found|missing|invalid|load(ed)?\s*failed|cannot\s*load|unauthorized|forbidden)/i,
-        title: "Mega Block or cloud localization configuration cannot be loaded",
-        actions: [
-          "Use the logged-in EasyAR website or Mega Studio session to confirm the cloud localization library and Mega Block identifiers.",
-          "Load or bind the selected Mega Block in Unity before building the APK.",
-          "Run easyar_check_sample_readiness with sampleId=mega and confirm mega-assets passes."
-        ]
-      },
-      {
-        id: "mega-hybridclr",
-        severity: "high",
-        pattern: /(hybridclr|aot|hot\s*update).{0,180}(error|missing|generate|install|metadata|dll|failed|exception)/i,
-        title: "HybridCLR generated files are missing or stale for the Mega Android build",
-        actions: [
-          "Run the HybridCLR installer if the package has not been installed for this Unity project.",
-          "Run HybridCLR/Generate/All for the same Android target before building.",
-          "Rebuild after switching Unity PlayerSettings to the final Android architecture and scripting backend."
-        ]
-      },
-      {
-        id: "mega-arcore-manifest",
-        severity: "high",
-        pattern: /(arcore|androidmanifest|minSdkVersion|onnxruntime|uses-feature|uses-permission).{0,220}(error|conflict|cannot|failed|smaller|replace|required|missing)/i,
-        title: "Android manifest, ARCore, or minSdk configuration blocks the Mega APK",
-        actions: [
-          "Check AndroidManifest.xml for ARCore metadata conflicts and tools:replace when required.",
-          "Set Android minSdkVersion high enough for imported Mega dependencies such as ONNX Runtime.",
-          "Confirm camera, location, Internet, and ARCore-related Android settings before rebuilding."
-        ]
-      },
-      {
-        id: "mega-localization-runtime",
-        severity: "medium",
-        pattern: /(mega|locali[sz]ation|cloudlocalizer|cloud\s*locali[sz]ation).{0,180}(lost|timeout|failed|not\s*localized|no\s*pose|tracking\s*lost)/i,
-        title: "Mega localization did not succeed on device",
-        actions: [
-          "Test in the physical environment represented by the selected Mega Block.",
-          "Confirm the device has camera, location, and network permissions enabled.",
-          "Record device logs and run easyar_write_device_run_result_form after the real-device attempt."
-        ]
-      }
-    ];
-  }
-
-  return [
-    {
-      id: "sample-deferred",
-      severity: "low",
-      pattern: /easyar|sample|tracking|cloud|camera/i,
-      title: "Sample is outside the current focused run-through scope",
-      actions: [
-        "Current focused run-through work covers image-tracking, cloud-recognition, and mega.",
-        `Switch to a focused sample before expecting sample-specific diagnostics for ${sample.id}.`
-      ]
-    }
-  ];
-}
-
-export function findEvidence(lines: string[], pattern: RegExp): string[] {
-  return lines
-    .filter((line) => pattern.test(line))
-    .slice(0, 3)
-    .map((line) => line.trim().slice(0, 500));
-}
-
-export type ScriptReviewIssue = {
-  id: string;
-  severity: "high" | "medium" | "low";
-  file: string;
-  line: number | null;
-  title: string;
-  evidence: string | null;
-  recommendation: string;
-};
-
-export function reviewCsharpScript(relativePath: string, text: string): ScriptReviewIssue[] {
-  const issues: ScriptReviewIssue[] = [];
-  const lines = text.split(/\r?\n/);
-  const addIssue = (
-    id: string,
-    severity: ScriptReviewIssue["severity"],
-    line: number | null,
-    title: string,
-    evidence: string | null,
-    recommendation: string
-  ) => {
-    issues.push({
-      id,
-      severity,
-      file: relativePath,
-      line,
-      title,
-      evidence: evidence?.trim().slice(0, 500) ?? null,
-      recommendation
-    });
-  };
-
-  const usingEasyAR = /\busing\s+EasyAR\b|EasyAR\./.test(text);
-  const isMonoBehaviour = /:\s*MonoBehaviour\b/.test(text);
-
-  lines.forEach((line, index) => {
-    const lineNumber = index + 1;
-    if (/(license\w*|appSecret|appKey|accountToken)\s*=\s*"[^"]{8,}"/i.test(line)) {
-      addIssue(
-        "hardcoded-easyar-secret",
-        "high",
-        lineNumber,
-        "Possible EasyAR secret is hardcoded in a C# script",
-        line,
-        "Move license keys, cloud recognition credentials, and account tokens into local config or secret injection."
-      );
-    }
-
-    if (/\basync\s+void\b/.test(line) && !/\b(async\s+void\s+(Start|Awake|OnEnable|OnDisable|Update|FixedUpdate|LateUpdate)\s*\()/.test(line)) {
-      addIssue(
-        "async-void",
-        "medium",
-        lineNumber,
-        "async void method can hide exceptions",
-        line,
-        "Use Task-returning methods for internal async work and surface failures through Unity logs."
-      );
-    }
-  });
-
-  const updateBody = extractMethodBody(text, "Update");
-  if (updateBody && /\b(GameObject\.Find|FindObjectOfType|FindObjectsOfType|Resources\.Load)\s*\(/.test(updateBody)) {
-    addIssue(
-      "expensive-update-lookup",
-      "medium",
-      findLineNumber(lines, /\bvoid\s+Update\s*\(/),
-      "Update performs expensive scene or resource lookups",
-      firstMatchingLine(updateBody, /\b(GameObject\.Find|FindObjectOfType|FindObjectsOfType|Resources\.Load)\s*\(/),
-      "Cache references in Awake/Start or assign them with [SerializeField] before running AR tracking loops."
-    );
-  }
-
-  if (isMonoBehaviour && /\bStartCoroutine\s*\(/.test(text) && !/\bStopCoroutine\s*\(|\bStopAllCoroutines\s*\(/.test(text)) {
-    addIssue(
-      "coroutine-not-stopped",
-      "low",
-      findLineNumber(lines, /\bStartCoroutine\s*\(/),
-      "Coroutine is started without an obvious stop path",
-      firstMatchingLine(text, /\bStartCoroutine\s*\(/),
-      "Stop long-running coroutines in OnDisable/OnDestroy so AR session transitions do not leak work."
-    );
-  }
-
-  if (isMonoBehaviour && /\bInvokeRepeating\s*\(/.test(text) && !/\bCancelInvoke\s*\(/.test(text)) {
-    addIssue(
-      "invoke-not-cancelled",
-      "low",
-      findLineNumber(lines, /\bInvokeRepeating\s*\(/),
-      "InvokeRepeating is used without CancelInvoke",
-      firstMatchingLine(text, /\bInvokeRepeating\s*\(/),
-      "Call CancelInvoke in OnDisable/OnDestroy for predictable sample teardown."
-    );
-  }
-
-  if (isMonoBehaviour && /\[SerializeField\]\s+private\s+[\w<>\[\].]+\s+(\w+)\s*;/.test(text)) {
-    const serializedFields = Array.from(text.matchAll(/\[SerializeField\]\s+private\s+[\w<>\[\].]+\s+(\w+)\s*;/g)).map((match) => match[1]);
-    for (const field of serializedFields) {
-      const fieldUsePattern = new RegExp(`\\b${escapeRegExp(field)}\\s*!=\\s*null|\\b${escapeRegExp(field)}\\s*==\\s*null`);
-      if (!fieldUsePattern.test(text)) {
-        addIssue(
-          "serialized-field-no-null-check",
-          "low",
-          findLineNumber(lines, new RegExp(`\\b${escapeRegExp(field)}\\b`)),
-          "Serialized field has no obvious null guard",
-          field,
-          "Add a null check or validation log before using Inspector-assigned AR references."
-        );
-      }
-    }
-  }
-
-  if (usingEasyAR && !/try\s*\{|catch\s*\(|Debug\.Log(Error|Warning)?\s*\(/.test(text)) {
-    addIssue(
-      "easyar-code-no-diagnostics",
-      "low",
-      null,
-      "EasyAR-related script has little diagnostic logging",
-      null,
-      "Add focused Debug.LogWarning/Debug.LogError messages around EasyAR initialization, target events, and credential-dependent paths."
-    );
-  }
-
-  if (/\bInput\.touchCount\b/.test(text) && !/\bInput\.GetTouch\s*\(\s*0\s*\)\.phase\b/.test(text)) {
-    addIssue(
-      "touch-without-phase-check",
-      "medium",
-      findLineNumber(lines, /\bInput\.touchCount\b/),
-      "Touch input is read without an obvious phase check",
-      firstMatchingLine(text, /\bInput\.touchCount\b/),
-      "Gate placement logic on TouchPhase.Began or a deliberate gesture phase to avoid repeated placement every frame."
-    );
-  }
-
-  return issues;
-}
-
-export async function buildScriptReviewReport(root: string, relativePaths: string[] | undefined, maxFiles: number, maxIssues: number) {
-  const files = relativePaths && relativePaths.length > 0
-    ? relativePaths.map((relativePath) => {
-        const target = path.resolve(root, relativePath);
-        assertInside(root, target);
-        if (!target.endsWith(".cs")) {
-          throw new Error("easyar_review_csharp_scripts only reviews .cs files.");
-        }
-        return target;
-      })
-    : (await findFiles(root, ["Assets"], /\.cs$/i, maxFiles)).map((relativePath) => path.join(root, relativePath));
-
-  const reviewed: string[] = [];
-  const issues: ScriptReviewIssue[] = [];
-  for (const filePath of files.slice(0, maxFiles)) {
-    if (!await exists(filePath)) {
-      issues.push({
-        id: "script-missing",
-        severity: "high",
-        file: path.relative(root, filePath),
-        line: null,
-        title: "Script file does not exist",
-        evidence: null,
-        recommendation: "Check the relativePaths input and rerun the review."
-      });
-      continue;
-    }
-
-    const text = await readFile(filePath, "utf8");
-    reviewed.push(path.relative(root, filePath));
-    issues.push(...reviewCsharpScript(path.relative(root, filePath), text));
-    if (issues.length >= maxIssues) {
-      break;
-    }
-  }
-
-  const limitedIssues = issues.slice(0, maxIssues);
-  return {
-    projectPath: root,
-    reviewedFiles: reviewed,
-    reviewedFileCount: reviewed.length,
-    issueCount: limitedIssues.length,
-    issues: limitedIssues,
-    nextActions: buildScriptReviewActions(limitedIssues),
-    note: "This is a static review. Unity compilation and device testing remain the source of truth."
-  };
-}
-
-export function buildScriptReviewActions(issues: ScriptReviewIssue[]): string[] {
-  if (issues.length === 0) {
-    return ["No static script review issues were detected. Run Unity compilation and device tests next."];
-  }
-  const actions = new Set<string>();
-  if (issues.some((issue) => issue.id === "hardcoded-easyar-secret")) {
-    actions.add("Move EasyAR secrets into ProjectSettings/EasyAR/easyar.local.json or environment-backed secret storage.");
-  }
-  if (issues.some((issue) => issue.severity === "high")) {
-    actions.add("Fix high-severity script issues before running Unity batch builds.");
-  }
-  actions.add("Patch focused scripts with easyar_write_csharp_file, then run Unity compilation or easyar_analyze_unity_log.");
-  return Array.from(actions);
-}
-
-export function chooseNextRunPhase(
-  readiness: Awaited<ReturnType<typeof buildSampleReadinessReport>>,
-  configValidation: Awaited<ReturnType<typeof buildLocalConfigValidationReport>>,
-  scriptReview: Awaited<ReturnType<typeof buildScriptReviewReport>>
-): string {
-  if (!readiness.ready) {
-    return "Fix readiness gaps before Unity batch automation.";
-  }
-  if (!configValidation.valid) {
-    return "Fix local EasyAR config before building to device.";
-  }
-  if (scriptReview.issueCount > 0) {
-    return "Fix static C# review issues before compiling in Unity.";
-  }
-  return "Run mobile settings, Build Settings, and device build helpers from easyar_generate_run_sequence.";
 }
 
 
