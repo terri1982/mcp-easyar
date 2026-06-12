@@ -19,6 +19,12 @@ Safe evidence only. This summary intentionally excludes EasyAR website passwords
 - EasyAR camera overlay shader blocker was cleared by including `EasyAR/CameraImage_*` shaders in Unity `Always Included Shaders`.
 - Long device log showed Mega localization/tracking activity with `[MLOC]`, `kLocalizationFullMap`, `kMapTracking`, and repeated `NCam_Verified results`.
 
+## Fresh Project Follow-Up
+
+A separate fresh Unity project pass was also recorded after the user asked not to continue with the Tiantan project. See `docs/release-evidence/mega-fresh-project-android-startup.md`.
+
+That fresh-project pass now proves official package import, APK build, real-device install/startup, EasyAR Sense initialization, `Onsite` mode readiness, and real-device Mega localization/tracking log signals from the selected mapped environment.
+
 ## Local Evidence Files
 
 The raw logs stay local and should not be committed because Unity/EasyAR projects can contain private account or environment details.

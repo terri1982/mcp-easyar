@@ -1,11 +1,11 @@
 # mcp-easyar 当前状态
 
-当前 GitHub 预发布版：`v0.1.0-local-key.34`
+当前 GitHub 预发布版：`v0.1.0-local-key.35`
 
 安装：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -18,7 +18,8 @@ easyar-mcp-check
   - Image Tracking
   - CRS / Cloud Recognition
 - 当前工作树新增：
-  - Mega：Unity 2022.3.62f3 Android APK 已在真机安装启动，EasyAR Sense 初始化成功，选定 Mega Block 已加载，并取得 `[MLOC]` `kMapTracking` / `NCam_Verified results` 定位跟踪日志证据。
+  - Mega：已有一轮 Android 真机定位跟踪日志证据，包含 `[MLOC]`、`kMapTracking` / `NCam_Verified results` 等信号。
+  - Mega fresh project：已按用户要求新建 Unity 工程，使用官方 4002 Mega 包完成 APK 打包、真机安装启动、EasyAR Sense 初始化、`Onsite` 模式就绪，并在对应办公室映射场景中抓到真机定位/跟踪日志信号。
 - Codex、Claude Desktop、通用 JSON MCP client 配置生成可用。
 - 新用户注册/登录/下载/key 创建采用浏览器引导，不收集官网密码或密钥。
 - Unity 项目编程辅助可生成 preflight、scene audit、run sequence、device validation、programming context、code plan、C# review、handoff artifact。
@@ -31,4 +32,4 @@ easyar-mcp-check
 
 ## 当前建议
 
-日常使用请安装 GitHub Release 正版包，并保持默认 core profile。下一步是用当前三样本 safe evidence 跑严格 local-key release gate，然后发布新的 GitHub Release。
+日常使用请安装 GitHub Release 正版包，并保持默认 core profile。下一步是用三样本 safe evidence 跑严格 local-key release gate，并在通过后发布新的 GitHub Release。

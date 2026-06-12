@@ -6,6 +6,7 @@ Current acceptance scope:
 
 - Image Tracking
 - CRS/Cloud Recognition
+- Mega
 
 Out of scope until the user explicitly continues:
 
@@ -26,7 +27,7 @@ Out of scope until the user explicitly continues:
 Install the current prerelease:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -72,7 +73,7 @@ easyar://workflow/focused-scope
 easyar://workflow/programming
 ```
 
-The client is ready when the server name is `mcp-easyar`, the focused samples include `image-tracking` and `cloud-recognition`, and `easyar-mcp-check` reports all required resources as OK.
+The client is ready when the server name is `mcp-easyar`, the focused samples include `image-tracking`, `cloud-recognition`, and `mega`, and `easyar-mcp-check` reports all required resources as OK.
 
 ## New Unity Project Flow
 
@@ -116,6 +117,19 @@ easyar_run_unity_method projectPath=/path/to/UnityProject methodName=EasyARGener
 easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
 ```
 
+For Mega, use the official EasyAR Sense Unity Plugin for Mega and run the focused setup sequence with `sampleId=mega`. The user must already have an EasyAR package-bound license and must use their own logged-in EasyAR website or Mega Studio session to find the cloud localization library, Mega Block storage, Block name, and Block ID. Configure Unity locally; do not paste license or API Secret values into chat.
+
+```text
+easyar_write_import_checklist projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_write_sample_import_guide projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_import_sample_from_package_cache projectPath=/path/to/UnityProject sampleId=mega dryRun=true
+easyar_write_focused_preflight projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=mega platform=android
+```
+
+For real-device Mega validation, set the Mega sample `LocationInputMode` to `Onsite`. A passed Mega result requires build/install/launch/readiness plus localization/tracking signals in the selected mapped physical environment.
+
 Build and device validation should then write focused evidence:
 
 ```text
@@ -126,6 +140,9 @@ easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=image-
 easyar_write_device_validation_checklist projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
 easyar_write_run_result projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android status=passed recognitionVerified=true
 easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android runThroughComplete=true
+easyar_write_device_validation_checklist projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android status=passed recognitionVerified=true
+easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega platform=android runThroughComplete=true
 easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=android
 ```
 

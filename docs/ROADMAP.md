@@ -6,12 +6,12 @@ For the broader service objective across more samples, official API production i
 
 ## Current State
 
-Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.34`.
+Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.35`.
 
 The current release can be installed from GitHub Releases:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -24,7 +24,7 @@ easyar-mcp-check
 - Local-key onboarding is implemented: users register, log in, download, and create keys on the official EasyAR website in their own browser.
 - MCP guides local Unity configuration without collecting website passwords, verification codes, account tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
 - Focused Image Tracking and CRS/Cloud Recognition workflows are implemented and have safe committed Android evidence.
-- Focused Mega workflow assistance is implemented and has safe committed Android device evidence from a Unity 2022.3.62f3 APK install/startup/localization-tracking run.
+- Focused Mega workflow assistance is implemented and has safe committed Android device evidence from a Unity 2022.3.62f3 APK install/startup/localization-tracking run. A separate fresh Unity project now proves official package import, APK build/install/startup, Onsite-mode readiness, and real-device localization/tracking log signals in the selected mapped environment.
 - Unity project programming assistance exists for focused sample preflight, scene audit, run sequence, device validation, log collection, C# planning, script writing, and handoff artifacts.
 
 ## Active Scope

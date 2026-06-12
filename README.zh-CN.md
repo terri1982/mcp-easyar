@@ -12,11 +12,11 @@
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.34`
+- 当前 GitHub 预发布版：`v0.1.0-local-key.35`
 - 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
-  - Mega（Unity 2022.3.62f3 Android APK 已真机安装启动，并取得 Mega `kMapTracking` / `NCam_Verified results` 定位跟踪日志证据）
+  - Mega（已有 Unity 2022.3.62f3 Android 真机定位跟踪日志证据；fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式就绪，并已抓到定位/跟踪日志信号）
 - 暂缓目标：
   - Hello AR
   - Surface Tracking
@@ -29,7 +29,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

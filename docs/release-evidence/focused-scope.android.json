@@ -50,7 +50,9 @@
       "latestRunResultStatus": "passed",
       "completionReportPath": "Assets/EasyARGenerated/mega/COMPLETION_REPORT.md",
       "runResultPath": "Assets/EasyARGenerated/mega/RUN_RESULT.md",
-      "deviceEvidencePath": "docs/release-evidence/mega-android-device-summary.md"
+      "deviceEvidencePath": "docs/release-evidence/mega-android-device-summary.md",
+      "freshProjectStartupEvidencePath": "docs/release-evidence/mega-fresh-project-android-startup.md",
+      "freshProjectLocalizationEvidencePath": "docs/release-evidence/mega-fresh-project-android-startup.md"
     }
   ],
   "security": "Safe release evidence contains completion states and relative artifact paths only. It excludes project absolute paths, EasyAR passwords, account tokens, license keys, Cloud Recognition API KEY/API Secret values, appKey/appSecret, signing keys, provisioning secrets, APKs, Unity packages, and raw logs."

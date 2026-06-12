@@ -4,7 +4,7 @@
 
 ## 1. 已发布 local-key MVP
 
-当前版本：`v0.1.0-local-key.34`
+当前版本：`v0.1.0-local-key.35`
 
 已完成：
 
@@ -16,7 +16,7 @@
 
 当前工作树已补齐：
 
-- Mega：MCP 工作流、Android APK 打包、真机安装启动、EasyAR 初始化、Mega Block 加载和定位跟踪日志证据已完成，等待下一版 local-key GitHub Release。
+- Mega：MCP 工作流、Android APK 打包、真机安装启动、EasyAR 初始化、Mega Block 加载和一轮定位跟踪日志证据已完成。fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式就绪，并已在对应办公室映射场景抓到定位/跟踪日志信号，可进入下一版 local-key GitHub Release 发布前验证。
 
 ## 2. Sample 扩展
 

@@ -2,7 +2,7 @@
 
 This plan keeps the original long-term goal visible while preserving the current released scope.
 
-Current public release: `v0.1.0-local-key.34`
+Current public release: `v0.1.0-local-key.35`
 
 ## Goal
 
@@ -37,8 +37,9 @@ The current in-progress expansion target adds:
 Evidence so far:
 
 - MCP catalog, runbooks, readiness checks, device-validation forms, MonoBehaviour template generation, and log diagnostics include Mega.
-- Unity 2022.3.62f3 Android APK build, real-device install/startup, EasyAR initialization, Mega Block load, and Mega localization/tracking evidence exist.
-- Safe committed release evidence now includes real-device APK install/startup and Mega localization/tracking validation for the next local-key release.
+- Unity 2022.3.62f3 Android APK build, real-device install/startup, EasyAR initialization, Mega Block load, and Mega localization/tracking evidence exist from the earlier completed pass.
+- A separate fresh Unity project now proves official 4002 Mega package import, Android APK build/install/startup, EasyAR initialization, and Onsite-mode readiness.
+- Safe committed release evidence now includes real-device APK install/startup and Mega localization/tracking validation plus fresh-project startup/localization evidence from the selected mapped environment.
 
 ## Expansion Track 1: More EasyAR Samples
 

@@ -1,11 +1,11 @@
 # mcp-easyar 发布清单
 
-当前发布：`v0.1.0-local-key.34`
+当前发布：`v0.1.0-local-key.35`
 
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -24,7 +24,7 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 
 ## 发布模型
 
-- `local-key-mvp`：当前 GitHub prerelease gate。已发布的两样本证据覆盖 Image Tracking 和 CRS / Cloud Recognition；当前工作树已补 Mega 真机安装、启动、定位跟踪和 safe release evidence，可用于下一版 local-key release gate。
+- `local-key-mvp`：当前 GitHub prerelease gate。已发布的两样本证据覆盖 Image Tracking 和 CRS / Cloud Recognition；当前工作树已补 Mega 真机安装、启动、定位跟踪和 safe release evidence。另有 fresh project Mega APK 启动与定位/跟踪证据，可用于下一版 local-key release gate。
 - `production`：未来官方 API 接入后使用。
 
 ## 包内容
@@ -35,4 +35,4 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 
 - Image Tracking
 - CRS / Cloud Recognition
-- Mega（待真机 evidence 后再发布新版本）
+- Mega（已有历史真机定位 evidence；fresh project 还需现场定位 evidence 后再发布新版本）

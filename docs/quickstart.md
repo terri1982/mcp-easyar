@@ -227,7 +227,7 @@ easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=image-tr
 easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
 
-`easyar_prepare_unity_project` also creates a focused runbook under `Assets/EasyARGenerated/<sampleId>/RUNBOOK.md`. For Image Tracking it creates a target-asset staging directory. For Cloud Recognition it creates a cloud credential note directory.
+`easyar_prepare_unity_project` also creates a focused runbook under `Assets/EasyARGenerated/<sampleId>/RUNBOOK.md`. For Image Tracking it creates a target-asset staging directory. For Cloud Recognition it creates a cloud credential note directory. For Mega it creates a Mega local-materials note, generates validation checks for local EasyAR Settings credential presence, and reminds users to set `LocationInputMode` to `Onsite` for real-device validation.
 
 Copy `ProjectSettings/EasyAR/easyar.local.json.example` to `ProjectSettings/EasyAR/easyar.local.json` and fill it with official local credentials, or write the local file from environment-backed secrets:
 

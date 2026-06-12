@@ -3679,7 +3679,7 @@ server.tool(
     const written: string[] = [];
     await writeGeneratedFile(runnerPath, buildSampleRunner(sample), overwrite, written);
     await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
-    await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, null), overwrite, written);
+    await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, sample.id === "mega" ? 24 : null), overwrite, written);
     await writeGeneratedFile(validationPath, buildSampleValidationHelper(sample), overwrite, written);
     await writeGeneratedFile(bridgeEditorPath, buildLocalConfigBridgeEditor(sample), overwrite, written);
     await writeGeneratedFile(bridgeRuntimePath, buildLocalConfigBridgeRuntime(), overwrite, written);
@@ -3796,7 +3796,7 @@ server.tool(
     sampleId: z.string().optional().describe("Optional sample id used to generate a stable default bundle identifier."),
     bundleIdentifier: z.string().optional().describe("Application bundle/package identifier. Defaults to a sample-specific com.easyar.generated.* id."),
     cameraUsageDescription: z.string().optional().describe("iOS camera usage description. Defaults to an EasyAR AR camera message."),
-    minSdkVersion: z.number().int().min(23).max(35).optional().describe("Android minimum SDK API level. Defaults to 23."),
+    minSdkVersion: z.number().int().min(23).max(35).optional().describe("Android minimum SDK API level. Defaults to 23, or 24 for Mega."),
     overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
   },
   async ({ projectPath, platform, sampleId, bundleIdentifier, cameraUsageDescription, minSdkVersion, overwrite }) => {
@@ -3810,7 +3810,7 @@ server.tool(
     const written: string[] = [];
     await writeGeneratedFile(
       filePath,
-      buildMobileSettingsHelper(platform, appId, cameraUsageDescription ?? null, minSdkVersion ?? null),
+      buildMobileSettingsHelper(platform, appId, cameraUsageDescription ?? null, minSdkVersion ?? (sample?.id === "mega" ? 24 : null)),
       overwrite,
       written
     );
@@ -11986,6 +11986,60 @@ async function findMegaAssetHints(root: string, limit: number): Promise<string[]
     .slice(0, limit);
 }
 
+async function readMegaSettingsSummary(root: string) {
+  const settingsPath = path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset");
+  if (!await exists(settingsPath)) {
+    return {
+      exists: false,
+      relativePath: "Assets/XR/Settings/EasyAR Settings.asset",
+      licensePresent: false,
+      appIdPresent: false,
+      serverAddressPresent: false,
+      apiKeyPresent: false,
+      apiSecretPresent: false
+    };
+  }
+
+  const text = await readFile(settingsPath, "utf8");
+  const block = text.match(/GlobalMegaBlockLocalizationServiceConfig:\s*\n([\s\S]*?)(?:\n  GlobalMegaLandmarkLocalizationServiceConfig:|\n  GlobalSpatialMapServiceConfig:|\n  GlobalCloudRecognizerServiceConfig:|\n  [A-Za-z].*:|$)/)?.[1] ?? "";
+  return {
+    exists: true,
+    relativePath: path.relative(root, settingsPath),
+    licensePresent: hasYamlScalar(text, "LicenseKey"),
+    appIdPresent: hasYamlScalar(block, "AppID"),
+    serverAddressPresent: hasYamlScalar(block, "ServerAddress"),
+    apiKeyPresent: hasYamlScalar(block, "APIKey"),
+    apiSecretPresent: hasYamlScalar(block, "APISecret")
+  };
+}
+
+async function readMegaLocationInputModeSummary(root: string) {
+  const sceneCandidates = await findFiles(root, ["Assets"], /(?:mega|megablock|cloudlocalizer).*\.unity$/i, 40);
+  const modes: Array<{ path: string; mode: "Onsite" | "Simulator" | "FramePlayer" | "Unknown"; raw: number }> = [];
+  for (const scene of sceneCandidates) {
+    const text = await readFile(path.join(root, scene), "utf8");
+    for (const match of text.matchAll(/locationInputMode:\s*(\d+)/g)) {
+      const raw = Number(match[1]);
+      modes.push({
+        path: scene,
+        raw,
+        mode: raw === 0 ? "Onsite" : raw === 1 ? "Simulator" : raw === 2 ? "FramePlayer" : "Unknown"
+      });
+    }
+  }
+  return {
+    sceneCount: sceneCandidates.length,
+    modes,
+    hasOnsite: modes.some((item) => item.mode === "Onsite"),
+    hasSimulator: modes.some((item) => item.mode === "Simulator")
+  };
+}
+
+function hasYamlScalar(text: string, key: string): boolean {
+  const match = new RegExp(`^\\s*${key}:\\s*(.*)$`, "m").exec(text);
+  return isNonPlaceholderString(match?.[1] ?? "");
+}
+
 function focusedSampleGeneratedDir(root: string, sample: SampleInfo): string {
   return path.join(root, "Assets", "EasyARGenerated", sample.id);
 }
@@ -12036,6 +12090,15 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
 
   if (sample.id === "mega") {
     const megaHints = await findMegaAssetHints(root, 80);
+    const megaSettings = await readMegaSettingsSummary(root);
+    const megaLocationInputMode = await readMegaLocationInputModeSummary(root);
+    const missingMegaSettings = [
+      megaSettings.licensePresent ? null : "license",
+      megaSettings.appIdPresent ? null : "GlobalMegaBlock.AppID",
+      megaSettings.serverAddressPresent ? null : "GlobalMegaBlock.ServerAddress",
+      megaSettings.apiKeyPresent ? null : "GlobalMegaBlock.APIKey",
+      megaSettings.apiSecretPresent ? null : "GlobalMegaBlock.APISecret"
+    ].filter((item): item is string => item !== null);
     return [
       {
         id: "mega-assets",
@@ -12043,6 +12106,24 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
         detail: megaHints.length > 0
           ? `Found Mega asset hint(s): ${megaHints.slice(0, 8).join(", ")}.`
           : "No Mega, MegaBlock, CloudLocalizer, or TiantanSkyPalace asset hints were found under Assets or Packages."
+      },
+      {
+        id: "mega-settings",
+        ok: megaSettings.exists && missingMegaSettings.length === 0,
+        detail: megaSettings.exists
+          ? missingMegaSettings.length === 0
+            ? `Local EasyAR Settings contain package license and Global Mega Block credential presence at ${megaSettings.relativePath}. Secret values were not read or printed.`
+            : `Local EasyAR Settings exist at ${megaSettings.relativePath}, but missing configured presence for: ${missingMegaSettings.join(", ")}.`
+          : "Assets/XR/Settings/EasyAR Settings.asset was not found. Create EasyAR Settings and fill local package license plus Global Mega Block AppID/server/API Key/API Secret."
+      },
+      {
+        id: "mega-location-input-mode",
+        ok: megaLocationInputMode.hasOnsite,
+        detail: megaLocationInputMode.modes.length > 0
+          ? megaLocationInputMode.hasOnsite
+            ? `Mega scene LocationInputMode includes Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}.`
+            : `Mega scene LocationInputMode was found but not Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. Use Onsite for real-device validation; Simulator is only for editor/remote debugging.`
+          : "No serialized Mega locationInputMode was found in Mega scene assets. Open the Mega sample scene and set Location Input Mode to Onsite for real-device validation."
       }
     ];
   }
@@ -16293,6 +16374,8 @@ function buildSampleValidationHelper(sample: SampleInfo): string {
             {
                 throw new InvalidOperationException("No Mega sample or Mega Block asset hints found. Import the official EasyAR Sense Unity Plugin for Mega and load the selected Mega Block first.");
             }
+            ValidateMegaSettings();
+            ValidateMegaLocationInputMode(scene);
             UnityEngine.Debug.Log("Validated Mega asset hints without printing service credentials: " + string.Join(", ", megaAssets.Take(5)));
 `
         : `            throw new InvalidOperationException("This generated validation helper is only focused on Image Tracking, Cloud Recognition, and Mega.");
@@ -16406,6 +16489,66 @@ ${sampleValidation}
             return File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.jpg"))
                 && File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "namecard.etd"))
                 && File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Assets", "StreamingAssets", "EasyARSamples", "ImageTargets", "idback.etd"));
+        }
+
+        private static void ValidateMegaSettings()
+        {
+            var settingsPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "XR", "Settings", "EasyAR Settings.asset");
+            if (!File.Exists(settingsPath))
+            {
+                throw new InvalidOperationException("Mega requires Assets/XR/Settings/EasyAR Settings.asset with local package license and Global Mega Block service config.");
+            }
+
+            var settings = File.ReadAllText(settingsPath);
+            var block = ExtractYamlBlock(settings, "GlobalMegaBlockLocalizationServiceConfig");
+            var missing = new[]
+            {
+                HasConfiguredYamlScalar(settings, "LicenseKey") ? null : "LicenseKey",
+                HasConfiguredYamlScalar(block, "AppID") ? null : "GlobalMegaBlock.AppID",
+                HasConfiguredYamlScalar(block, "ServerAddress") ? null : "GlobalMegaBlock.ServerAddress",
+                HasConfiguredYamlScalar(block, "APIKey") ? null : "GlobalMegaBlock.APIKey",
+                HasConfiguredYamlScalar(block, "APISecret") ? null : "GlobalMegaBlock.APISecret"
+            }
+                .Where(item => item != null)
+                .ToArray();
+            if (missing.Length > 0)
+            {
+                throw new InvalidOperationException("Mega EasyAR Settings missing configured field presence: " + string.Join(", ", missing) + ". Fill values locally; do not paste secrets into chat.");
+            }
+        }
+
+        private static void ValidateMegaLocationInputMode(string scenePath)
+        {
+            var scene = File.ReadAllText(scenePath);
+            var match = Regex.Match(scene, @"locationInputMode:\\s*(\\d+)");
+            if (!match.Success)
+            {
+                throw new InvalidOperationException("Mega scene does not serialize locationInputMode. Set Location Input Mode to Onsite before real-device validation.");
+            }
+            if (match.Groups[1].Value != "0")
+            {
+                throw new InvalidOperationException("Mega LocationInputMode must be Onsite (0) for real-device validation. Simulator is only for editor or remote debugging.");
+            }
+        }
+
+        private static string ExtractYamlBlock(string yaml, string key)
+        {
+            var match = Regex.Match(yaml, @"^  " + Regex.Escape(key) + @":\\s*\\n([\\s\\S]*?)(?:\\n  [A-Za-z].*:|\\z)", RegexOptions.Multiline);
+            return match.Success ? match.Groups[1].Value : string.Empty;
+        }
+
+        private static bool HasConfiguredYamlScalar(string yaml, string key)
+        {
+            var match = Regex.Match(yaml, @"^\\s*" + Regex.Escape(key) + @":\\s*(.*)$", RegexOptions.Multiline);
+            if (!match.Success)
+            {
+                return false;
+            }
+            var value = match.Groups[1].Value.Trim();
+            return value.Length > 0
+                && value.IndexOf("paste-", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("placeholder", StringComparison.OrdinalIgnoreCase) < 0
+                && value.IndexOf("your_", StringComparison.OrdinalIgnoreCase) < 0;
         }
 
         private static bool IsGeneratedSupportAsset(string path)
@@ -16869,7 +17012,10 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           "easyar.cloudRecognition.apiKey",
           "easyar.cloudRecognition.apiSecret",
           "easyar.cloudRecognition.appKey",
-          "easyar.cloudRecognition.appSecret"
+          "easyar.cloudRecognition.appSecret",
+          "easyar.mega.apiKey",
+          "easyar.mega.apiSecret",
+          "easyar.mega.licenseKey"
         ],
         envAlternative: {
           tool: "easyar_write_local_config_from_env",
@@ -16879,7 +17025,11 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           cloudAppId: ["EASYAR_CLOUD_APP_ID", "EASYAR_CLOUD_RECOGNITION_APP_ID"],
           cloudServerAddress: ["EASYAR_CLOUD_SERVER_ADDRESS", "EASYAR_CLOUD_RECOGNITION_SERVER_ADDRESS", "EASYAR_CRS_SERVER_ADDRESS", "EASYAR_CRS_RECOGNITION_URL"],
           cloudApiKey: ["EASYAR_CLOUD_API_KEY", "EASYAR_CLOUD_RECOGNITION_API_KEY", "EASYAR_CLOUD_APP_KEY", "EASYAR_CLOUD_RECOGNITION_APP_KEY"],
-          cloudApiSecret: ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"]
+          cloudApiSecret: ["EASYAR_CLOUD_API_SECRET", "EASYAR_CLOUD_RECOGNITION_API_SECRET", "EASYAR_CLOUD_APP_SECRET", "EASYAR_CLOUD_RECOGNITION_APP_SECRET"],
+          megaAppId: ["EASYAR_MEGA_APP_ID"],
+          megaServerAddress: ["EASYAR_MEGA_SERVER", "EASYAR_MEGA_SERVER_ADDRESS"],
+          megaApiKey: ["EASYAR_MEGA_API_KEY"],
+          megaApiSecret: ["EASYAR_MEGA_API_SECRET"]
         },
         validation: "Run easyar_validate_local_config after editing. The MCP server reports field presence and placeholders only, never secret values."
       },
@@ -16903,7 +17053,11 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           megaBlockStorageName: needsMega ? "local-only-placeholder-fill-from-mega-studio" : "",
           megaBlockName: needsMega ? "local-only-placeholder-fill-from-mega-studio" : "",
           megaBlockId: needsMega ? "local-only-placeholder-fill-from-mega-studio" : "",
-          serverAddress: needsMega ? "local-only-placeholder-fill-from-local-mega-settings" : ""
+          appId: needsMega ? "local-only-placeholder-fill-from-easyar-cloud-localization-library" : "",
+          serverAddress: needsMega ? "local-only-placeholder-fill-from-local-mega-settings" : "",
+          apiKey: needsMega ? "local-only-placeholder-fill-locally-never-share" : "",
+          apiSecret: needsMega ? "local-only-placeholder-fill-locally-never-share" : "",
+          locationInputMode: needsMega ? "Onsite for real-device validation; Simulator only for remote/editor debugging" : ""
         }
       },
       unity: {
@@ -16989,13 +17143,17 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
       "1. Install the official EasyAR Sense Unity Plugin for Mega from the EasyAR download page.",
       "2. Use the already logged-in EasyAR website or Mega Studio session to locate the cloud localization library, Mega Block storage, Mega Block name, and Block ID.",
       "3. Load or bind the selected Mega Block in Unity/Mega Studio before building.",
-      "4. Confirm Android minSdk is at least 24 when ONNX Runtime is included, and prefer ARM64 for device builds.",
-      "5. If the project uses HybridCLR, run the HybridCLR Installer and `HybridCLR/Generate/All` for the same build target before APK packaging.",
-      "6. Validate on a real device in or near the mapped environment; emulator/editor launch does not prove Mega localization.",
+      "4. Configure `Assets/XR/Settings/EasyAR Settings.asset` locally with the package-bound Sense license plus Global Mega Block AppID, server address, API Key, and API Secret. Do not paste those values into chat.",
+      "5. Set Mega `LocationInputMode` to `Onsite` for real-device validation. Use `Simulator` only for editor or remote debugging.",
+      "6. Confirm Android minSdk is at least 24 when ONNX Runtime is included, and prefer ARM64 for device builds.",
+      "7. If the project uses HybridCLR, run the HybridCLR Installer and `HybridCLR/Generate/All` for the same build target before APK packaging.",
+      "8. Validate on a real device in or near the mapped environment; emulator/editor launch does not prove Mega localization.",
       "",
       "Expected readiness checks:",
       "",
       "- `mega-assets` should find Mega, MegaBlock, CloudLocalizer, or project-specific Mega scene assets.",
+      "- `mega-settings` should report local license and Global Mega Block credential presence without printing secret values.",
+      "- `mega-location-input-mode` should report `Onsite` for a real-device validation build.",
       "- `sample-scene` should find an official or project Mega scene.",
       "- `RUN_RESULT.md` should record build success plus real-device localization evidence without secret values."
     ].join("\n") + "\n";
@@ -17054,6 +17212,10 @@ async function writeFocusedSampleSupportFiles(root: string, sample: SampleInfo, 
         "# Mega Local Materials",
         "",
         "Use the logged-in EasyAR website or Mega Studio session to find the non-secret cloud localization library name, Mega Block storage name, Mega Block display name, and Block ID.",
+        "",
+        "Configure `Assets/XR/Settings/EasyAR Settings.asset` locally with the package-bound Sense license and Global Mega Block AppID/server/API Key/API Secret. Keep those values local.",
+        "",
+        "For real-device validation, set the Mega sample scene `LocationInputMode` to `Onsite`; `Simulator` is only for editor or remote debugging.",
         "",
         "Keep EasyAR license keys, API keys, account tokens, and any service credentials in local Unity settings or ignored local config files. Do not paste them into chat or commit them.",
         "",

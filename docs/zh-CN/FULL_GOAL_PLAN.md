@@ -23,7 +23,7 @@ local-key MVP 已完成：
 
 - Mega
 
-已完成 MCP catalog、runbook、readiness check、device validation、MonoBehaviour 模板、日志诊断、Android APK 打包、真机安装启动、Mega 定位跟踪日志和安全发布证据。还需要跑严格 local-key release gate 并发布新的 GitHub Release，才能把三样本能力正式对外发布。
+已完成 MCP catalog、runbook、readiness check、device validation、MonoBehaviour 模板、日志诊断、Android APK 打包、真机安装启动、一轮 Mega 定位跟踪日志和安全发布证据。fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式就绪，并已在对应办公室映射场景抓到定位/跟踪日志信号；接下来跑严格 local-key release gate 并发布新的 GitHub Release，就能把三样本能力正式对外发布。
 
 ## 扩展轨道 1：更多 Sample
 

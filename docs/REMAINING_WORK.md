@@ -14,9 +14,9 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 
 ## Current Evidence
 
-- Current public prerelease: `v0.1.0-local-key.34`
+- Current public prerelease: `v0.1.0-local-key.35`
 - Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
-- Active Mega expansion: Android APK install/startup and Mega localization/tracking evidence exists in the current worktree.
+- Active Mega expansion: Android APK install/startup and Mega localization/tracking evidence exists in the current worktree; a separate fresh Unity project pass now proves official package import, APK build, install/startup, EasyAR initialization, Onsite-mode readiness, and real-device localization/tracking log signals.
 - Local-key MVP public usability: about 95%
 - Android real-device evidence exists for Image Tracking and CRS/Cloud Recognition, including a refreshed CRS recognition screenshot and device log from 2026-06-11.
 - GitHub Release tarball install smoke passes, including Codex and Claude Desktop `package-bin` client setup checks.
@@ -27,7 +27,6 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 ## Remaining For Current Scoped Target
 
 - Keep release links, status docs, fresh project acceptance guidance, install checks, and GitHub Release smoke tests aligned with each new prerelease.
-- Add safe Mega run-through evidence after APK install and real-device localization validation.
 - Re-run Image Tracking, CRS/Cloud Recognition, and Mega device evidence when the Unity project, EasyAR Sense Unity Plugin version, supported Unity version, or target platform changes.
 - Continue hardening Unity programming workflows with real Image Tracking and CRS project cases.
 

@@ -6,19 +6,19 @@ It is not a completion claim for every EasyAR sample. The active goal now covers
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.34`
+Current GitHub prerelease: `v0.1.0-local-key.35`
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.35/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
 ## Evidence-Weighted Progress
 
 - Published scoped objective: 100% for the approved Image Tracking, CRS/Cloud Recognition, and Mega target.
-- Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.
+- Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12. A separate fresh Unity project pass now proves official package import, APK build, install/startup, EasyAR initialization, `Onsite` readiness, and real-device localization/tracking log signals in the selected mapped environment.
 - Local-key MVP public usability: about 98%
 
 These percentages are evidence-weighted estimates. The published prerelease covers the three-sample local-key target: Image Tracking, CRS/Cloud Recognition, and Mega. The broader production official API goal remains incomplete.
@@ -33,7 +33,7 @@ These percentages are evidence-weighted estimates. The published prerelease cove
 - Local-key onboarding is implemented without collecting EasyAR website passwords or secret keys in chat.
 - Focused Image Tracking, CRS/Cloud Recognition, and Mega workflows are implemented or under active development.
 - Safe committed Android evidence exists for the Image Tracking, CRS/Cloud Recognition, and Mega target scope.
-- Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals.
+- Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals. Fresh-project Mega evidence now also includes localization/tracking signals such as `successfully localized against ADF`.
 - Unity project programming assistance exists for focused preflight, scene audit, run sequence, device validation, log analysis, C# planning, script writing, review, and handoff artifacts.
 
 ## Active Scope
@@ -54,7 +54,7 @@ Out of scope for the current goal:
 
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
-- Add more real-device and platform evidence if supported Unity versions or target platforms expand for the two target samples.
+- Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence current when supported Unity versions or target platforms expand.
 - Continue hardening Unity programming workflows with more real project cases.
 
 ## Safety Boundary

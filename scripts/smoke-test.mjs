@@ -547,6 +547,7 @@ try {
   assertResourceIncludes(freshProjectAcceptanceResource, "mcp-easyar Fresh Project Acceptance");
   assertResourceIncludes(freshProjectAcceptanceResource, "Image Tracking");
   assertResourceIncludes(freshProjectAcceptanceResource, "CRS/Cloud Recognition");
+  assertResourceIncludes(freshProjectAcceptanceResource, "Mega");
   assertResourceIncludes(freshProjectAcceptanceResource, "ProjectSettings/EasyAR/easyar.local.json");
   assertResourceIncludes(freshProjectAcceptanceResource, "allFocusedSamplesComplete=true");
 
@@ -557,6 +558,7 @@ try {
   assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
   assertResourceIncludes(currentStatusResource, "Published scoped objective: 100% for the approved Image Tracking, CRS/Cloud Recognition, and Mega target.");
   assertResourceIncludes(currentStatusResource, "Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.");
+  assertResourceIncludes(currentStatusResource, "Fresh-project Mega evidence now also includes localization/tracking signals such as `successfully localized against ADF`.");
   assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 98%");
 
   const sampleCatalog = await callTool("easyar_list_samples", {});
@@ -972,7 +974,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.34"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.35"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -1015,14 +1017,14 @@ try {
   assert(committedChineseDocsIndex.includes("CRS"), "Chinese docs index should include focused CRS scope");
   assert(committedChineseDocsIndex.includes("Mega Sample"), "Chinese docs index should mention active Mega expansion");
   assert(committedChineseFreshAcceptance.includes("Mega 验收"), "Chinese fresh acceptance should include Mega acceptance");
-  assert(committedChineseFreshAcceptance.includes("当前工作树已完成 Android 真机安装启动和 Mega 定位跟踪证据"), "Chinese fresh acceptance should reflect Mega device evidence");
-  assert(committedChineseStatus.includes("Mega：Unity 2022.3.62f3 Android APK 已在真机安装启动"), "Chinese status should include Mega device evidence state");
+  assert(committedChineseFreshAcceptance.includes("fresh project 已完成官方包导入、APK 打包、真机安装启动、Onsite 模式就绪，并在对应办公室映射场景抓到定位/跟踪日志信号"), "Chinese fresh acceptance should reflect Mega fresh-project localization evidence");
+  assert(committedChineseStatus.includes("Mega fresh project"), "Chinese status should include Mega fresh-project evidence state");
   assert(committedChineseStatus.includes("NCam_Verified results"), "Chinese status should include Mega localization evidence signal");
   assert(committedChineseQuickstart.includes("sampleId=mega"), "Chinese quickstart should include Mega calls");
   assert(committedChineseQuickstart.includes("Mega 只有 APK 打包成功还不算完成"), "Chinese quickstart should state Mega build-only is incomplete");
   assert(committedChineseTroubleshooting.includes("Mega APK 或定位失败"), "Chinese troubleshooting should include Mega diagnostics");
   assert(committedChineseTroubleshooting.includes("mega-hybridclr"), "Chinese troubleshooting should include Mega HybridCLR diagnostics");
-  assert(committedChineseReleaseManifest.includes("当前工作树已补 Mega 真机安装、启动、定位跟踪和 safe release evidence"), "Chinese release manifest should mention Mega release evidence");
+  assert(committedChineseReleaseManifest.includes("fresh project Mega APK 启动与定位/跟踪证据"), "Chinese release manifest should mention Mega fresh-project evidence");
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
@@ -2111,6 +2113,33 @@ exit 0
   assert(megaAndroidDeviceRunbookMarkdown.includes("Mega Block/localization outcome"), "Mega Android runbook should include Mega passed evidence placeholder");
   assert(!megaAndroidDeviceRunbookMarkdown.includes("focused image target"), "Mega Android runbook should not use Image Tracking next action");
 
+  const megaValidationHelperResult = await callTool("easyar_create_sample_validation_helper", {
+    projectPath,
+    sampleId: "mega",
+    overwrite: true
+  });
+  assertTextIncludes(megaValidationHelperResult, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
+  const megaValidationHelper = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARSampleValidationHelper.cs"),
+    "utf8"
+  );
+  assert(megaValidationHelper.includes("ValidateMegaSettings"), "Mega validation helper should check EasyAR Settings credential presence");
+  assert(megaValidationHelper.includes("ValidateMegaLocationInputMode"), "Mega validation helper should check Onsite mode");
+  assert(megaValidationHelper.includes("LocationInputMode must be Onsite"), "Mega validation helper should reject Simulator mode for real-device validation");
+
+  const megaMobileSettings = await callTool("easyar_create_mobile_settings_helper", {
+    projectPath,
+    sampleId: "mega",
+    platform: "android",
+    overwrite: true
+  });
+  assertTextIncludes(megaMobileSettings, "EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings");
+  const megaMobileSettingsScript = await readFile(
+    path.join(projectPath, "Assets", "Editor", "EasyARMobileSettingsHelper.cs"),
+    "utf8"
+  );
+  assert(megaMobileSettingsScript.includes("(AndroidSdkVersions)24"), "Mega mobile settings helper should default Android minSdk to 24");
+
   const notRunCompletionReport = await callTool("easyar_generate_completion_report", {
     projectPath,
     sampleId: "image-tracking",
@@ -2214,6 +2243,13 @@ exit 0
     mobileSettingsHelper.includes("ConfigureMobileSettings"),
     "Mobile settings helper should include ConfigureMobileSettings"
   );
+  const explicitValidationHelper = await callTool("easyar_create_sample_validation_helper", {
+    projectPath,
+    sampleId: "image-tracking",
+    overwrite: true
+  });
+  assertTextIncludes(explicitValidationHelper, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
+
   const validationHelper = await readFile(
     path.join(projectPath, "Assets", "Editor", "EasyARSampleValidationHelper.cs"),
     "utf8"
@@ -2246,13 +2282,6 @@ exit 0
     validationHelper.includes("ImageTargets.unitypackage"),
     "Image Tracking validation helper should tell users to import ImageTargets.unitypackage"
   );
-
-  const explicitValidationHelper = await callTool("easyar_create_sample_validation_helper", {
-    projectPath,
-    sampleId: "image-tracking",
-    overwrite: true
-  });
-  assertTextIncludes(explicitValidationHelper, "EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample");
 
   const iosMobileSettings = await callTool("easyar_create_mobile_settings_helper", {
     projectPath,
