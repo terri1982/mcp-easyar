@@ -1141,7 +1141,9 @@ try {
   const toolsSource = await readFile(path.join(process.cwd(), "src", "tools.ts"), "utf8");
   const toolsRegistrySource = await readFile(path.join(process.cwd(), "src", "tools-registry.ts"), "utf8");
   const toolServicesSource = await readFile(path.join(process.cwd(), "src", "tool-services.ts"), "utf8");
-  const mcpSource = `${serverSource}\n${toolsSource}\n${toolsRegistrySource}\n${toolServicesSource}`;
+  const toolMarkdownSource = await readFile(path.join(process.cwd(), "src", "tool-markdown.ts"), "utf8");
+  const toolFileUtilsSource = await readFile(path.join(process.cwd(), "src", "tool-file-utils.ts"), "utf8");
+  const mcpSource = `${serverSource}\n${toolsSource}\n${toolsRegistrySource}\n${toolServicesSource}\n${toolMarkdownSource}\n${toolFileUtilsSource}`;
   assert(mcpSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
   assert(mcpSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");
   const officialApiCanaryScript = await readFile(path.join(process.cwd(), "scripts", "official-api-canary.mjs"), "utf8");
