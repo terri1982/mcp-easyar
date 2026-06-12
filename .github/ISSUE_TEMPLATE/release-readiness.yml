@@ -41,10 +41,11 @@ body:
     id: focused-samples
     attributes:
       label: Focused sample evidence
-      description: Link or list Image Tracking and Cloud Recognition RUN_RESULT.md / COMPLETION_REPORT.md evidence.
+      description: Link or list Image Tracking, Cloud Recognition, and Mega RUN_RESULT.md / COMPLETION_REPORT.md evidence.
       placeholder: |
         - Image Tracking: Assets/EasyARGenerated/image-tracking/COMPLETION_REPORT.md
         - Cloud Recognition: Assets/EasyARGenerated/cloud-recognition/COMPLETION_REPORT.md
+        - Mega: Assets/EasyARGenerated/mega/COMPLETION_REPORT.md
     validations:
       required: true
   - type: checkboxes
@@ -56,7 +57,7 @@ body:
           required: true
         - label: Official EasyAR account API endpoint evidence is recorded or this issue is explicitly tracking that blocker.
           required: true
-        - label: Image Tracking and Cloud Recognition real-device evidence is recorded or this issue is explicitly tracking that blocker.
+        - label: Image Tracking, Cloud Recognition, and Mega real-device evidence is recorded or this issue is explicitly tracking that blocker.
           required: true
         - label: No secrets or private logs are included.
           required: true

@@ -1,20 +1,21 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-11T06:10:00.000Z",
+  "generatedAt": "2026-06-12T01:05:00.000Z",
   "evidenceKind": "mcp-easyar-focused-scope",
   "source": "easyar_write_release_evidence",
   "platform": "android",
   "scope": "focused-samples",
   "focusedSampleIds": [
     "image-tracking",
-    "cloud-recognition"
+    "cloud-recognition",
+    "mega"
   ],
   "outOfScopeSampleIds": [
     "hello-ar",
     "surface-tracking"
   ],
-  "focusedSampleCount": 2,
-  "completedCount": 2,
+  "focusedSampleCount": 3,
+  "completedCount": 3,
   "blockedCount": 0,
   "failedCount": 0,
   "notRunCount": 0,
@@ -39,6 +40,17 @@
       "latestRunResultStatus": "passed",
       "completionReportPath": "Assets/EasyARGenerated/cloud-recognition/COMPLETION_REPORT.md",
       "runResultPath": "Assets/EasyARGenerated/cloud-recognition/RUN_RESULT.md"
+    },
+    {
+      "sampleId": "mega",
+      "sampleName": "Mega",
+      "completionStatus": "passed",
+      "runThroughComplete": true,
+      "blockerCount": 0,
+      "latestRunResultStatus": "passed",
+      "completionReportPath": "Assets/EasyARGenerated/mega/COMPLETION_REPORT.md",
+      "runResultPath": "Assets/EasyARGenerated/mega/RUN_RESULT.md",
+      "deviceEvidencePath": "docs/release-evidence/mega-android-device-summary.md"
     }
   ],
   "security": "Safe release evidence contains completion states and relative artifact paths only. It excludes project absolute paths, EasyAR passwords, account tokens, license keys, Cloud Recognition API KEY/API Secret values, appKey/appSecret, signing keys, provisioning secrets, APKs, Unity packages, and raw logs."

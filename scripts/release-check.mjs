@@ -59,7 +59,7 @@ try {
     }
     console.log("Package/repository checks passed. Production readiness is incomplete; set EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 to enforce the final gate.");
     if (validation.localKeyMvpReady) {
-      console.log("Local-key MVP release gate passed for focused Image Tracking and Cloud Recognition assistance.");
+      console.log("Local-key MVP release gate passed for focused Image Tracking, Cloud Recognition, and Mega assistance.");
     }
   } else {
     console.log("Release check passed with production readiness evidence.");

@@ -1,17 +1,17 @@
 # mcp-easyar Roadmap
 
-This roadmap tracks the current scoped local-key MVP goal: Image Tracking and CRS/Cloud Recognition only.
+This roadmap tracks the current scoped local-key MVP goal: Image Tracking, CRS/Cloud Recognition, and Mega only.
 
 For the broader service objective across more samples, official API production integration, and Unity programming service hardening, read [FULL_GOAL_PLAN.md](FULL_GOAL_PLAN.md) or MCP resource `easyar://roadmap/full-goal`.
 
 ## Current State
 
-Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.33`.
+Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.34`.
 
 The current release can be installed from GitHub Releases:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.33/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -24,6 +24,7 @@ easyar-mcp-check
 - Local-key onboarding is implemented: users register, log in, download, and create keys on the official EasyAR website in their own browser.
 - MCP guides local Unity configuration without collecting website passwords, verification codes, account tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
 - Focused Image Tracking and CRS/Cloud Recognition workflows are implemented and have safe committed Android evidence.
+- Focused Mega workflow assistance is implemented and has safe committed Android device evidence from a Unity 2022.3.62f3 APK install/startup/localization-tracking run.
 - Unity project programming assistance exists for focused sample preflight, scene audit, run sequence, device validation, log collection, C# planning, script writing, and handoff artifacts.
 
 ## Active Scope
@@ -32,6 +33,7 @@ The active sample target is intentionally limited to:
 
 - Image Tracking
 - CRS/Cloud Recognition
+- Mega
 
 Hello AR, Surface Tracking, and other EasyAR samples are not part of the current goal.
 
@@ -39,7 +41,8 @@ Hello AR, Surface Tracking, and other EasyAR samples are not part of the current
 
 ### Target Samples
 
-- Keep Image Tracking and CRS/Cloud Recognition release evidence aligned with every public prerelease.
+- Publish the next local-key GitHub Release after the strict three-sample release gate passes.
+- Keep Image Tracking, CRS/Cloud Recognition, and Mega release evidence aligned with every public prerelease.
 - Keep install docs, client acceptance docs, and smoke tests aligned with the latest GitHub Release.
 - Continue hardening Unity programming workflows using real Image Tracking and CRS project cases.
 
@@ -77,5 +80,5 @@ Until those APIs exist, the safe path is browser handoff plus local Unity keys.
 
 1. Keep local-key MVP docs and release smoke tests aligned with the latest GitHub Release.
 2. Keep client acceptance checks green for Codex and Claude.
-3. Keep Unity programming support focused on Image Tracking and CRS/Cloud Recognition.
+3. Keep Unity programming support focused on Image Tracking, CRS/Cloud Recognition, and Mega.
 4. Decide whether npm publication should ship as a clearly marked local-key MVP or wait.

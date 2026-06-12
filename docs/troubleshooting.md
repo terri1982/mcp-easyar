@@ -1,6 +1,6 @@
 # mcp-easyar Focused Sample Troubleshooting
 
-Current run-through work is limited to Image Tracking and Cloud Recognition. Other EasyAR samples are cataloged for later expansion and should not be treated as verified by this MCP server yet.
+Current run-through work is limited to Image Tracking, Cloud Recognition, and Mega. Other EasyAR samples are cataloged for later expansion and should not be treated as verified by this MCP server yet.
 
 ## First Checks
 
@@ -14,7 +14,7 @@ easyar_write_scene_audit projectPath=/path/to/UnityProject sampleId=image-tracki
 easyar_write_support_bundle projectPath=/path/to/UnityProject sampleId=image-tracking
 ```
 
-Use `sampleId=cloud-recognition` for Cloud Recognition.
+Use `sampleId=cloud-recognition` for Cloud Recognition, or `sampleId=mega` for Mega.
 
 ## Image Tracking
 
@@ -94,6 +94,40 @@ easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=cloud-recog
 ```
 
 Paste `ISSUE_REPORT.md` into a GitHub issue and reference `SUPPORT_BUNDLE.md`, `RUN_RESULT.md`, `SCENE_AUDIT.md`, and the Unity log paths listed there. Review every artifact before posting publicly.
+
+## Mega
+
+Common blockers:
+
+- `mega-assets`: no Mega, Mega Block, CloudLocalizer, or project-specific Mega scene asset hints were found under `Assets` or `Packages`.
+- `mega-block-config`: Unity or device logs indicate that the selected Mega Block or cloud localization library cannot be loaded.
+- `mega-hybridclr`: HybridCLR generated files are missing or stale for the current Android build target.
+- `mega-arcore-manifest`: Android Manifest, ARCore metadata, or `minSdkVersion` conflicts block APK packaging.
+- `mega-localization-runtime`: the app starts, but real-device Mega localization does not succeed.
+
+Mega device pass note:
+
+Compile or APK build success is not enough for Mega. A passed Mega `RUN_RESULT.md` needs APK install/launch evidence plus real-device localization evidence for the selected cloud localization library and Mega Block. The user should find library and block identifiers in the already logged-in EasyAR website or Mega Studio session; MCP should not collect website credentials or secret keys in chat.
+
+Recommended flow:
+
+```text
+easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=mega
+easyar_write_local_config_form projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=mega
+easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android overwrite=true
+easyar_create_sample_validation_helper projectPath=/path/to/UnityProject sampleId=mega overwrite=true
+easyar_analyze_latest_unity_log projectPath=/path/to/UnityProject sampleId=mega
+```
+
+After the APK is built and a phone is connected, use the Android device runbook and record the result:
+
+```text
+easyar_write_android_device_runbook projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=passed
+easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega platform=android
+```
 
 ## Security
 

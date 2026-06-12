@@ -1,5 +1,5 @@
 name: Focused EasyAR sample run issue
-description: Report an Image Tracking or Cloud Recognition run-through problem.
+description: Report an Image Tracking, Cloud Recognition, or Mega run-through problem.
 title: "[Sample Run]: "
 labels:
   - sample-run
@@ -7,16 +7,17 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this template for the current focused scope: Image Tracking and Cloud Recognition.
+        Use this template for the current focused scope: Image Tracking, Cloud Recognition, and Mega.
 
         Before posting, run `easyar_write_issue_report` and paste the generated `ISSUE_REPORT.md` content below. Do not include EasyAR license keys, account tokens, Cloud Recognition appKey/appSecret, signing keys, provisioning profiles, or full private logs.
   - type: dropdown
     id: sample
     attributes:
       label: Sample
-      options:
+        options:
         - Image Tracking
         - Cloud Recognition
+        - Mega
     validations:
       required: true
   - type: dropdown

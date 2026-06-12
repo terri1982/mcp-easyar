@@ -4,7 +4,7 @@ This workflow supports both new and registered EasyAR users connecting Codex, Cl
 
 Current status:
 
-- Local-key MVP is ready for the focused Image Tracking and Cloud Recognition workflow after the official EasyAR Sense Unity Plugin is installed and local keys are configured.
+- Local-key MVP is ready for focused Image Tracking, Cloud Recognition, and Mega workflow assistance after the official EasyAR Sense Unity Plugin is installed and local keys or Mega materials are configured. Mega now has Android device install/startup/localization-tracking evidence in the current worktree.
 - Official EasyAR account APIs are still a production automation track. They are needed for server-side account/license/download/cloud entitlement checks, but they are not required for Unity-side sample execution once authorized plugin and keys are local.
 
 Default path now: run the local-key MVP. The user completes registration/login/download/key creation on the official EasyAR website in a browser. MCP guides those steps, writes local forms and handoff files, validates only redacted local config presence, and then proceeds with Unity import, build, and device validation.
@@ -38,11 +38,11 @@ easyar_write_local_config_form projectPath=/path/to/UnityProject accountStage=no
 easyar_write_focused_handoff_pack projectPath=/path/to/UnityProject sampleId=all platform=android accountStage=not-registered
 ```
 
-The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `AUTHORIZATION_STRATEGY.md` records the key distinction: after the official EasyAR Sense Unity Plugin is installed, Unity sample execution uses local license/API key configuration and does not require website login at runtime; website login is for obtaining authorized packages and keys. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition scope, and artifact reading order. `PORTAL_EVIDENCE.md` records only non-secret development-center observations such as app record ids, service flags, Sense License presence, and Cloud Recognition library/target status. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. `easyar_write_focused_handoff_pack` writes the safe per-sample diagnostics, forms, run sequence, programming context, `HANDOFF_PACK.md`, `ARTIFACT_INDEX.md`, and project dashboards in one call. MCP does not ask for EasyAR website passwords and does not store account credentials.
+The guides send users to the official EasyAR website and development center, then list every required field, where it comes from, where it should be stored, and whether it is safe to share. `AUTHORIZATION_STRATEGY.md` records the key distinction: after the official EasyAR Sense Unity Plugin is installed, Unity sample execution uses local license/API key configuration and does not require website login at runtime; website login is for obtaining authorized packages and keys. `FIRST_RUN.md` gives the first safe call, focused Image Tracking/Cloud Recognition/Mega scope, and artifact reading order. `PORTAL_EVIDENCE.md` records only non-secret development-center observations such as app record ids, service flags, Sense License presence, Cloud Recognition library/target status, and Mega library/block identifiers. `LOCAL_CONFIG_HANDOFF.md` ties those account steps to the exact `ProjectSettings/EasyAR/easyar.local.json` file. `LOCAL_CONFIG_FORM.md` gives the fillable JSON skeleton, field-by-field source map, environment-backed writer command, and validation chain. `easyar_write_focused_handoff_pack` writes the safe per-sample diagnostics, forms, run sequence, programming context, `HANDOFF_PACK.md`, `ARTIFACT_INDEX.md`, and project dashboards in one call. MCP does not ask for EasyAR website passwords and does not store account credentials.
 
 For a user who has not registered yet, the MCP flow is:
 
-1. Read MCP resource `easyar://acceptance/fresh-project` to anchor the current Image Tracking and CRS/Cloud Recognition acceptance scope.
+1. Read MCP resource `easyar://acceptance/fresh-project` to anchor the current Image Tracking, CRS/Cloud Recognition, and Mega acceptance scope.
 2. Ask only for account state, for example `accountStage=not-registered`; a new user is a valid starting point.
 3. Run `easyar_authorization_strategy preferredMode=auto sampleId=cloud-recognition platform=android`; the normal MVP path is `local-key`.
 4. Send the user to `https://www.easyar.cn/` in their browser when they still need the official plugin, license, or Cloud Recognition keys. They use the official login/register entry, activate the account if required, and enter the development center there.
@@ -54,9 +54,10 @@ For a user who has not registered yet, the MCP flow is:
 10. Guide them to create or locate the EasyAR Sense license for the Unity bundle/package identifier.
 11. For Cloud Recognition, guide them to create or locate the CRS/Cloud Recognition AppId plus API KEY. Sense 4.1+ uses `appId` + `apiKey`; legacy `appKey`/`appSecret` fields remain accepted for compatibility.
 12. For Cloud Recognition real-device validation, also guide them to create a cloud recognition image library, upload at least one test target image, and keep only a non-secret library name, target count, or dashboard URL for evidence.
-13. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
-14. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
-15. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`; compile/build success alone is not enough.
+13. For Mega, guide them to locate the cloud localization library, Mega Block storage, Block name, and Block ID in the already logged-in EasyAR website or Mega Studio session. Store only non-secret names/ids as local project material.
+14. Keep secrets out of chat: fill `ProjectSettings/EasyAR/easyar.local.json` locally, or use local environment variables with `easyar_write_local_config_from_env`, then let `easyar_validate_local_config` report only presence and placeholder problems.
+15. Create `PREFLIGHT.md` with `easyar_write_focused_preflight`; do not run Unity batch automation until that file reports the account, local config, import, Unity path, scene, and script gates.
+16. After compile, build, and real-device validation attempts, write `RUN_RESULT.md`, then write `COMPLETION_REPORT.md`. Treat the focused sample as actually run through only when `runThroughComplete=true`; compile/build success alone is not enough.
 
 The MCP should never turn registration into a chat form. Login, email activation, password reset, and verification codes stay in the official browser session. MCP only records account stage and local evidence.
 
@@ -158,14 +159,15 @@ easyar_write_official_access_report projectPath=/path/to/UnityProject sampleId=i
 
 ## 3. Choose A Sample
 
-If your MCP client supports prompts, start from `easyar-run-image-tracking` or `easyar-run-cloud-recognition`.
+If your MCP client supports prompts, start from `easyar-run-image-tracking`, `easyar-run-cloud-recognition`, or the generic programming assistant with `sampleId=mega`.
 
 For now, use one of the focused sample workflows:
 
 - `image-tracking`
 - `cloud-recognition`
+- `mega`
 
-Other EasyAR samples are out of scope for the current Image Tracking and CRS/Cloud Recognition target.
+Other EasyAR samples are out of scope for the current Image Tracking, CRS/Cloud Recognition, and Mega target.
 
 Call:
 
@@ -198,6 +200,8 @@ easyar_write_remaining_work_report projectPath=/path/to/UnityProject platform=an
 After writing artifacts, read `FIRST_RUN.md` first for new users or new MCP clients, then `PROJECT_HANDOFF.md` when resuming the whole Unity project, then `REMAINING_WORK.md` for the evidence-weighted gap estimate, then `PREFLIGHT.md` for the active sample. The project handoff gives a single top next call plus per-sample workflow state; `PREFLIGHT.md` is the focused gate that tells Codex, Claude, or a human operator which blocker must be cleared before Unity batch automation or device builds.
 
 For Cloud Recognition, use `sampleId=cloud-recognition` and fill `easyar.cloudRecognition.appId` plus `apiKey` in `ProjectSettings/EasyAR/easyar.local.json`. Legacy `appKey`/`appSecret` fields are still accepted for compatibility. A passed device result also requires an EasyAR Cloud Recognition target library with at least one uploaded test target image.
+
+For Mega, use `sampleId=mega`, install the official EasyAR Sense Unity Plugin for Mega, and use the already logged-in EasyAR website or Mega Studio session to find the cloud localization library, Mega Block storage, Block name, and Block ID. A passed device result requires APK install/launch evidence plus observed real-device localization against the selected Mega Block.
 
 Import the official EasyAR Unity Plugin and sample scenes from the EasyAR download page or Unity Package Manager Samples before expecting a real device run to succeed. If `easyar_generate_import_checklist` reports a PackageCache `Samples~` candidate but no imported scene, run `easyar_generate_sample_import_guide`; for Image Tracking this guide also checks the official `Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage` import so device builds can load `Assets/StreamingAssets/EasyARSamples/ImageTargets/namecard.jpg`, `namecard.etd`, and `idback.etd`. For Cloud Recognition this guide points users to import `ImageTracking_CloudRecognition` from Package Manager into `Assets/Samples`.
 
@@ -329,13 +333,13 @@ easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=cloud-
 
 `COMPLETION_REPORT.md` parses the latest `RUN_RESULT.md`, checks focused preflight readiness again, verifies device-validation blockers, and summarizes latest Unity log diagnostics. It reports `not-run` when no run result exists, `blocked` or `failed` when the latest evidence is not passed, and `passed` only when the focused sample has a recorded device plus a passed real-device/device-validation step. Compile-only or build-only success remains blocked.
 
-For the current focused scope, aggregate Image Tracking and Cloud Recognition:
+For the current focused scope, aggregate Image Tracking, Cloud Recognition, and Mega:
 
 ```text
 easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=android
 ```
 
-`FOCUSED_SCOPE_STATUS.md` reports whether both focused samples are complete and lists the next action for each incomplete sample. Deferred samples stay out of this status until the user asks to continue.
+`FOCUSED_SCOPE_STATUS.md` reports whether all focused samples are complete and lists the next action for each incomplete sample. Deferred samples stay out of this status until the user asks to continue.
 
 MCP clients can read `easyar://workflow/focused-scope` or use the `easyar-close-focused-scope` prompt when handing the focused run-through to another AI tool.
 
@@ -346,7 +350,7 @@ easyar_write_deployment_readiness projectPath=/path/to/UnityProject
 easyar_write_production_validation projectPath=/path/to/UnityProject platform=android verificationEvidence=not-provided
 ```
 
-`PRODUCTION_VALIDATION.md` is intentionally strict. It stays incomplete until release files, official EasyAR account endpoints, recorded verification commands, official access reports, and both focused sample completion reports all provide real evidence. After the verification commands pass for the release commit, regenerate it with `verificationEvidence=passed`.
+`PRODUCTION_VALIDATION.md` is intentionally strict. It stays incomplete until release files, official EasyAR account endpoints, recorded verification commands, official access reports, and all focused sample completion reports provide real evidence. After the verification commands pass for the release commit, regenerate it with `verificationEvidence=passed`.
 
 For repository/package verification, run:
 
@@ -363,7 +367,7 @@ EASYAR_RELEASE_REQUIRE_PRODUCTION_READY=1 npm run release:check
 
 For the npm package, use the manual GitHub Actions `Release` workflow after configuring the protected `npm-publish` environment. The workflow runs the strict gate before `npm publish --provenance`, so package publishing cannot bypass official endpoint and real-device evidence. For local release checks, set `EASYAR_RELEASE_PROJECT_PATH` to the Unity project containing the passed focused sample artifacts. For GitHub release runners, set `EASYAR_RELEASE_EVIDENCE_PATH=docs/release-evidence/focused-scope.android.json` after generating that safe evidence file with `easyar_write_release_evidence`.
 
-`npm run release:check` reports two readiness lines. `Local-key MVP ready: yes` is the current focused-sample target: package/install docs pass, verification passed, and committed safe evidence proves Image Tracking and Cloud Recognition were run through on Android. `Production ready: yes` is stricter and remains blocked until EasyAR official account/license/download/cloud endpoint variables and official access checks are wired.
+`npm run release:check` reports two readiness lines. For the current three-sample local-key release candidate, `Local-key MVP ready: yes` means package/install docs pass, verification passed, and committed safe evidence proves Image Tracking, Cloud Recognition, and Mega were run through on Android. `Production ready: yes` is stricter and remains blocked until EasyAR official account/license/download/cloud endpoint variables and official access checks are wired.
 
 For GitHub-only distribution before npm publishing, run the manual GitHub Actions `GitHub Release` workflow with `gate=local-key-mvp`. It enforces `EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1`, packs the project with `npm pack`, and uploads the tarball as a GitHub Release asset. Use the existing `Release` workflow for npm only after the production official API gate is ready.
 

@@ -12,10 +12,11 @@
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.33`
-- 当前已跑通并发布验证的 Sample：
+- 当前 GitHub 预发布版：`v0.1.0-local-key.34`
+- 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
+  - Mega（Unity 2022.3.62f3 Android APK 已真机安装启动，并取得 Mega `kMapTracking` / `NCam_Verified results` 定位跟踪日志证据）
 - 暂缓目标：
   - Hello AR
   - Surface Tracking
@@ -28,7 +29,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.33/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -70,7 +71,7 @@ easyar://workflow/programming
 1. 用户在浏览器里打开 EasyAR 官网并注册/登录。
 2. 用户下载官方 EasyAR Sense Unity Plugin。
 3. 用户在官网开发中心创建或找到 license。
-4. CRS / Cloud Recognition 用户创建或找到 AppId、识别服务地址、API KEY、API Secret。
+4. CRS / Cloud Recognition 用户创建或找到 AppId、识别服务地址、API KEY、API Secret；Mega 用户在已登录的 EasyAR 网页端或 Mega Studio 中找到云定位库、Mega Block storage、Block 名称和 Block ID。
 5. 用户在本机 Unity 工程里填写 `ProjectSettings/EasyAR/easyar.local.json`。
 6. MCP 只检查字段是否存在、是否像占位符，不输出 secret。
 7. Unity 构建和真机验证使用本地配置运行，不需要在运行时登录官网。

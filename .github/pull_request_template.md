@@ -23,6 +23,7 @@
 
 - Image Tracking status:
 - Cloud Recognition status:
+- Mega status:
 - Real-device evidence paths, if changed:
 
 ## Security

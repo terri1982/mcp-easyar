@@ -12,7 +12,8 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 - Supports the scoped Unity sample run-through target:
   - Image Tracking
   - CRS/Cloud Recognition
-- Includes committed safe Android release evidence for the focused scope.
+  - Mega
+- Includes committed safe Android release evidence for the focused scope, including Mega APK install/startup and localization-tracking evidence.
 - Prompts for Image Tracking, CRS/Cloud Recognition, and focused close-out now tell clients to read `easyar://acceptance/fresh-project` first.
 - Server status, quickstart, install guide, and generated client setup now point fresh users to the same fresh project acceptance resource before Unity automation.
 - Provides Unity project assistance tools for local config, preflight, import guidance, build/run sequencing, log diagnostics, C# planning, script writing, and support bundles.
@@ -22,7 +23,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 Use Node.js 20 or newer:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.33/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -45,7 +46,7 @@ easyar_validate_local_config projectPath=/path/to/UnityProject sampleId=cloud-re
 easyar_next_workflow_step projectPath=/path/to/UnityProject sampleId=cloud-recognition platform=android
 ```
 
-For Image Tracking, switch `sampleId` to `image-tracking`.
+For Image Tracking, switch `sampleId` to `image-tracking`. For Mega, switch `sampleId` to `mega` and use the EasyAR portal package name, local license, and selected Mega Block from the user's own logged-in EasyAR/Mega Studio session.
 
 ## Local-Key Boundary
 
@@ -75,7 +76,7 @@ The release gate requires:
 - package install smoke test
 - npm pack dry run
 - repository security check
-- local-key MVP evidence for Image Tracking and CRS/Cloud Recognition
+- local-key MVP evidence for Image Tracking, CRS/Cloud Recognition, and Mega
 
 Additional published-asset check:
 

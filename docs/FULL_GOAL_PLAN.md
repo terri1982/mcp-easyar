@@ -2,7 +2,7 @@
 
 This plan keeps the original long-term goal visible while preserving the current released scope.
 
-Current public release: `v0.1.0-local-key.33`
+Current public release: `v0.1.0-local-key.34`
 
 ## Goal
 
@@ -27,6 +27,18 @@ Evidence:
 - `easyar://acceptance/fresh-project` defines the fresh Unity project acceptance path.
 - `easyar://workflow/programming` defines the safe Unity programming workflow.
 - The production gate still reports `Production ready: no` until real official EasyAR account APIs are connected.
+
+## Active Expansion Slice
+
+The current in-progress expansion target adds:
+
+- Mega
+
+Evidence so far:
+
+- MCP catalog, runbooks, readiness checks, device-validation forms, MonoBehaviour template generation, and log diagnostics include Mega.
+- Unity 2022.3.62f3 Android APK build, real-device install/startup, EasyAR initialization, Mega Block load, and Mega localization/tracking evidence exist.
+- Safe committed release evidence now includes real-device APK install/startup and Mega localization/tracking validation for the next local-key release.
 
 ## Expansion Track 1: More EasyAR Samples
 

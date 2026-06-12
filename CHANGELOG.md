@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added focused Mega sample support to the MCP catalog, runbooks, readiness checks, device-validation checklist, MonoBehaviour template generation, and Unity log diagnostics.
+- Updated active local-key MVP scope text to Image Tracking, Cloud Recognition, and Mega with committed safe Mega real-device install/localization evidence for the next GitHub release.
+
 ## 0.1.0 - 2026-06-10
 
 Initial public MVP for `mcp-easyar`.

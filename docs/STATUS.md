@@ -2,25 +2,26 @@
 
 This status page summarizes the current evidence-backed state of `mcp-easyar`.
 
-It is not a completion claim for every EasyAR sample. The current goal has been narrowed to Image Tracking and CRS/Cloud Recognition only.
+It is not a completion claim for every EasyAR sample. The active goal now covers Image Tracking, CRS/Cloud Recognition, and Mega only.
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.33`
+Current GitHub prerelease: `v0.1.0-local-key.34`
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.33/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.34/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
 ## Evidence-Weighted Progress
 
-- Current scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
-- Local-key MVP public usability: about 95%
+- Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
+- Active Mega expansion: Android device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.
+- Local-key MVP public usability: about 98%
 
-These percentages are evidence-weighted estimates. The scoped objective is complete for the currently approved two-sample target, while the broader production official API goal remains incomplete.
+These percentages are evidence-weighted estimates. The published prerelease is still the earlier two-sample release, while the current worktree has three-sample local-key evidence ready for the next release. The broader production official API goal remains incomplete.
 
 ## What Is Ready
 
@@ -30,8 +31,9 @@ These percentages are evidence-weighted estimates. The scoped objective is compl
 - Client acceptance guidance is available through `docs/CLIENT_ACCEPTANCE.md` and `easyar://client/acceptance`.
 - Fresh Unity project acceptance guidance is available through `docs/FRESH_PROJECT_ACCEPTANCE.md` and `easyar://acceptance/fresh-project`.
 - Local-key onboarding is implemented without collecting EasyAR website passwords or secret keys in chat.
-- Focused Image Tracking and CRS/Cloud Recognition workflows are implemented.
-- Safe committed Android evidence exists for the Image Tracking and CRS/Cloud Recognition target scope.
+- Focused Image Tracking, CRS/Cloud Recognition, and Mega workflows are implemented or under active development.
+- Safe committed Android evidence exists for the Image Tracking, CRS/Cloud Recognition, and Mega target scope.
+- Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals.
 - Unity project programming assistance exists for focused preflight, scene audit, run sequence, device validation, log analysis, C# planning, script writing, review, and handoff artifacts.
 
 ## Active Scope
@@ -40,6 +42,7 @@ Current target samples:
 
 - Image Tracking
 - CRS/Cloud Recognition
+- Mega
 
 Out of scope for the current goal:
 
@@ -49,7 +52,8 @@ Out of scope for the current goal:
 
 ## Known Remaining Work
 
-- Keep Image Tracking and CRS/Cloud Recognition evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
+- Publish the next local-key GitHub Release after strict local-key release checks pass.
+- Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
 - Add more real-device and platform evidence if supported Unity versions or target platforms expand for the two target samples.
 - Continue hardening Unity programming workflows with more real project cases.
@@ -69,5 +73,5 @@ MCP must not ask users to paste EasyAR website passwords, verification codes, li
 
 1. Keep the GitHub Release tarball and docs aligned with every public prerelease.
 2. Test a fresh Codex and Claude Desktop setup using `docs/CLIENT_ACCEPTANCE.md` and `docs/FRESH_PROJECT_ACCEPTANCE.md`.
-3. Run another clean install/build/device pass only for Image Tracking and CRS/Cloud Recognition when the Unity project changes.
+3. Run another clean install/build/device pass for Image Tracking, CRS/Cloud Recognition, and Mega when the Unity project changes.
 4. Decide whether npm publication is needed for this scoped local-key MVP.

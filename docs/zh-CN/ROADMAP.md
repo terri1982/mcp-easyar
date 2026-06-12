@@ -4,7 +4,7 @@
 
 ## 1. 已发布 local-key MVP
 
-当前版本：`v0.1.0-local-key.33`
+当前版本：`v0.1.0-local-key.34`
 
 已完成：
 
@@ -13,6 +13,10 @@
 - GitHub Release 安装包
 - core/full tool profile
 - 中文文档入口
+
+当前工作树已补齐：
+
+- Mega：MCP 工作流、Android APK 打包、真机安装启动、EasyAR 初始化、Mega Block 加载和定位跟踪日志证据已完成，等待下一版 local-key GitHub Release。
 
 ## 2. Sample 扩展
 
@@ -24,6 +28,7 @@
 扩展前先调用：
 
 ```text
+easyar_generate_sample_plan sampleId=mega platform=android unityVersion=2022.3.62f3
 easyar_generate_sample_expansion_plan sampleId=hello-ar platform=android unityVersion=2022.3.62f3
 ```
 
@@ -33,4 +38,4 @@ easyar_generate_sample_expansion_plan sampleId=hello-ar platform=android unityVe
 
 ## 4. Unity 编程服务
 
-继续围绕真实 Unity 项目增强 preflight、programming context、code plan、C# review、compile/device evidence。
+继续围绕真实 Unity 项目增强 preflight、programming context、code plan、C# review、compile/device evidence。当前优先收口三样本 local-key 发布。

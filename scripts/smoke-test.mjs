@@ -555,8 +555,22 @@ try {
   });
   assertResourceIncludes(currentStatusResource, "mcp-easyar Current Status");
   assertResourceIncludes(currentStatusResource, "Evidence-Weighted Progress");
-  assertResourceIncludes(currentStatusResource, "Current scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.");
-  assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 95%");
+  assertResourceIncludes(currentStatusResource, "Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.");
+  assertResourceIncludes(currentStatusResource, "Active Mega expansion: Android device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12.");
+  assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 98%");
+
+  const sampleCatalog = await callTool("easyar_list_samples", {});
+  assertTextIncludes(sampleCatalog, "\"id\": \"mega\"");
+  assertTextIncludes(sampleCatalog, "\"name\": \"Mega\"");
+  assertTextIncludes(sampleCatalog, "\"implementationStatus\": \"focused\"");
+
+  const megaSamplePlan = await callTool("easyar_generate_sample_plan", {
+    sampleId: "mega",
+    platform: "android",
+    unityVersion: "2022.3.62f3"
+  });
+  assertTextIncludes(megaSamplePlan, "Sample: Mega");
+  assertTextIncludes(megaSamplePlan, "Mega Block");
 
   const remainingWorkStatusResource = await request("resources/read", {
     uri: "easyar://status/remaining-work"
@@ -688,7 +702,7 @@ try {
   assert(firstRunGuideMarkdown.includes("EasyAR First Run"), "First-run markdown should include title");
   assert(firstRunGuideMarkdown.includes("Ready for Unity automation: no"), "First-run markdown should block Unity automation for unregistered users");
   assert(firstRunGuideMarkdown.includes("Tool: `easyar_write_account_onboarding`"), "First-run markdown should include top next onboarding call");
-  assert(firstRunGuideMarkdown.includes("Active samples: image-tracking, cloud-recognition"), "First-run markdown should include focused sample scope");
+  assert(firstRunGuideMarkdown.includes("Active samples: image-tracking, cloud-recognition, mega"), "First-run markdown should include focused sample scope");
   assert(firstRunGuideMarkdown.includes("Artifact Reading Order"), "First-run markdown should include artifact reading order");
   assert(firstRunGuideMarkdown.includes("PORTAL_EVIDENCE.md"), "First-run markdown should include portal evidence in artifact reading order");
   assert(firstRunGuideMarkdown.includes("https://www.easyar.cn/"), "First-run markdown should include official website");
@@ -958,7 +972,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.33"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.34"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -974,11 +988,41 @@ try {
     path.join(process.cwd(), "docs", "zh-CN", "README.md"),
     "utf8"
   );
+  const committedChineseFreshAcceptance = await readFile(
+    path.join(process.cwd(), "docs", "zh-CN", "FRESH_PROJECT_ACCEPTANCE.md"),
+    "utf8"
+  );
+  const committedChineseStatus = await readFile(
+    path.join(process.cwd(), "docs", "zh-CN", "STATUS.md"),
+    "utf8"
+  );
+  const committedChineseQuickstart = await readFile(
+    path.join(process.cwd(), "docs", "zh-CN", "quickstart.md"),
+    "utf8"
+  );
+  const committedChineseTroubleshooting = await readFile(
+    path.join(process.cwd(), "docs", "zh-CN", "troubleshooting.md"),
+    "utf8"
+  );
+  const committedChineseReleaseManifest = await readFile(
+    path.join(process.cwd(), "docs", "zh-CN", "RELEASE_MANIFEST.md"),
+    "utf8"
+  );
   assert(committedChineseReadme.includes("中文文档目录"), "Chinese README should include the Chinese docs directory");
   assert(committedChineseReadme.includes("docs/zh-CN/quickstart.md"), "Chinese README should directly link to Chinese quickstart");
   assert(committedChineseDocsIndex.includes("mcp-easyar 中文文档"), "Chinese docs index should include title");
   assert(committedChineseDocsIndex.includes("Image Tracking"), "Chinese docs index should include focused Image Tracking scope");
   assert(committedChineseDocsIndex.includes("CRS"), "Chinese docs index should include focused CRS scope");
+  assert(committedChineseDocsIndex.includes("Mega Sample"), "Chinese docs index should mention active Mega expansion");
+  assert(committedChineseFreshAcceptance.includes("Mega 验收"), "Chinese fresh acceptance should include Mega acceptance");
+  assert(committedChineseFreshAcceptance.includes("当前工作树已完成 Android 真机安装启动和 Mega 定位跟踪证据"), "Chinese fresh acceptance should reflect Mega device evidence");
+  assert(committedChineseStatus.includes("Mega：Unity 2022.3.62f3 Android APK 已在真机安装启动"), "Chinese status should include Mega device evidence state");
+  assert(committedChineseStatus.includes("NCam_Verified results"), "Chinese status should include Mega localization evidence signal");
+  assert(committedChineseQuickstart.includes("sampleId=mega"), "Chinese quickstart should include Mega calls");
+  assert(committedChineseQuickstart.includes("Mega 只有 APK 打包成功还不算完成"), "Chinese quickstart should state Mega build-only is incomplete");
+  assert(committedChineseTroubleshooting.includes("Mega APK 或定位失败"), "Chinese troubleshooting should include Mega diagnostics");
+  assert(committedChineseTroubleshooting.includes("mega-hybridclr"), "Chinese troubleshooting should include Mega HybridCLR diagnostics");
+  assert(committedChineseReleaseManifest.includes("当前工作树已补 Mega 真机安装、启动、定位跟踪和 safe release evidence"), "Chinese release manifest should mention Mega release evidence");
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
@@ -1010,7 +1054,7 @@ try {
   assert(productionValidationMarkdown.includes("mcp-easyar Production Validation"), "Production validation markdown should include title");
   assert(productionValidationMarkdown.includes("Production ready: no"), "Production validation markdown should clearly mark incomplete production readiness");
   assert(productionValidationMarkdown.includes("Local-key MVP ready: no"), "Production validation markdown should include local-key MVP readiness");
-  assert(productionValidationMarkdown.includes("Focused Image Tracking and Cloud Recognition run-through"), "Production validation markdown should include focused scope gate");
+  assert(productionValidationMarkdown.includes("Focused Image Tracking, Cloud Recognition, Mega run-through"), "Production validation markdown should include focused scope gate");
   await rm(productionValidationRoot, { recursive: true, force: true });
 
   const releaseManifest = await callTool("easyar_release_manifest", {});
@@ -2027,6 +2071,46 @@ exit 0
   assert(!androidDeviceRunbookMarkdown.includes("env-test-account-token"), "Android runbook markdown should not include account token values");
   assert(!androidDeviceRunbookMarkdown.includes("env-test-license-key"), "Android runbook markdown should not include license values");
 
+  const megaDeviceValidation = await callTool("easyar_generate_device_validation_checklist", {
+    projectPath,
+    sampleId: "mega",
+    platform: "android",
+    buildOutputPath: "Builds/mega.apk"
+  });
+  assertTextIncludes(megaDeviceValidation, "mega-block-loaded");
+  assertTextIncludes(megaDeviceValidation, "mega-localization-result");
+  assertTextIncludes(megaDeviceValidation, "Mega localization succeeds");
+
+  const megaDeviceRunResultForm = await callTool("easyar_generate_device_run_result_form", {
+    projectPath,
+    sampleId: "mega",
+    platform: "android",
+    buildOutputPath: "Builds/mega.apk",
+    device: "Fake Android Mega Device"
+  });
+  assertTextIncludes(megaDeviceRunResultForm, "Mega Block/localization outcome");
+  assertTextIncludes(megaDeviceRunResultForm, "Record Mega Block, localization status");
+  assertTextExcludes(megaDeviceRunResultForm, "target image, detection");
+
+  const writtenMegaAndroidRunbook = await callTool("easyar_write_android_device_runbook", {
+    projectPath,
+    sampleId: "mega",
+    apkPath: "Builds/mega.apk",
+    adbPath: fakeAdbPath,
+    deviceSerial: "FAKE123",
+    bundleIdentifier: "com.easyar.megasample"
+  });
+  assertTextIncludes(writtenMegaAndroidRunbook, "ANDROID_DEVICE_RUNBOOK.md");
+  const megaAndroidDeviceRunbookMarkdown = await readFile(
+    path.join(projectPath, "Assets", "EasyARGenerated", "mega", "ANDROID_DEVICE_RUNBOOK.md"),
+    "utf8"
+  );
+  assert(megaAndroidDeviceRunbookMarkdown.includes("EasyAR Android Device Runbook - Mega"), "Mega Android runbook markdown should include title");
+  assert(megaAndroidDeviceRunbookMarkdown.includes("grant camera, location, and network permissions"), "Mega Android runbook should include Mega permission action");
+  assert(megaAndroidDeviceRunbookMarkdown.includes("Mega localization succeeds"), "Mega Android runbook should include Mega pass criteria");
+  assert(megaAndroidDeviceRunbookMarkdown.includes("Mega Block/localization outcome"), "Mega Android runbook should include Mega passed evidence placeholder");
+  assert(!megaAndroidDeviceRunbookMarkdown.includes("focused image target"), "Mega Android runbook should not use Image Tracking next action");
+
   const notRunCompletionReport = await callTool("easyar_generate_completion_report", {
     projectPath,
     sampleId: "image-tracking",
@@ -2419,6 +2503,19 @@ exit 0
   );
   assert(generatedScript.includes("OnTargetFound"), "Generated script should include OnTargetFound");
 
+  const megaScript = await callTool("easyar_create_mono_behaviour", {
+    projectPath,
+    relativePath: "Assets/Scripts/MegaLocalizationContentController.cs",
+    className: "MegaLocalizationContentController",
+    kind: "mega"
+  });
+  assertTextIncludes(megaScript, "MegaLocalizationContentController.cs");
+  const generatedMegaScript = await readFile(
+    path.join(projectPath, "Assets", "Scripts", "MegaLocalizationContentController.cs"),
+    "utf8"
+  );
+  assert(generatedMegaScript.includes("OnMegaLocalized"), "Generated Mega script should include OnMegaLocalized");
+
   const programmingContext = await callTool("easyar_generate_programming_context", {
     projectPath,
     sampleId: "image-tracking",
@@ -2574,6 +2671,18 @@ exit 0
   });
   assertTextIncludes(imageTrackingLogAnalysis, "image-tracking-target-load");
   assertTextIncludes(imageTrackingLogAnalysis, "\"id\": \"image-tracking\"");
+
+  const megaLogAnalysis = await callTool("easyar_analyze_unity_log", {
+    sampleId: "mega",
+    logText: [
+      "HybridCLR error: please run HybridCLR/Generate/All before building",
+      "launcher AndroidManifest.xml Error: minSdkVersion 22 cannot be smaller than version 24 declared in library onnxruntime-android-1.22.0",
+      "Mega Block map load failed: block not found"
+    ].join("\n")
+  });
+  assertTextIncludes(megaLogAnalysis, "mega-hybridclr");
+  assertTextIncludes(megaLogAnalysis, "mega-arcore-manifest");
+  assertTextIncludes(megaLogAnalysis, "mega-block-config");
 
   const nativeExtensionNoticeAnalysis = await callTool("easyar_analyze_unity_log", {
     sampleId: "image-tracking",

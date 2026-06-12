@@ -203,7 +203,7 @@ Repository canary:
 EASYAR_CANARY_PROJECT_PATH=/path/to/UnityProject EASYAR_CANARY_PLATFORM=android npm run official-api:canary
 ```
 
-The canary starts the MCP server locally, uses the configured bearer token and endpoint env vars, checks account status, verifies Image Tracking and Cloud Recognition official access, then runs production validation. It prints pass/blocker status only and must not print tokens, license keys, API KEY/API Secret, appKey, or appSecret values.
+The canary starts the MCP server locally, uses the configured bearer token and endpoint env vars, checks account status, verifies Image Tracking, Cloud Recognition, and Mega official access, then runs production validation. It prints pass/blocker status only and must not print tokens, license keys, API KEY/API Secret, appKey, or appSecret values.
 
 Local contract stub:
 

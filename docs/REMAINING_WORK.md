@@ -8,13 +8,15 @@ The current user-approved target is limited to:
 
 - Image Tracking
 - CRS/Cloud Recognition
+- Mega
 
 Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out of scope for the current release target until the user explicitly asks to continue.
 
 ## Current Evidence
 
-- Current public prerelease: `v0.1.0-local-key.33`
-- Current scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
+- Current public prerelease: `v0.1.0-local-key.34`
+- Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.
+- Active Mega expansion: Android APK install/startup and Mega localization/tracking evidence exists in the current worktree.
 - Local-key MVP public usability: about 95%
 - Android real-device evidence exists for Image Tracking and CRS/Cloud Recognition, including a refreshed CRS recognition screenshot and device log from 2026-06-11.
 - GitHub Release tarball install smoke passes, including Codex and Claude Desktop `package-bin` client setup checks.
@@ -25,7 +27,8 @@ Hello AR, Surface Tracking, and other EasyAR Sense Unity Plugin samples are out 
 ## Remaining For Current Scoped Target
 
 - Keep release links, status docs, fresh project acceptance guidance, install checks, and GitHub Release smoke tests aligned with each new prerelease.
-- Re-run Image Tracking and CRS/Cloud Recognition device evidence when the Unity project, EasyAR Sense Unity Plugin version, supported Unity version, or target platform changes.
+- Add safe Mega run-through evidence after APK install and real-device localization validation.
+- Re-run Image Tracking, CRS/Cloud Recognition, and Mega device evidence when the Unity project, EasyAR Sense Unity Plugin version, supported Unity version, or target platform changes.
 - Continue hardening Unity programming workflows with real Image Tracking and CRS project cases.
 
 ## Not Required For Current Scoped Target
@@ -54,6 +57,7 @@ easyar_server_status
 easyar_check_client_setup client=codex entrypointMode=package-bin includeTokenPlaceholder=false
 easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition platform=android
+easyar_generate_sample_plan sampleId=mega platform=android unityVersion=2022.3.62f3
 ```
 
 Also read MCP resource `easyar://acceptance/fresh-project`.

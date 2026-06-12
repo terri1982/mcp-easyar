@@ -86,7 +86,7 @@ jobs:
               echo "mcp-easyar GitHub release"
               echo
               echo "Gate: ${GATE}"
-              echo "Focused scope: Image Tracking and Cloud Recognition"
+              echo "Focused scope: Image Tracking, Cloud Recognition, and Mega"
               echo
               echo "This release asset is an npm-compatible tarball produced by npm pack."
               echo "Unity sample execution uses the installed official EasyAR Sense Unity Plugin plus local license/API keys."

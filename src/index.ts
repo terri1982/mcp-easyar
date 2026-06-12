@@ -63,7 +63,7 @@ type DeploymentReadinessReport = {
   security: string[];
 };
 
-const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "lifecycle"] as const;
+const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "mega", "lifecycle"] as const;
 const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
 const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
 const mobilePlatforms = ["android", "ios"] as const;
@@ -76,7 +76,7 @@ const authorizationModeValues = ["auto", "official-api", "local-key", "manual-br
 type AuthorizationMode = typeof authorizationModeValues[number];
 const serverName = "mcp-easyar";
 const serverVersion = "0.1.0";
-const currentGitHubReleaseTag = "v0.1.0-local-key.33";
+const currentGitHubReleaseTag = "v0.1.0-local-key.34";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
@@ -336,6 +336,20 @@ const samples: SampleInfo[] = [
       "Verify network permissions and service region before testing.",
       "Avoid committing secrets; inject them through local config or CI secrets."
     ]
+  },
+  {
+    id: "mega",
+    name: "Mega",
+    description: "Run an EasyAR Mega Unity sample with a configured cloud localization library and Mega Block on a real device.",
+    implementationStatus: "focused",
+    unityScenes: ["Mega", "MegaBlock", "MegaLocalization", "TiantanSkyPalace"],
+    requiredCapabilities: ["Camera permission", "Location/network access", "EasyAR Mega license key", "Mega Block cloud localization library"],
+    setupNotes: [
+      "Install the official EasyAR Sense Unity Plugin for Mega from the EasyAR download page.",
+      "Use the user's logged-in EasyAR website or Mega Studio session to find non-secret library and block identifiers.",
+      "Keep license keys and service credentials in local EasyAR settings or local config files; do not paste secrets into chat.",
+      "Build and validate on a real Android device; editor or emulator launch is not enough to prove cloud localization."
+    ]
   }
 ];
 
@@ -367,7 +381,7 @@ const quickstartWorkflow = [
   "4. Use `easyar_check_account` and `easyar_validate_license` only after official EasyAR endpoints are configured.",
   "5. Read `easyar://acceptance/fresh-project` before a fresh Unity project run so the client keeps the current Image Tracking + CRS/Cloud Recognition scope and safety boundary.",
   "6. Use `easyar_list_samples` and `easyar_generate_sample_plan` to choose a sample.",
-  "7. Focus first on `image-tracking` or `cloud-recognition`; other sample workflows are cataloged but deferred.",
+  "7. Focus first on `image-tracking`, `cloud-recognition`, or `mega`; other sample workflows are cataloged but deferred.",
   "8. Run `easyar_prepare_unity_project`, `easyar_write_unity_environment_report`, and `easyar_write_focused_preflight` before any Unity batch command.",
   "9. Read `PREFLIGHT.md` first and follow its `nextCall`; do not skip account, local config, import, Unity path, scene, or script blockers.",
   "10. Import the official EasyAR Unity Plugin and matching sample scenes from EasyAR downloads or Unity Package Manager Samples.",
@@ -784,7 +798,7 @@ server.prompt(
 
 server.prompt(
   "easyar-close-focused-scope",
-  "Guide Codex or Claude through closing out Image Tracking and Cloud Recognition focused sample status.",
+  "Guide Codex or Claude through closing out Image Tracking, Cloud Recognition, and Mega focused sample status.",
   {
     projectPath: z.string().describe("Unity project path."),
     platform: z.enum(["android", "ios"]).default("android")
@@ -800,7 +814,8 @@ server.prompt(
       "Then call:",
       `1. easyar_write_completion_report projectPath=${projectPath} sampleId=image-tracking platform=${platform}`,
       `2. easyar_write_completion_report projectPath=${projectPath} sampleId=cloud-recognition platform=${platform}`,
-      `3. easyar_write_focused_scope_status projectPath=${projectPath} platform=${platform}`,
+      `3. easyar_write_completion_report projectPath=${projectPath} sampleId=mega platform=${platform}`,
+      `4. easyar_write_focused_scope_status projectPath=${projectPath} platform=${platform}`,
       "",
       "Read FOCUSED_SCOPE_STATUS.md. If allFocusedSamplesComplete is false, follow the per-sample next actions. Do not start deferred samples unless the user asks to continue."
     ].join("\n")
@@ -812,7 +827,7 @@ server.prompt(
   "Guide Codex or Claude through Unity C# implementation and diagnostics for an EasyAR project.",
   {
     projectPath: z.string().describe("Unity project path."),
-    sampleId: z.enum(["image-tracking", "cloud-recognition"]).default("image-tracking")
+    sampleId: z.enum(["image-tracking", "cloud-recognition", "mega"]).default("image-tracking")
   },
   ({ projectPath, sampleId }) => promptText(
     "EasyAR Unity programming assistant",
@@ -2516,14 +2531,14 @@ server.tool(
   }
 );
 
-const focusedHandoffSampleIds = ["image-tracking", "cloud-recognition", "all"] as const;
+const focusedHandoffSampleIds = ["image-tracking", "cloud-recognition", "mega", "all"] as const;
 
 server.tool(
   "easyar_generate_focused_handoff_pack",
   "Generate a plan for writing the focused sample handoff artifact pack without writing files.",
   {
     projectPath: z.string().describe("Unity project path."),
-    sampleId: z.enum(focusedHandoffSampleIds).default("all").describe("Focused sample id or all for Image Tracking and Cloud Recognition."),
+    sampleId: z.enum(focusedHandoffSampleIds).default("all").describe("Focused sample id or all focused samples."),
     platform: z.enum(["android", "ios"]).default("android"),
     accountStage: z.enum(accountStageValues).default("unknown"),
     client: z.enum(clientKinds).default("claude-desktop"),
@@ -2563,10 +2578,10 @@ server.tool(
 
 server.tool(
   "easyar_write_focused_handoff_pack",
-  "Write the focused sample handoff artifact pack for Image Tracking, Cloud Recognition, or both focused samples.",
+  "Write the focused sample handoff artifact pack for Image Tracking, Cloud Recognition, Mega, or all focused samples.",
   {
     projectPath: z.string().describe("Unity project path."),
-    sampleId: z.enum(focusedHandoffSampleIds).default("all").describe("Focused sample id or all for Image Tracking and Cloud Recognition."),
+    sampleId: z.enum(focusedHandoffSampleIds).default("all").describe("Focused sample id or all focused samples."),
     platform: z.enum(["android", "ios"]).default("android"),
     accountStage: z.enum(accountStageValues).default("unknown"),
     client: z.enum(clientKinds).default("claude-desktop"),
@@ -3191,7 +3206,7 @@ server.tool(
 
 server.tool(
   "easyar_generate_focused_scope_status",
-  "Generate a two-sample focused scope status across Image Tracking and Cloud Recognition completion reports.",
+  "Generate focused scope status across Image Tracking, Cloud Recognition, and Mega completion reports.",
   {
     projectPath: z.string().describe("Unity project path."),
     platform: z.enum(["android", "ios"]).default("android"),
@@ -3208,7 +3223,7 @@ server.tool(
 
 server.tool(
   "easyar_write_focused_scope_status",
-  "Write the focused Image Tracking and Cloud Recognition scope status to Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md.",
+  "Write the focused Image Tracking, Cloud Recognition, and Mega scope status to Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md.",
   {
     projectPath: z.string().describe("Unity project path."),
     platform: z.enum(["android", "ios"]).default("android"),
@@ -4697,6 +4712,15 @@ function buildSampleExpansionPlan(
 }
 
 function sampleExpansionPassCriteria(sample: SampleInfo): string[] {
+  if (sample.id === "mega") {
+    return [
+      "App installs and launches on a physical Android or iOS device.",
+      "Camera and location/network permissions are granted as required by the sample.",
+      "EasyAR Mega initializes without license, plugin import, or service configuration errors.",
+      "The configured Mega Block is loaded and cloud localization succeeds against the selected library.",
+      "No secret values appear in generated reports or logs."
+    ];
+  }
   if (sample.id === "hello-ar") {
     return [
       "App installs and launches on a physical Android or iOS device.",
@@ -4725,6 +4749,13 @@ function sampleExpansionPassCriteria(sample: SampleInfo): string[] {
 }
 
 function sampleExpansionRisks(sample: SampleInfo): string[] {
+  if (sample.id === "mega") {
+    return [
+      "Mega validation depends on a real cloud localization library and matching physical environment.",
+      "Editor or emulator startup cannot prove cloud localization behavior.",
+      "Incorrect block id, stale Mega Studio import state, or weak device network/GPS can make validation fail."
+    ];
+  }
   if (sample.id === "surface-tracking") {
     return [
       "Editor or emulator startup cannot prove surface tracking behavior.",
@@ -4803,7 +4834,7 @@ async function buildDeploymentReadiness(projectPath: string | null, unityPath?: 
       check("project-path", projectPath ? project.hasAssets === true && project.hasPackagesManifest === true && project.hasProjectSettings === true : true, "warning", projectPath ? `Project path ${projectPath} has Unity structure.` : "No Unity project path was provided for deployment readiness.")
     ],
     scope: [
-      check("focused-samples", focusedSamples().map((sample) => sample.id).join(",") === "image-tracking,cloud-recognition", "blocker", "Focused run-through scope is Image Tracking and Cloud Recognition."),
+      check("focused-samples", focusedSamples().map((sample) => sample.id).join(",") === "image-tracking,cloud-recognition,mega", "blocker", "Focused run-through scope is Image Tracking, Cloud Recognition, and Mega."),
       check("deferred-samples", deferredSamples().length > 0, "info", "Other samples are cataloged as deferred until the user asks to continue.")
     ],
     security: [
@@ -4848,7 +4879,7 @@ async function buildDeploymentReadiness(projectPath: string | null, unityPath?: 
     security: [
       "Do not publish account tokens, license keys, Cloud Recognition credentials, signing keys, or provisioning secrets.",
       "Connect production deployments only to official EasyAR account/license/download/cloud endpoints.",
-      "Keep Image Tracking and Cloud Recognition as the active run-through scope until the user asks to continue."
+      "Keep Image Tracking, Cloud Recognition, and Mega as the active run-through scope until the user asks to continue."
     ]
   };
 }
@@ -4978,6 +5009,7 @@ async function buildProductionValidationReport(
     return !configured[name];
   });
   const focused = focusedSamples();
+  const focusedSampleNames = focused.map((sample) => sample.name).join(", ");
   const officialAccessReports = await Promise.all(focused.map((sample) => buildOfficialAccessReport(root, sample, platform, "unity-samples")));
   const focusedScopeStatus = root
     ? await buildFocusedScopeStatus(root, platform, maxScriptIssues, maxLogBytes, maxLogIssues)
@@ -5034,7 +5066,7 @@ async function buildProductionValidationReport(
       "unity-project-evidence",
       "Unity focused sample evidence",
       Boolean(root) || Boolean(focusedScopeStatus?.allFocusedSamplesComplete),
-      "A Unity project path or safe focused release evidence file is provided so Image Tracking and Cloud Recognition run-through evidence can be verified.",
+      `A Unity project path or safe focused release evidence file is provided so ${focusedSampleNames} run-through evidence can be verified.`,
       root
         ? `Project path: ${root}.`
         : focusedScopeStatus
@@ -5059,12 +5091,12 @@ async function buildProductionValidationReport(
     }),
     productionGate(
       "focused-scope-run-through",
-      "Focused Image Tracking and Cloud Recognition run-through",
+      `Focused ${focusedSampleNames} run-through`,
       Boolean(focusedScopeStatus?.allFocusedSamplesComplete),
-      "Both focused samples have COMPLETION_REPORT.md with runThroughComplete=true based on preflight, device validation, RUN_RESULT.md, and latest log evidence.",
+      "All focused samples have COMPLETION_REPORT.md with runThroughComplete=true based on preflight, device validation, RUN_RESULT.md, and latest log evidence.",
       focusedScopeStatus
         ? focusedScopeStatus.allFocusedSamplesComplete
-          ? "Both focused samples are complete."
+          ? "All focused samples are complete."
           : `${focusedScopeStatus.completedCount}/${focusedScopeStatus.focusedSampleCount} focused samples complete; blocked=${focusedScopeStatus.blockedCount}, failed=${focusedScopeStatus.failedCount}, notRun=${focusedScopeStatus.notRunCount}.`
         : "Focused scope status was not generated because no projectPath was provided.",
       focusedScopeStatus?.nextActions[0] ?? `Run easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=${platform}.`
@@ -5081,7 +5113,7 @@ async function buildProductionValidationReport(
     productionReady,
     localKeyMvpReady,
     readinessModel: {
-      localKeyMvp: "Ready when package/install docs, verification commands, and focused Image Tracking/Cloud Recognition run-through evidence pass. It uses locally configured EasyAR license/API keys after the official Unity Plugin is installed.",
+      localKeyMvp: `Ready when package/install docs, verification commands, and focused ${focusedSampleNames} run-through evidence pass. It uses locally configured EasyAR license/API keys after the official Unity Plugin is installed.`,
       productionOfficialApi: "Ready only when official EasyAR account/license/download/cloud endpoint env vars and focused official access checks pass."
     },
     projectPath: root,
@@ -5097,7 +5129,7 @@ async function buildProductionValidationReport(
     scope: {
       focusedSamples: focused.map((sample) => sample.id),
       deferredSamples: deferredSamples().map((sample) => sample.id),
-      note: "Only Image Tracking and Cloud Recognition are in the active run-through scope until the user asks to continue."
+      note: `${focusedSampleNames} are in the active run-through scope.`
     },
     verificationEvidence,
     gates,
@@ -5127,7 +5159,7 @@ async function buildProductionValidationReport(
       "docs/OFFICIAL_API_CONTRACT.md",
       "DEPLOYMENT_READINESS.md",
       "OFFICIAL_ACCESS.md for image-tracking and cloud-recognition",
-      "PREFLIGHT.md, DEVICE_VALIDATION.md, RUN_RESULT.md, and COMPLETION_REPORT.md for both focused samples",
+      "PREFLIGHT.md, DEVICE_VALIDATION.md, RUN_RESULT.md, and COMPLETION_REPORT.md for every focused sample",
       "FOCUSED_SCOPE_STATUS.md",
       "docs/release-evidence/focused-scope.<platform>.json for GitHub release runners that cannot access the Unity project",
       "Passing GitHub Actions or locally recorded verification commands"
@@ -6982,7 +7014,7 @@ async function buildReleaseManifest() {
       deferredSamples: deferredSamples().map((sample) => sample.id)
     },
     readinessModel: {
-      localKeyMvp: "Ready for focused Image Tracking and Cloud Recognition assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided.",
+      localKeyMvp: "Ready for focused Image Tracking, Cloud Recognition, and Mega assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided.",
       productionOfficialApi: "Ready only after EasyAR account, license, downloads, and Cloud Recognition endpoint variables are connected to authorized EasyAR services and focused official access checks pass.",
       unityRuntime: "After the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses local license/API key configuration and does not require website login at runtime."
     },
@@ -7265,7 +7297,7 @@ async function buildFirstRunGuide(input: {
     focusedScope: {
       activeSamples: focused.map((sample) => sample.id),
       deferredSamples: deferredSamples().map((sample) => sample.id),
-      note: "Current run-through work is intentionally limited to Image Tracking and Cloud Recognition until the user asks to continue other samples."
+      note: "Current run-through work is intentionally limited to Image Tracking, Cloud Recognition, and Mega until the user asks to continue other samples."
     },
     sample: {
       id: input.sample.id,
@@ -8177,7 +8209,7 @@ async function buildSampleReadinessReport(root: string, sample: SampleInfo) {
       ok: sample.implementationStatus === "focused",
       detail: sample.implementationStatus === "focused"
         ? `${sample.name} is in the current focused run-through set.`
-        : `${sample.name} is deferred. Current focused samples are Image Tracking and Cloud Recognition.`
+        : `${sample.name} is deferred. Current focused samples are Image Tracking, Cloud Recognition, and Mega.`
     },
     {
       id: "unity-project",
@@ -8320,7 +8352,7 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
       required: true,
       ok: sample.implementationStatus === "focused",
       evidence: `${sample.name} status is ${sample.implementationStatus}.`,
-      action: "Use image-tracking or cloud-recognition until broader sample work resumes."
+      action: "Use image-tracking, cloud-recognition, or mega until broader sample work resumes."
     },
     {
       id: "official-download-discovery-ready",
@@ -8361,7 +8393,8 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
             action: "Import the official Samples~/StreamingAssets/ImageTargets/ImageTargets.unitypackage so device builds can load EasyARSamples/ImageTargets/namecard.jpg, namecard.etd, and idback.etd."
           }
         ]
-      : [
+      : sample.id === "cloud-recognition"
+        ? [
           {
             id: "cloud-recognition-local-credentials-ready",
             required: true,
@@ -8371,7 +8404,20 @@ async function buildImportChecklist(root: string, sample: SampleInfo) {
               : `Cloud Recognition credentials are missing or incomplete in ${path.relative(root, cloudConfigPath)}.`,
             action: "Fill CRS AppId and API KEY from the official EasyAR Cloud Recognition account into local config, never into committed source."
           }
-        ])
+        ]
+        : sample.id === "mega"
+          ? [
+              {
+                id: "mega-assets-ready",
+                required: true,
+                ok: (await findMegaAssetHints(root, 40)).length > 0,
+                evidence: (await findMegaAssetHints(root, 10)).length > 0
+                  ? `Mega asset hint(s): ${(await findMegaAssetHints(root, 10)).join(", ")}`
+                  : "No Mega, Mega Block, CloudLocalizer, or TiantanSkyPalace asset hints were found.",
+                action: "Import the official EasyAR Sense Unity Plugin for Mega, then use Mega Studio or the generated installer to load the selected Mega Block."
+              }
+            ]
+          : [])
   ];
   const nextActions = items
     .filter((item) => item.required && !item.ok)
@@ -9693,7 +9739,7 @@ function focusedArtifactDefinitions(root: string, sample: SampleInfo) {
     {
       name: "Focused Scope Status",
       relativePath: path.join("Assets", "EasyARGenerated", "FOCUSED_SCOPE_STATUS.md"),
-      purpose: "Overall Image Tracking and Cloud Recognition completion state and next actions.",
+      purpose: "Overall Image Tracking, Cloud Recognition, and Mega completion state and next actions.",
       generateWith: "easyar_write_focused_scope_status"
     },
     {
@@ -9942,7 +9988,7 @@ async function buildDeviceRunResultForm(
   notes?: string
 ) {
   const checklist = await buildDeviceValidationChecklist(root, sample, platform, device, buildOutputPath);
-  const recordedDevice = hasRecordedDevice(device ?? null) ? device : "<physical device model and OS>";
+  const recordedDevice = hasRecordedDevice(device ?? null) ? device ?? "<physical device model and OS>" : "<physical device model and OS>";
   const recordedBuildOutput = isNonPlaceholderString(buildOutputPath) ? buildOutputPath : platform === "android"
     ? "Builds/<sample-id>.apk"
     : "Builds/iOS/<sample-id>";
@@ -10003,7 +10049,7 @@ async function buildDeviceRunResultForm(
       name: step.name,
       status: "passed",
       evidence: step.name.includes("sample pass criteria")
-        ? `<${sample.name} passed on ${recordedDevice}; record target/recognition outcome without secrets.>`
+        ? samplePassedEvidencePlaceholder(sample, recordedDevice)
         : `<Observed on ${recordedDevice}: ${step.evidencePrompt}>`
     }))
   };
@@ -10014,6 +10060,8 @@ async function buildDeviceRunResultForm(
     "Keep compile-only and build-only outcomes as blocked until real-device validation evidence exists.",
     sample.id === "cloud-recognition"
       ? "Record recognition status and target/library identifiers without appKey, appSecret, license keys, tokens, passwords, or raw secret-bearing logs."
+      : sample.id === "mega"
+        ? "Record Mega Block, localization status, and physical-environment evidence without license keys, tokens, passwords, appKey/appSecret, or raw secret-bearing logs."
       : "Record target image, detection, anchored content, and tracking stability evidence without license keys, tokens, passwords, or raw secret-bearing logs."
   ];
 
@@ -10050,6 +10098,16 @@ async function buildDeviceRunResultForm(
         ],
     security: "This form is designed for evidence collection only. Do not paste EasyAR license keys, account tokens, Cloud Recognition appKey/appSecret, signing keys, provisioning profiles, passwords, private device identifiers, or raw secret-bearing logs."
   };
+}
+
+function samplePassedEvidencePlaceholder(sample: SampleInfo, recordedDevice: string): string {
+  if (sample.id === "mega") {
+    return `<${sample.name} passed on ${recordedDevice}; record Mega Block/localization outcome without secrets.>`;
+  }
+  if (sample.id === "cloud-recognition") {
+    return `<${sample.name} passed on ${recordedDevice}; record cloud target/recognition outcome without secrets.>`;
+  }
+  return `<${sample.name} passed on ${recordedDevice}; record target/tracking outcome without secrets.>`;
 }
 
 async function buildAndroidDeviceRunbook(input: {
@@ -10148,9 +10206,7 @@ async function buildAndroidDeviceRunbook(input: {
     ...(apkExists ? [] : [`Build the APK first at ${path.relative(input.root, resolvedApk)}.`]),
     ...buildAndroidDeviceStatusActions(deviceStatusResult, devices),
     "Run the install, launch, and logcat commands in order.",
-    input.sample.id === "cloud-recognition"
-      ? "On the phone, grant camera permission, point the camera at a target uploaded to the Cloud Recognition library, and record whether recognition succeeds."
-      : "On the phone, grant camera permission, point the camera at the focused image target, and record tracking stability.",
+    androidDeviceInteractionAction(input.sample),
     "Write RUN_RESULT.md with overallStatus=passed only after the physical-device behavior satisfies every pass criterion."
   ];
 
@@ -10192,6 +10248,16 @@ async function buildAndroidDeviceRunbook(input: {
     nextActions: Array.from(new Set(nextActions)),
     security: "Android device runbooks record adb metadata, commands, paths, package names, and evidence prompts only. They do not include EasyAR passwords, license keys, API KEY/API Secret values, appKey/appSecret, signing keys, or raw secret-bearing logs."
   };
+}
+
+function androidDeviceInteractionAction(sample: SampleInfo): string {
+  if (sample.id === "cloud-recognition") {
+    return "On the phone, grant camera permission, point the camera at a target uploaded to the Cloud Recognition library, and record whether recognition succeeds.";
+  }
+  if (sample.id === "mega") {
+    return "On the phone, grant camera, location, and network permissions; test in the selected Mega Block environment until Mega localization succeeds, then record non-secret block/localization evidence.";
+  }
+  return "On the phone, grant camera permission, point the camera at the focused image target, and record tracking stability.";
 }
 
 async function buildRunResult(input: {
@@ -11044,7 +11110,14 @@ async function buildDeviceValidationChecklist(
   };
 }
 
-function buildDeviceValidationSteps(sample: SampleInfo, platform: typeof mobilePlatforms[number]) {
+type DeviceValidationStep = {
+  id: string;
+  title: string;
+  action: string;
+  expected: string;
+};
+
+function buildDeviceValidationSteps(sample: SampleInfo, platform: typeof mobilePlatforms[number]): DeviceValidationStep[] {
   const platformSteps = platform === "android"
     ? [
         {
@@ -11080,7 +11153,7 @@ function buildDeviceValidationSteps(sample: SampleInfo, platform: typeof mobileP
   ];
 }
 
-function sampleSpecificDeviceValidationSteps(sample: SampleInfo) {
+function sampleSpecificDeviceValidationSteps(sample: SampleInfo): DeviceValidationStep[] {
   if (sample.id === "cloud-recognition") {
     return [
       {
@@ -11100,6 +11173,35 @@ function sampleSpecificDeviceValidationSteps(sample: SampleInfo) {
         title: "Verify cloud recognition result",
         action: "Present a target configured in the official EasyAR Cloud Recognition library.",
         expected: "The sample receives a cloud recognition result and displays or logs the expected target/content response."
+      }
+    ];
+  }
+
+  if (sample.id === "mega") {
+    return [
+      {
+        id: "mega-block-loaded",
+        title: "Verify Mega Block is loaded",
+        action: "Launch the Mega sample and confirm the selected Mega Block/library configuration is loaded without license or service errors.",
+        expected: "The app logs or UI indicate the selected Mega Block is available; no license, credential, or block-not-found error appears."
+      },
+      {
+        id: "mega-localization-environment",
+        title: "Verify physical localization environment",
+        action: "Run the sample in or near the physical environment represented by the selected Mega Block.",
+        expected: "The test location matches the selected cloud localization library/Mega Block closely enough for localization."
+      },
+      {
+        id: "mega-localization-result",
+        title: "Verify Mega localization result",
+        action: "Move the device slowly while pointing the camera at mapped visual features until the Mega sample reports a localized pose.",
+        expected: "The sample reports successful localization/tracking and anchors content consistently to the Mega Block/map."
+      },
+      {
+        id: "mega-runtime-stability",
+        title: "Verify Mega runtime stability",
+        action: "Keep the sample running for a short validation pass after localization succeeds.",
+        expected: "Localization remains stable long enough to record evidence, and no network, GPS, or tracking timeout error blocks the sample."
       }
     ];
   }
@@ -11132,6 +11234,17 @@ function sampleDevicePassCriteria(sample: SampleInfo): string[] {
     ];
   }
 
+  if (sample.id === "mega") {
+    return [
+      "App launches on a physical device with camera, location, and network permissions granted.",
+      "EasyAR Mega initializes without license, plugin import, or service configuration errors.",
+      "The selected cloud localization library and Mega Block are loaded or bound in the Unity project.",
+      "The device is tested in or near the physical environment represented by the selected Mega Block.",
+      "Mega localization succeeds and reports a stable localized/tracking pose long enough to record evidence.",
+      "No secret values are printed in Unity, device, or support logs."
+    ];
+  }
+
   return [
     "App launches on a physical device with camera permission granted.",
     "EasyAR initializes without license or plugin import errors.",
@@ -11148,6 +11261,16 @@ function sampleDeviceEvidencePrompts(sample: SampleInfo): string[] {
       "Target library count or account-page confirmation that at least one test target image is uploaded.",
       "Recognition response status without appKey/appSecret values.",
       "Network/service-region observations."
+    ];
+  }
+
+  if (sample.id === "mega") {
+    return [
+      "Cloud localization library name or non-secret identifier.",
+      "Mega Block storage/name/id as non-secret local project material.",
+      "Physical test location or mapped area description without private credentials.",
+      "Observed Mega localization status, stability, and any timeout/network/GPS notes.",
+      "Redacted logcat path captured after localization attempt."
     ];
   }
 
@@ -11782,12 +11905,13 @@ function packageCacheSamplePathMatches(sample: SampleInfo, relativePath: string)
   const normalized = relativePath.toLowerCase();
   return sample.unityScenes.some((hint) => normalized.includes(hint.toLowerCase()))
     || (sample.id === "cloud-recognition" && normalized.includes("cloudrecognition"))
-    || (sample.id === "image-tracking" && normalized.includes("imagetracking"));
+    || (sample.id === "image-tracking" && normalized.includes("imagetracking"))
+    || (sample.id === "mega" && (normalized.includes("mega") || normalized.includes("cloudlocalizer") || normalized.includes("megablock")));
 }
 
 function readinessAction(checkId: string, sample: SampleInfo): string {
   if (checkId === "sample-focus") {
-    return "Use sampleId \"image-tracking\" or \"cloud-recognition\" for the current run-through work.";
+    return "Use sampleId \"image-tracking\", \"cloud-recognition\", or \"mega\" for the current run-through work.";
   }
   if (checkId === "unity-project") {
     return "Open or create a Unity project before running EasyAR sample tools.";
@@ -11815,6 +11939,9 @@ function readinessAction(checkId: string, sample: SampleInfo): string {
   }
   if (checkId === "cloud-recognition-credentials") {
     return "Fill easyar.cloudRecognition.appId and apiKey in ProjectSettings/EasyAR/easyar.local.json. Legacy appKey/appSecret fields are still accepted.";
+  }
+  if (checkId === "mega-assets") {
+    return "Import the official EasyAR Sense Unity Plugin for Mega and load the selected Mega Block before running the Mega sample.";
   }
   return "Review the EasyAR Unity checklist and rerun readiness checks.";
 }
@@ -11850,6 +11977,13 @@ async function hasOfficialImageTargetsStreamingAssets(root: string): Promise<boo
     }
   }
   return true;
+}
+
+async function findMegaAssetHints(root: string, limit: number): Promise<string[]> {
+  const candidates = await findFiles(root, ["Assets", "Packages"], /(?:mega|megablock|cloudlocalizer|tiantanskypalace)/i, limit * 3);
+  return candidates
+    .filter((candidatePath) => !candidatePath.replace(/\\/g, "/").startsWith("Assets/EasyARGenerated/"))
+    .slice(0, limit);
 }
 
 function focusedSampleGeneratedDir(root: string, sample: SampleInfo): string {
@@ -11896,6 +12030,19 @@ async function buildSampleSpecificReadinessChecks(root: string, sample: SampleIn
             ? "Cloud recognition appId, serverAddress, apiKey, and apiSecret are configured in local config."
             : "Cloud recognition legacy appId, serverAddress, and appSecret are configured in local config."
           : "Cloud recognition credentials are incomplete or missing in ProjectSettings/EasyAR/easyar.local.json."
+      }
+    ];
+  }
+
+  if (sample.id === "mega") {
+    const megaHints = await findMegaAssetHints(root, 80);
+    return [
+      {
+        id: "mega-assets",
+        ok: megaHints.length > 0,
+        detail: megaHints.length > 0
+          ? `Found Mega asset hint(s): ${megaHints.slice(0, 8).join(", ")}.`
+          : "No Mega, MegaBlock, CloudLocalizer, or TiantanSkyPalace asset hints were found under Assets or Packages."
       }
     ];
   }
@@ -13003,6 +13150,55 @@ function sampleSpecificLogRules(sample: SampleInfo | null): UnityLogRule[] {
     ];
   }
 
+  if (sample.id === "mega") {
+    return [
+      {
+        id: "mega-block-config",
+        severity: "high",
+        pattern: /(mega|mega\s*block|block|cloud\s*locali[sz]ation|cloudlocalizer).{0,180}(not\s*found|missing|invalid|load(ed)?\s*failed|cannot\s*load|unauthorized|forbidden)/i,
+        title: "Mega Block or cloud localization configuration cannot be loaded",
+        actions: [
+          "Use the logged-in EasyAR website or Mega Studio session to confirm the cloud localization library and Mega Block identifiers.",
+          "Load or bind the selected Mega Block in Unity before building the APK.",
+          "Run easyar_check_sample_readiness with sampleId=mega and confirm mega-assets passes."
+        ]
+      },
+      {
+        id: "mega-hybridclr",
+        severity: "high",
+        pattern: /(hybridclr|aot|hot\s*update).{0,180}(error|missing|generate|install|metadata|dll|failed|exception)/i,
+        title: "HybridCLR generated files are missing or stale for the Mega Android build",
+        actions: [
+          "Run the HybridCLR installer if the package has not been installed for this Unity project.",
+          "Run HybridCLR/Generate/All for the same Android target before building.",
+          "Rebuild after switching Unity PlayerSettings to the final Android architecture and scripting backend."
+        ]
+      },
+      {
+        id: "mega-arcore-manifest",
+        severity: "high",
+        pattern: /(arcore|androidmanifest|minSdkVersion|onnxruntime|uses-feature|uses-permission).{0,220}(error|conflict|cannot|failed|smaller|replace|required|missing)/i,
+        title: "Android manifest, ARCore, or minSdk configuration blocks the Mega APK",
+        actions: [
+          "Check AndroidManifest.xml for ARCore metadata conflicts and tools:replace when required.",
+          "Set Android minSdkVersion high enough for imported Mega dependencies such as ONNX Runtime.",
+          "Confirm camera, location, Internet, and ARCore-related Android settings before rebuilding."
+        ]
+      },
+      {
+        id: "mega-localization-runtime",
+        severity: "medium",
+        pattern: /(mega|locali[sz]ation|cloudlocalizer|cloud\s*locali[sz]ation).{0,180}(lost|timeout|failed|not\s*localized|no\s*pose|tracking\s*lost)/i,
+        title: "Mega localization did not succeed on device",
+        actions: [
+          "Test in the physical environment represented by the selected Mega Block.",
+          "Confirm the device has camera, location, and network permissions enabled.",
+          "Record device logs and run easyar_write_device_run_result_form after the real-device attempt."
+        ]
+      }
+    ];
+  }
+
   return [
     {
       id: "sample-deferred",
@@ -13010,7 +13206,7 @@ function sampleSpecificLogRules(sample: SampleInfo | null): UnityLogRule[] {
       pattern: /easyar|sample|tracking|cloud|camera/i,
       title: "Sample is outside the current focused run-through scope",
       actions: [
-        "Current focused run-through work covers image-tracking and cloud-recognition.",
+        "Current focused run-through work covers image-tracking, cloud-recognition, and mega.",
         `Switch to a focused sample before expecting sample-specific diagnostics for ${sample.id}.`
       ]
     }
@@ -16088,7 +16284,18 @@ function buildSampleValidationHelper(sample: SampleInfo): string {
             }
             UnityEngine.Debug.Log("Validated Cloud Recognition local credential presence without printing secret values.");
 `
-      : `            throw new InvalidOperationException("This generated validation helper is only focused on Image Tracking and Cloud Recognition.");
+      : sample.id === "mega"
+        ? `            var megaAssets = AssetDatabase.FindAssets("")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(IsMegaAssetSignal)
+                .ToArray();
+            if (megaAssets.Length == 0)
+            {
+                throw new InvalidOperationException("No Mega sample or Mega Block asset hints found. Import the official EasyAR Sense Unity Plugin for Mega and load the selected Mega Block first.");
+            }
+            UnityEngine.Debug.Log("Validated Mega asset hints without printing service credentials: " + string.Join(", ", megaAssets.Take(5)));
+`
+        : `            throw new InvalidOperationException("This generated validation helper is only focused on Image Tracking, Cloud Recognition, and Mega.");
 `;
 
   return `using System;
@@ -16178,6 +16385,20 @@ ${sampleValidation}
                 && (normalized.IndexOf("/ImageTargets/", StringComparison.OrdinalIgnoreCase) >= 0
                     || normalized.IndexOf("/Targets/", StringComparison.OrdinalIgnoreCase) >= 0
                     || normalized.IndexOf("target", StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private static bool IsMegaAssetSignal(string path)
+        {
+            if (IsGeneratedSupportAsset(path) || IsGeneratedEditorHelper(path))
+            {
+                return false;
+            }
+
+            var normalized = path.Replace('\\\\', '/');
+            return normalized.IndexOf("Mega", StringComparison.OrdinalIgnoreCase) >= 0
+                || normalized.IndexOf("MegaBlock", StringComparison.OrdinalIgnoreCase) >= 0
+                || normalized.IndexOf("CloudLocalizer", StringComparison.OrdinalIgnoreCase) >= 0
+                || normalized.IndexOf("TiantanSkyPalace", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static bool HasOfficialImageTargetsStreamingAssets()
@@ -16625,6 +16846,7 @@ function buildTargetSwitchSnippet(platform: typeof buildPlatforms[number]): stri
 
 function buildLocalConfigExample(sample: SampleInfo): string {
   const needsCloudRecognition = sample.id === "cloud-recognition";
+  const needsMega = sample.id === "mega";
   return `${JSON.stringify(
     {
       _instructions: {
@@ -16634,7 +16856,9 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           "Create or locate the EasyAR Sense license for the Unity bundle/package identifier below.",
           ...(needsCloudRecognition
             ? ["Create or locate Cloud Recognition/CRS credentials in the official EasyAR account: the Cloud Recognition/CRS library AppId, Client-end Target Recognition URL, API KEY, and API Secret."]
-            : ["Cloud Recognition credentials can stay empty for the Image Tracking focused sample."])
+            : needsMega
+              ? ["Use the already logged-in EasyAR website or Mega Studio session to find the cloud localization library and Mega Block identifiers; Unity runtime uses local EasyAR/Mega settings rather than website login."]
+              : ["Cloud Recognition credentials can stay empty for the Image Tracking focused sample."])
         ],
         neverShareInChat: [
           "EasyAR website password",
@@ -16673,6 +16897,13 @@ function buildLocalConfigExample(sample: SampleInfo): string {
           appKey: "",
           appSecret: "",
           credentialMode: ""
+        },
+        mega: {
+          cloudLocalizationLibraryName: needsMega ? "local-only-placeholder-fill-from-logged-in-easyar-website" : "",
+          megaBlockStorageName: needsMega ? "local-only-placeholder-fill-from-mega-studio" : "",
+          megaBlockName: needsMega ? "local-only-placeholder-fill-from-mega-studio" : "",
+          megaBlockId: needsMega ? "local-only-placeholder-fill-from-mega-studio" : "",
+          serverAddress: needsMega ? "local-only-placeholder-fill-from-local-mega-settings" : ""
         }
       },
       unity: {
@@ -16749,10 +16980,31 @@ function buildFocusedSampleRunbook(sample: SampleInfo): string {
     ].join("\n") + "\n";
   }
 
+  if (sample.id === "mega") {
+    return [
+      ...commonSteps,
+      "",
+      "## Mega Checklist",
+      "",
+      "1. Install the official EasyAR Sense Unity Plugin for Mega from the EasyAR download page.",
+      "2. Use the already logged-in EasyAR website or Mega Studio session to locate the cloud localization library, Mega Block storage, Mega Block name, and Block ID.",
+      "3. Load or bind the selected Mega Block in Unity/Mega Studio before building.",
+      "4. Confirm Android minSdk is at least 24 when ONNX Runtime is included, and prefer ARM64 for device builds.",
+      "5. If the project uses HybridCLR, run the HybridCLR Installer and `HybridCLR/Generate/All` for the same build target before APK packaging.",
+      "6. Validate on a real device in or near the mapped environment; emulator/editor launch does not prove Mega localization.",
+      "",
+      "Expected readiness checks:",
+      "",
+      "- `mega-assets` should find Mega, MegaBlock, CloudLocalizer, or project-specific Mega scene assets.",
+      "- `sample-scene` should find an official or project Mega scene.",
+      "- `RUN_RESULT.md` should record build success plus real-device localization evidence without secret values."
+    ].join("\n") + "\n";
+  }
+
   return [
     ...commonSteps,
     "",
-    "This sample is deferred in the current run-through scope. Use `image-tracking` or `cloud-recognition` first."
+    "This sample is deferred in the current run-through scope. Use `image-tracking`, `cloud-recognition`, or `mega` first."
   ].join("\n") + "\n";
 }
 
@@ -16787,6 +17039,25 @@ async function writeFocusedSampleSupportFiles(root: string, sample: SampleInfo, 
         "Before marking the sample as passed, create or locate a Cloud Recognition image library in the EasyAR development center, upload at least one test target image, and record only a non-secret library name, target count, or dashboard URL in `RUN_RESULT.md`.",
         "",
         "Do not commit cloud recognition credentials. The generated `.gitignore` protects the local config file."
+      ].join("\n") + "\n",
+      overwrite,
+      written
+    );
+  }
+
+  if (sample.id === "mega") {
+    const megaDir = path.join(focusedSampleGeneratedDir(root, sample), "Mega");
+    await mkdir(megaDir, { recursive: true });
+    await writeGeneratedFile(
+      path.join(megaDir, "README.md"),
+      [
+        "# Mega Local Materials",
+        "",
+        "Use the logged-in EasyAR website or Mega Studio session to find the non-secret cloud localization library name, Mega Block storage name, Mega Block display name, and Block ID.",
+        "",
+        "Keep EasyAR license keys, API keys, account tokens, and any service credentials in local Unity settings or ignored local config files. Do not paste them into chat or commit them.",
+        "",
+        "A passed Mega result needs APK build evidence plus real-device localization evidence for the selected Mega Block."
       ].join("\n") + "\n",
       overwrite,
       written
@@ -16909,6 +17180,42 @@ ${footer}`;
             if (recognizedContent != null)
             {
                 recognizedContent.SetActive(recognized);
+            }
+        }
+${footer}`;
+  }
+
+  if (kind === "mega") {
+    return `${header}
+        [SerializeField] private GameObject localizedContent;
+        [SerializeField] private string megaBlockName;
+
+        private bool localized;
+
+        private void Awake()
+        {
+            SetLocalized(false);
+        }
+
+        public void OnMegaLocalized()
+        {
+            localized = true;
+            SetLocalized(true);
+            Debug.Log("Mega localization succeeded" + (string.IsNullOrEmpty(megaBlockName) ? "." : " for block: " + megaBlockName + "."));
+        }
+
+        public void OnMegaLocalizationLost()
+        {
+            localized = false;
+            SetLocalized(false);
+            Debug.Log("Mega localization lost.");
+        }
+
+        private void SetLocalized(bool visible)
+        {
+            if (localizedContent != null)
+            {
+                localizedContent.SetActive(visible);
             }
         }
 ${footer}`;

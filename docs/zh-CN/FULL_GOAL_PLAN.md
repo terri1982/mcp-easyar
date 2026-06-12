@@ -17,6 +17,14 @@ local-key MVP 已完成：
 - 默认 core profile 工具数约 57
 - 中文 README 和中文文档入口
 
+## 当前扩展阶段
+
+当前正在扩展：
+
+- Mega
+
+已完成 MCP catalog、runbook、readiness check、device validation、MonoBehaviour 模板、日志诊断、Android APK 打包、真机安装启动、Mega 定位跟踪日志和安全发布证据。还需要跑严格 local-key release gate 并发布新的 GitHub Release，才能把三样本能力正式对外发布。
+
 ## 扩展轨道 1：更多 Sample
 
 每个新 Sample 进入已验证范围前，需要：
@@ -26,7 +34,7 @@ local-key MVP 已完成：
 - 生成 import checklist、preflight、run sequence、device validation、run result、completion report。
 - 真机验证证明 Sample 的核心 AR 行为。
 
-建议顺序：
+后续建议顺序：
 
 1. Hello AR
 2. Surface Tracking
@@ -48,7 +56,7 @@ local-key MVP 已完成：
 
 继续加强：
 
-- 更多真实 Image Tracking / CRS 项目案例
+- 更多真实 Image Tracking / CRS / Mega 项目案例
 - 更多 sample-specific 编程 playbook
 - 代码改动前生成 programming context 和 code plan
 - 代码改动后跑 C# review、compile check、device evidence

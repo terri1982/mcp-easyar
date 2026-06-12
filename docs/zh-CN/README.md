@@ -2,7 +2,7 @@
 
 本目录提供 `mcp-easyar` 公开文档的中文版入口。英文文档仍是字段名、命令、API contract 和自动化测试的权威来源；中文版用于安装、使用、交接和验收阅读。
 
-当前发布范围只覆盖两个已验证 Sample：图像跟踪（Image Tracking）和 CRS / Cloud Recognition。其他 EasyAR 官方 Sample 已从当前目标剔除，后续按需继续扩展。
+当前已发布 GitHub prerelease 仍是两样本版本：图像跟踪（Image Tracking）和 CRS / Cloud Recognition。当前工作树已补齐 Mega Sample 的 Android 真机定位跟踪证据，可用于下一版三样本 local-key release；Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
 
 ## 快速入口
 
