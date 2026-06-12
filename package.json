@@ -61,6 +61,7 @@
     "dev": "tsx src/index.ts",
     "github-release:smoke": "node scripts/github-release-install-smoke.mjs",
     "install:check": "npm run build && node dist/install-check.js",
+    "ios:package": "scripts/build-ios-samples.sh",
     "official-api:canary": "npm run build && node scripts/official-api-canary.mjs",
     "official-api:stub": "node scripts/official-api-stub.mjs",
     "official-api:stub-smoke": "node scripts/official-api-stub-smoke.mjs",

@@ -1137,9 +1137,11 @@ try {
   assert(releaseCheckScript.includes("EASYAR_RELEASE_EVIDENCE_PATH"), "release:check should accept a safe focused sample evidence file path");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_PLATFORM"), "release:check should accept a focused sample evidence platform");
   assert(releaseCheckScript.includes("EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP"), "release:check should enforce the local-key MVP release gate");
-  const indexSource = await readFile(path.join(process.cwd(), "src", "index.ts"), "utf8");
-  assert(indexSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
-  assert(indexSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");
+  const serverSource = await readFile(path.join(process.cwd(), "src", "server.ts"), "utf8");
+  const toolsSource = await readFile(path.join(process.cwd(), "src", "tools.ts"), "utf8");
+  const mcpSource = `${serverSource}\n${toolsSource}`;
+  assert(mcpSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
+  assert(mcpSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");
   const officialApiCanaryScript = await readFile(path.join(process.cwd(), "scripts", "official-api-canary.mjs"), "utf8");
   assert(officialApiCanaryScript.includes("easyar_check_official_access"), "Official API canary should check focused sample official access");
   assert(officialApiCanaryScript.includes("easyar_production_validation"), "Official API canary should check production validation");
