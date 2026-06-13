@@ -3,9 +3,10 @@ import { z } from "zod";
 import { access, cp, mkdir, open, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createEasyARApiClient } from "./easyar-api.js";
+import { focusedHandoffSampleIds } from "./focused-scope.js";
 import { jsonText, markdownText } from "./mcp-response.js";
+import { officialOpenApiPath, packageRoot } from "./paths.js";
 import {
   accountStageValues,
   activeToolCatalog,
@@ -340,8 +341,6 @@ export {
 } from "./tool-file-utils.js";
 
 
-const focusedHandoffSampleIds = ["image-tracking", "cloud-recognition", "mega", "all"] as const;
-
 export type ReadinessCheck = {
   id: string;
   ok: boolean;
@@ -386,8 +385,6 @@ export type DeploymentReadinessReport = {
   security: string[];
 };
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
 
 export function chooseSampleExpansionOrder(targetSamples: SampleInfo[]) {
@@ -575,12 +572,13 @@ export async function buildDeploymentReadiness(projectPath: string | null, unity
       check("logo", await exists(path.join(process.cwd(), "assets", "easyar-icon.png")), "warning", "assets/easyar-icon.png exists.")
     ],
     authorization: [
-      check("api-base-url", Boolean(auth.apiBaseUrl), "blocker", `EASYAR_API_BASE_URL is ${auth.apiBaseUrl || "missing"}.`),
-      check("api-token", auth.hasToken, "blocker", "EASYAR_API_TOKEN is configured."),
-      check("account-status-endpoint", auth.accountStatusEndpointConfigured, "blocker", "EASYAR_ACCOUNT_STATUS_ENDPOINT is configured."),
-      check("license-validation-endpoint", auth.licenseValidationEndpointConfigured, "blocker", "EASYAR_LICENSE_VALIDATE_ENDPOINT is configured."),
-      check("downloads-endpoint", auth.downloadsEndpointConfigured, "blocker", "EASYAR_DOWNLOADS_ENDPOINT is configured."),
-      check("cloud-credentials-endpoint", auth.cloudCredentialsEndpointConfigured, "blocker", "EASYAR_CLOUD_CREDENTIALS_ENDPOINT is configured.")
+      check("local-key-workflow", true, "blocker", "Default authorization workflow is local-key: users log in on www.easyar.cn and fill ProjectSettings/EasyAR/easyar.local.json locally."),
+      check("api-base-url", Boolean(auth.apiBaseUrl), "info", `Optional official API base URL is ${auth.apiBaseUrl || "not configured"}.`),
+      check("api-token", auth.hasToken, "info", "Optional EASYAR_API_TOKEN is configured only when an official API integration is explicitly enabled."),
+      check("account-status-endpoint", auth.accountStatusEndpointConfigured, "info", "Optional EASYAR_ACCOUNT_STATUS_ENDPOINT is configured."),
+      check("license-validation-endpoint", auth.licenseValidationEndpointConfigured, "info", "Optional EASYAR_LICENSE_VALIDATE_ENDPOINT is configured."),
+      check("downloads-endpoint", auth.downloadsEndpointConfigured, "info", "Optional EASYAR_DOWNLOADS_ENDPOINT is configured."),
+      check("cloud-credentials-endpoint", auth.cloudCredentialsEndpointConfigured, "info", "Optional EASYAR_CLOUD_CREDENTIALS_ENDPOINT is configured.")
     ],
     unityAutomation: [
       check("unity-path", Boolean(requestedUnityPath), "warning", "EASYAR_UNITY_PATH or explicit unityPath is configured."),
@@ -2693,7 +2691,7 @@ export async function buildReleaseManifest() {
     {
       id: "github-release-package",
       label: "GitHub Release package",
-      commands: [`npm install -g https://github.com/terri1982/mcp-easyar/releases/download/${currentGitHubReleaseTag}/mcp-easyar-0.1.0.tgz`, "easyar-mcp-check"],
+      commands: [`npm install -g https://github.com/terri1982/mcp-easyar/releases/download/${currentGitHubReleaseTag}/mcp-easyar-${serverVersion}.tgz`, "easyar-mcp-check"],
       entrypointMode: "package-bin",
       availability: "current public prerelease path",
       clientConfigCall: "easyar_generate_client_config client=claude-desktop entrypointMode=package-bin"

@@ -2,6 +2,7 @@
 import path from "node:path";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { serverVersion } from "./catalog.js";
 
 const requiredTools = [
   "easyar_server_status",
@@ -109,7 +110,7 @@ try {
     capabilities: {},
     clientInfo: {
       name: "easyar-mcp-install-check",
-      version: "0.1.0"
+      version: serverVersion
     }
   });
   notify(child, "notifications/initialized", {});

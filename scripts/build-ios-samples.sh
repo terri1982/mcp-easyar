@@ -21,6 +21,17 @@ Optional:
   EASYAR_IOS_OUTPUT_DIR=<path>
     Default: ./Builds/iOSPackages
 
+  EASYAR_IOS_PROJECT_ROOT=<path>
+    Default: current working directory.
+
+  EASYAR_IOS_SAMPLE_NAMES="image-tracking cloud-recognition mega"
+    Space-separated sample ids to package.
+
+  EASYAR_IOS_<SAMPLE>_XCODEPROJ=<path>
+    Optional per-sample Xcode project override. SAMPLE is uppercased with
+    non-alphanumeric characters converted to underscores, for example:
+    EASYAR_IOS_IMAGE_TRACKING_XCODEPROJ=/path/to/Unity-iPhone.xcodeproj
+
 Examples:
   EASYAR_IOS_TEAM_ID=ABCDE12345 npm run ios:package
   EASYAR_IOS_TEAM_ID=ABCDE12345 EASYAR_IOS_INSTALL=1 npm run ios:package
@@ -60,6 +71,8 @@ fi
 EXPORT_METHOD="${EASYAR_IOS_EXPORT_METHOD:-development}"
 CONFIGURATION="${EASYAR_IOS_CONFIGURATION:-Debug}"
 OUTPUT_DIR="${EASYAR_IOS_OUTPUT_DIR:-$(pwd)/Builds/iOSPackages}"
+PROJECT_ROOT="${EASYAR_IOS_PROJECT_ROOT:-$(pwd)}"
+SAMPLE_NAMES_TEXT="${EASYAR_IOS_SAMPLE_NAMES:-image-tracking cloud-recognition mega}"
 INSTALL="${EASYAR_IOS_INSTALL:-0}"
 
 require_tool /usr/libexec/PlistBuddy
@@ -90,17 +103,19 @@ cat > "$EXPORT_OPTIONS" <<PLIST
 </plist>
 PLIST
 
-declare -a SAMPLE_NAMES=(
-  "image-tracking"
-  "cloud-recognition"
-  "mega"
-)
+read -r -a SAMPLE_NAMES <<< "$SAMPLE_NAMES_TEXT"
 
-declare -a SAMPLE_PROJECTS=(
-  "/Users/tuyi/Documents/EasyAR-RMB-Sample-Build/Builds/iOS/image-tracking/Unity-iPhone.xcodeproj"
-  "/Users/tuyi/Documents/EasyAR-RMB-Sample-Build/Builds/iOS/cloud-recognition/Unity-iPhone.xcodeproj"
-  "/Users/tuyi/UnityProjects/EasyARMegaVerification/Builds/iOS/mega/Unity-iPhone.xcodeproj"
-)
+project_for_sample() {
+  local sample="$1"
+  local env_name normalized
+  normalized="$(printf '%s' "$sample" | tr '[:lower:]' '[:upper:]' | sed -E 's/[^A-Z0-9]+/_/g')"
+  env_name="EASYAR_IOS_${normalized}_XCODEPROJ"
+  if [[ -n "${!env_name:-}" ]]; then
+    printf '%s\n' "${!env_name}"
+    return
+  fi
+  printf '%s\n' "$PROJECT_ROOT/Builds/iOS/$sample/Unity-iPhone.xcodeproj"
+}
 
 install_ipa() {
   local ipa="$1"
@@ -130,7 +145,7 @@ for device in data.get("result", {}).get("devices", []):
 
 for i in "${!SAMPLE_NAMES[@]}"; do
   name="${SAMPLE_NAMES[$i]}"
-  project="${SAMPLE_PROJECTS[$i]}"
+  project="$(project_for_sample "$name")"
 
   if [[ ! -d "$project" ]]; then
     echo "Missing Xcode project for $name: $project" >&2

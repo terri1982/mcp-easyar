@@ -1,5 +1,6 @@
 import { stat, readFile } from "node:fs/promises";
 import path from "node:path";
+import { focusedHandoffSampleIds } from "./focused-scope.js";
 import {
   clientEntrypointModes,
   clientKinds,
@@ -74,10 +75,6 @@ import {
   readLocalConfigForRemoteValidation,
   normalizeProjectRelativePath
 } from "./tool-services.js";
-
-const focusedHandoffSampleIds = ["image-tracking", "cloud-recognition", "mega", "all"] as const;
-
-
 
 export async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScriptIssues: number) {
   const readiness = await buildSampleReadinessReport(root, sample);

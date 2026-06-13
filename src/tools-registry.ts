@@ -3,9 +3,11 @@ import { z } from "zod";
 import { access, cp, mkdir, open, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createEasyARApiClient } from "./easyar-api.js";
+import { focusedHandoffSampleIds } from "./focused-scope.js";
 import { jsonText, markdownText } from "./mcp-response.js";
+import { officialOpenApiPath, packageRoot } from "./paths.js";
+import { createToolRegistrar, type ToolRegistrar } from "./tool-handler.js";
 import {
   accountStageValues,
   activeToolCatalog,
@@ -300,8 +302,6 @@ import {
   writePackFile
 } from "./tool-services.js";
 
-const focusedHandoffSampleIds = ["image-tracking", "cloud-recognition", "mega", "all"] as const;
-
 type ReadinessCheck = {
   id: string;
   ok: boolean;
@@ -346,12 +346,13 @@ type DeploymentReadinessReport = {
   security: string[];
 };
 
-const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const officialOpenApiPath = path.join(packageRoot, "docs", "openapi", "easyar-mcp-account-api.openapi.json");
 const easyarApi = createEasyARApiClient();
 
-export function registerTools(server: McpServer) {
-  server.tool(
+export function registerTools(server: McpServer, options: { shouldRegisterTool?: (name: string) => boolean } = {}) {
+  const guardedRegisterTool = createToolRegistrar((server.tool as ToolRegistrar).bind(server), options);
+  const registerTool = ((name: string, ...args: any[]) => guardedRegisterTool(name, ...args)) as typeof server.tool;
+
+  registerTool(
     "easyar_server_status",
     "Return mcp-easyar server version, capability summary, resources, authorization state, and recommended next steps.",
     {},
@@ -453,21 +454,21 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_list_samples",
     "List known EasyAR Unity sample categories and setup requirements.",
     {},
     async () => jsonText(samples)
   );
   
-  server.tool(
+  registerTool(
     "easyar_official_info",
     "Return official EasyAR links and package versions captured by this MCP server.",
     {},
     async () => jsonText(officialInfo)
   );
   
-  server.tool(
+  registerTool(
     "easyar_auth_status",
     "Report whether EasyAR account environment variables are configured without exposing secret values.",
     {},
@@ -495,7 +496,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_authorization_strategy",
     "Explain the safe EasyAR authorization strategy: official API, manual browser handoff, local authorized packages, or local stub, without bypassing EasyAR access controls.",
     {
@@ -515,7 +516,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_authorization_strategy",
     "Write the safe EasyAR authorization strategy as a Markdown artifact for users, backend teams, and future MCP sessions.",
     {
@@ -553,7 +554,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_account_onboarding",
     "Guide new or existing EasyAR users through official registration, login, license, Cloud Recognition credentials, and local MCP setup without collecting passwords or secrets.",
     {
@@ -572,7 +573,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_account_onboarding",
     "Write the EasyAR account registration/login and local secret setup guide as a Markdown artifact.",
     {
@@ -608,7 +609,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_account_materials",
     "Generate a field-by-field checklist of EasyAR account materials, where each value comes from, where it must be stored, and whether it is safe to share.",
     {
@@ -626,7 +627,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_account_materials",
     "Write the EasyAR account material checklist as a Markdown artifact.",
     {
@@ -662,7 +663,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_portal_evidence",
     "Generate a safe EasyAR portal evidence report from non-secret browser observations such as app id, service flags, license presence, and Cloud Recognition library status.",
     {
@@ -696,7 +697,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_portal_evidence",
     "Write a safe EasyAR portal evidence report without storing portal passwords, API KEY values, API Secret values, license keys, appKey, or appSecret.",
     {
@@ -749,14 +750,14 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_check_account",
     "Call a configured official EasyAR account-status endpoint when official production authentication is available, without exposing secrets.",
     {},
     async () => jsonText(await easyarApi.checkAccount())
   );
   
-  server.tool(
+  registerTool(
     "easyar_validate_license",
     "Call a configured official EasyAR license-validation endpoint without exposing license keys or account tokens.",
     {
@@ -786,7 +787,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_discover_downloads",
     "Call a configured official EasyAR downloads endpoint to discover account-scoped SDK/sample packages without exposing tokens.",
     {
@@ -820,7 +821,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_discover_cloud_credentials",
     "Call a configured official EasyAR Cloud Recognition endpoint to discover account-scoped credential metadata without exposing secrets.",
     {
@@ -854,7 +855,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_official_api_contract",
     "Generate the official EasyAR account API contract required for production mcp-easyar deployment.",
     {
@@ -866,7 +867,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_official_api_contract",
     "Write the official EasyAR account API contract as Markdown for backend, operations, and MCP client handoff.",
     {
@@ -897,7 +898,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_official_openapi_contract",
     "Return the machine-readable OpenAPI contract for official EasyAR account endpoint integration.",
     {},
@@ -909,7 +910,7 @@ export function registerTools(server: McpServer) {
     })
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_official_openapi_contract",
     "Write the official EasyAR account OpenAPI contract JSON for backend, gateway, or client generation handoff.",
     {
@@ -938,7 +939,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_official_api_handoff",
     "Generate a backend and operations handoff for connecting mcp-easyar to authorized EasyAR account, license, downloads, and Cloud Recognition APIs.",
     {
@@ -951,7 +952,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_official_api_handoff",
     "Write OFFICIAL_API_HANDOFF.md for backend and operations teams wiring real EasyAR official APIs into mcp-easyar.",
     {
@@ -984,7 +985,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_check_official_access",
     "Run a focused official EasyAR account, license, downloads, and Cloud Recognition access check without exposing secrets.",
     {
@@ -1001,7 +1002,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_official_access_report",
     "Write the focused official EasyAR access check as a Markdown artifact inside the Unity project.",
     {
@@ -1036,7 +1037,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_client_config",
     "Generate MCP client configuration snippets for connecting Codex, Claude Desktop, or another stdio MCP client.",
     {
@@ -1071,7 +1072,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_check_client_setup",
     "Check whether a Codex, Claude Desktop, or generic stdio MCP client can be configured for mcp-easyar.",
     {
@@ -1083,7 +1084,7 @@ export function registerTools(server: McpServer) {
     async ({ client, entrypointMode, serverPath, includeTokenPlaceholder }) => jsonText(await buildClientSetupReport(client, entrypointMode, serverPath, includeTokenPlaceholder))
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_client_setup",
     "Write a client setup Markdown report for Codex, Claude Desktop, or another stdio MCP client.",
     {
@@ -1119,7 +1120,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_deployment_readiness",
     "Generate a deployment readiness report for publishing and operating mcp-easyar without exposing secrets.",
     {
@@ -1136,7 +1137,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_deployment_readiness",
     "Write a deployment readiness Markdown report inside the selected project or workspace directory.",
     {
@@ -1169,7 +1170,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_production_validation",
     "Generate a production validation evidence matrix for official mcp-easyar deployment and focused sample run-through readiness.",
     {
@@ -1191,7 +1192,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_release_evidence",
     "Export a safe focused sample release evidence JSON file for GitHub release runners that cannot access the local Unity project.",
     {
@@ -1226,7 +1227,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_production_validation",
     "Write a production validation evidence matrix for official mcp-easyar deployment.",
     {
@@ -1264,14 +1265,14 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_release_manifest",
     "Generate a consumer-facing install and release manifest for mcp-easyar.",
     {},
     async () => jsonText(await buildReleaseManifest())
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_release_manifest",
     "Write a consumer-facing install and release manifest as Markdown.",
     {
@@ -1300,7 +1301,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_first_run_guide",
     "Generate the first-screen guide for a new MCP user, including EasyAR registration/login route, focused sample scope, required artifacts, and the first safe MCP calls.",
     {
@@ -1326,7 +1327,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_first_run_guide",
     "Write FIRST_RUN.md, the first-screen guide for a new EasyAR MCP user or a handoff to another AI tool.",
     {
@@ -1373,7 +1374,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_onboarding_report",
     "Generate a first-run onboarding report that combines client setup, official access, release manifest, and focused workflow state.",
     {
@@ -1406,7 +1407,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_onboarding_report",
     "Write the first-run onboarding report as a Markdown artifact inside the Unity project.",
     {
@@ -1459,7 +1460,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_project_handoff",
     "Generate a project-level handoff dashboard across account setup, local config, Unity environment, focused samples, and next MCP calls.",
     {
@@ -1488,7 +1489,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_project_handoff",
     "Write PROJECT_HANDOFF.md, a concise continuation dashboard for another AI tool or human operator.",
     {
@@ -1536,7 +1537,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_remaining_work_report",
     "Generate an evidence-weighted remaining-work report for making mcp-easyar production-ready and running the focused EasyAR samples on real devices.",
     {
@@ -1563,7 +1564,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_remaining_work_report",
     "Write REMAINING_WORK.md, an evidence-weighted gap report for the remaining mcp-easyar production and focused sample run-through work.",
     {
@@ -1610,7 +1611,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_sample_plan",
     "Generate a step-by-step plan for preparing and running an EasyAR Unity sample.",
     {
@@ -1654,7 +1655,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_sample_expansion_plan",
     "Generate the acceptance plan for moving a deferred EasyAR sample into the verified run-through scope.",
     {
@@ -1685,7 +1686,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_focused_preflight",
     "Generate a focused Image Tracking or Cloud Recognition preflight gate across account, config, Unity, import, scene, and script readiness.",
     {
@@ -1706,7 +1707,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_focused_preflight",
     "Write the focused sample preflight gate as a Markdown artifact inside the Unity project.",
     {
@@ -1747,7 +1748,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_next_workflow_step",
     "Inspect the focused EasyAR workflow state and recommend the next MCP/Unity action.",
     {
@@ -1768,7 +1769,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_workflow_state",
     "Write the focused workflow state and recommended next action as a Markdown artifact inside the Unity project.",
     {
@@ -1807,7 +1808,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_import_checklist",
     "Generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.",
     {
@@ -1822,7 +1823,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_import_checklist",
     "Write the official EasyAR import checklist as a Markdown artifact inside the Unity project.",
     {
@@ -1855,7 +1856,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_sample_import_guide",
     "Generate a Unity Package Manager oriented guide for importing the focused official EasyAR sample into Assets/Samples.",
     {
@@ -1870,7 +1871,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_sample_import_guide",
     "Write the focused official EasyAR sample import guide as a Markdown artifact inside the Unity project.",
     {
@@ -1903,7 +1904,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_import_sample_from_package_cache",
     "Copy a focused EasyAR sample that already exists in local Unity PackageCache Samples~ into Assets/Samples without downloading private content.",
     {
@@ -1920,7 +1921,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_run_sequence",
     "Generate an ordered MCP and Unity batch sequence for the focused Image Tracking or Cloud Recognition sample run-through.",
     {
@@ -1946,7 +1947,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_run_sequence",
     "Write the focused sample MCP and Unity batch run sequence as a Markdown artifact inside the Unity project.",
     {
@@ -1991,7 +1992,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_artifact_index",
     "Generate an index of focused sample handoff artifacts and recommended reading order.",
     {
@@ -2006,7 +2007,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_artifact_index",
     "Write the focused sample handoff artifact index inside the Unity project.",
     {
@@ -2039,7 +2040,7 @@ export function registerTools(server: McpServer) {
   );
   
   
-  server.tool(
+  registerTool(
     "easyar_generate_focused_handoff_pack",
     "Generate a plan for writing the focused sample handoff artifact pack without writing files.",
     {
@@ -2082,7 +2083,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_focused_handoff_pack",
     "Write the focused sample handoff artifact pack for Image Tracking, Cloud Recognition, Mega, or all focused samples.",
     {
@@ -2127,7 +2128,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_inspect_unity_project",
     "Inspect a Unity project and report EasyAR/sample readiness signals.",
     {
@@ -2151,7 +2152,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_check_sample_readiness",
     "Check whether a Unity project has the local pieces needed to run a specific EasyAR sample workflow.",
     {
@@ -2166,7 +2167,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_run_report",
     "Generate a focused sample run report combining readiness, local config validation, script review, and recommended next steps.",
     {
@@ -2182,7 +2183,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_run_report",
     "Write a focused sample run report Markdown artifact into the Unity project.",
     {
@@ -2215,7 +2216,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_audit_sample_scene",
     "Audit focused sample scene candidates, EasyAR import signals, Build Settings hints, and sample-specific run blockers.",
     {
@@ -2231,7 +2232,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_scene_audit",
     "Write the focused sample scene audit as a Markdown artifact inside the Unity project.",
     {
@@ -2265,7 +2266,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_support_bundle",
     "Generate a focused sample support bundle summary across run sequence, run report, scene audit, and latest Unity log diagnostics.",
     {
@@ -2297,7 +2298,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_support_bundle",
     "Write a focused sample support bundle Markdown artifact inside the Unity project.",
     {
@@ -2348,7 +2349,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_device_validation_checklist",
     "Generate a focused real-device validation checklist for Image Tracking or Cloud Recognition.",
     {
@@ -2366,7 +2367,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_device_validation_checklist",
     "Write the focused real-device validation checklist as a Markdown artifact inside the Unity project.",
     {
@@ -2403,7 +2404,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_device_run_result_form",
     "Generate a fillable real-device run result form and safe easyar_write_run_result templates for Image Tracking or Cloud Recognition.",
     {
@@ -2422,7 +2423,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_device_run_result_form",
     "Write a fillable real-device run result form to Assets/EasyARGenerated/<sampleId>/DEVICE_RUN_RESULT_FORM.md.",
     {
@@ -2460,7 +2461,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_android_device_runbook",
     "Generate an Android real-device runbook for installing, launching, logging, and recording focused EasyAR sample evidence.",
     {
@@ -2492,7 +2493,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_android_device_runbook",
     "Write the Android real-device runbook to Assets/EasyARGenerated/<sampleId>/ANDROID_DEVICE_RUNBOOK.md.",
     {
@@ -2550,7 +2551,7 @@ export function registerTools(server: McpServer) {
     nextAction: z.string().optional().describe("Recommended next action for this step.")
   });
   
-  server.tool(
+  registerTool(
     "easyar_generate_run_result",
     "Generate a focused sample run result summary for handoff after Unity compile, build, or device validation attempts.",
     {
@@ -2588,7 +2589,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_run_result",
     "Write a focused sample run result Markdown artifact inside the Unity project.",
     {
@@ -2644,7 +2645,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_completion_report",
     "Generate the final focused sample completion report, combining preflight, device validation, latest run result, and Unity log evidence.",
     {
@@ -2667,7 +2668,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_completion_report",
     "Write the final focused sample completion report to Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md.",
     {
@@ -2710,7 +2711,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_focused_scope_status",
     "Generate focused scope status across Image Tracking, Cloud Recognition, and Mega completion reports.",
     {
@@ -2727,7 +2728,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_focused_scope_status",
     "Write the focused Image Tracking, Cloud Recognition, and Mega scope status to Assets/EasyARGenerated/FOCUSED_SCOPE_STATUS.md.",
     {
@@ -2765,7 +2766,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_issue_report",
     "Generate a redacted GitHub issue report for a focused Image Tracking or Cloud Recognition run-through.",
     {
@@ -2807,7 +2808,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_issue_report",
     "Write a redacted GitHub issue report Markdown artifact inside the Unity project.",
     {
@@ -2867,7 +2868,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_validate_local_config",
     "Validate ProjectSettings/EasyAR/easyar.local.json without returning secret values.",
     {
@@ -2905,7 +2906,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_local_config_form",
     "Generate a fillable ProjectSettings/EasyAR/easyar.local.json form with field sources, placeholders, env alternatives, and validation calls.",
     {
@@ -2923,7 +2924,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_local_config_form",
     "Write a fillable local config form to Assets/EasyARGenerated/LOCAL_CONFIG_FORM.md without writing secret values.",
     {
@@ -2960,7 +2961,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_local_config_from_env",
     "Write ProjectSettings/EasyAR/easyar.local.json from local environment variables without returning secret values.",
     {
@@ -3005,7 +3006,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_local_config_handoff",
     "Generate a first-run handoff for registering/logging into EasyAR, collecting account materials, and filling ProjectSettings/EasyAR/easyar.local.json locally.",
     {
@@ -3022,7 +3023,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_local_config_handoff",
     "Write a local Markdown handoff that guides first-time EasyAR users from registration/login to safe easyar.local.json validation.",
     {
@@ -3058,7 +3059,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_analyze_unity_log",
     "Analyze Unity Editor or build logs for common and focused-sample EasyAR issues.",
     {
@@ -3093,7 +3094,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_analyze_latest_unity_log",
     "Find the most recent Unity Editor/project log and analyze its tail with optional focused sample diagnostics.",
     {
@@ -3151,7 +3152,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_prepare_unity_project",
     "Prepare a Unity project for an authorized EasyAR sample workflow by creating editor helpers, local config templates, and secret ignore rules.",
     {
@@ -3219,7 +3220,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_sample_validation_helper",
     "Create a Unity Editor script that validates focused EasyAR sample import, scene, Build Settings, and sample-specific local requirements.",
     {
@@ -3247,7 +3248,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_local_config_bridge",
     "Create Unity Editor/runtime scripts that export ProjectSettings/EasyAR/easyar.local.json into ignored StreamingAssets for device builds and read it at runtime without logging secret values.",
     {
@@ -3293,7 +3294,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_mobile_settings_helper",
     "Create a Unity Editor script that applies Android/iOS player settings commonly required by EasyAR camera samples.",
     {
@@ -3332,7 +3333,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_build_settings_helper",
     "Create a Unity Editor script that adds the matching EasyAR sample scene to Build Settings and optionally switches the active build target.",
     {
@@ -3362,7 +3363,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_device_build_helper",
     "Create a Unity Editor script that builds the configured EasyAR sample scenes for Android, iOS, or standalone targets.",
     {
@@ -3398,7 +3399,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_sample_runner",
     "Create a Unity Editor script that opens EasyAR sample scenes by name.",
     {
@@ -3422,7 +3423,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_code_plan",
     "Generate a focused Unity C# implementation plan before editing Image Tracking or Cloud Recognition sample code.",
     {
@@ -3440,7 +3441,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_code_plan",
     "Write a focused Unity C# implementation plan Markdown artifact inside the Unity project.",
     {
@@ -3476,7 +3477,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_create_mono_behaviour",
     "Create a Unity C# MonoBehaviour template for common EasyAR sample development tasks.",
     {
@@ -3514,7 +3515,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_csharp_file",
     "Create or replace a C# script inside a Unity project. The file must stay inside the project and end with .cs.",
     {
@@ -3536,7 +3537,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_config_integration_audit",
     "Audit how ProjectSettings/EasyAR/easyar.local.json can be wired into EasyAR Unity scripts, scenes, prefabs, and assets without exposing secret values.",
     {
@@ -3553,7 +3554,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_config_integration_audit",
     "Write a focused local-config integration audit to CONFIG_INTEGRATION.md for Unity programming handoff.",
     {
@@ -3589,7 +3590,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_programming_context",
     "Generate a focused Unity programming context before editing EasyAR sample C# scripts.",
     {
@@ -3607,7 +3608,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_programming_context",
     "Write the focused Unity programming context as a Markdown artifact inside the Unity project.",
     {
@@ -3644,7 +3645,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_generate_code_change_summary",
     "Generate a focused Unity C# change summary after editing scripts, including static review and next verification steps.",
     {
@@ -3663,7 +3664,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_code_change_summary",
     "Write a focused Unity C# change summary Markdown artifact inside the Unity project.",
     {
@@ -3701,7 +3702,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_review_csharp_scripts",
     "Review Unity C# scripts for common EasyAR workflow risks before opening or building the project.",
     {
@@ -3717,7 +3718,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_unity_environment",
     "Inspect local Unity executable configuration and common install locations without launching Unity.",
     {},
@@ -3726,7 +3727,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_write_unity_environment_report",
     "Write a Unity executable setup report for MCP batch compile/build automation without launching Unity.",
     {
@@ -3760,7 +3761,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_run_unity_compile_check",
     "Open a Unity project in batch mode to force script import/compilation, then optionally analyze the produced log.",
     {
@@ -3837,7 +3838,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_run_unity_method",
     "Run a Unity static editor method in batch mode for project automation.",
     {
@@ -3895,7 +3896,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_android_device_status",
     "Inspect adb availability and connected Android devices for focused sample validation.",
     {
@@ -3921,7 +3922,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_android_install_apk",
     "Install a focused sample Android APK on a connected device with adb.",
     {
@@ -3994,7 +3995,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_android_start_app",
     "Start the focused sample Android app on a connected device with adb monkey.",
     {
@@ -4061,7 +4062,7 @@ export function registerTools(server: McpServer) {
     }
   );
   
-  server.tool(
+  registerTool(
     "easyar_android_collect_logcat",
     "Collect a redacted adb logcat snapshot for focused sample device validation.",
     {

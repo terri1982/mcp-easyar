@@ -1,3 +1,5 @@
+import { packageVersion } from "./paths.js";
+
 export const monoBehaviourKinds = ["image-tracking", "surface-placement", "cloud-recognition", "mega", "lifecycle"] as const;
 export const buildPlatforms = ["android", "ios", "standalone", "none"] as const;
 export const deviceBuildPlatforms = ["android", "ios", "standalone"] as const;
@@ -10,8 +12,8 @@ export type AccountStage = typeof accountStageValues[number];
 export const authorizationModeValues = ["auto", "official-api", "local-key", "manual-browser", "local-packages", "stub"] as const;
 export type AuthorizationMode = typeof authorizationModeValues[number];
 export const serverName = "mcp-easyar";
-export const serverVersion = "0.1.0";
-export const currentGitHubReleaseTag = "v0.1.0-local-key.34";
+export const serverVersion = packageVersion;
+export const currentGitHubReleaseTag = process.env.MCP_EASYAR_RELEASE_TAG ?? process.env.GITHUB_REF_NAME ?? `v${serverVersion}`;
 
 export const toolCatalog = [
   "easyar_server_status",
@@ -45,6 +47,7 @@ export const toolCatalog = [
   "easyar_write_deployment_readiness",
   "easyar_production_validation",
   "easyar_write_production_validation",
+  "easyar_write_release_evidence",
   "easyar_release_manifest",
   "easyar_write_release_manifest",
   "easyar_first_run_guide",

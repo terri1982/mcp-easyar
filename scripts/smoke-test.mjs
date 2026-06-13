@@ -7,6 +7,7 @@ const command = process.env.MCP_EASYAR_SMOKE_COMMAND ?? process.execPath;
 const args = process.env.MCP_EASYAR_SMOKE_COMMAND
   ? []
   : [path.resolve("dist/index.js")];
+const { coreToolCatalog, toolCatalog } = await import(path.resolve("dist/catalog.js"));
 const unityCandidateRoot = await mkdtemp(path.join(tmpdir(), "mcp-easyar-unity-candidates-"));
 const fakeHubUnityPath = path.join(unityCandidateRoot, "2022.3.62f1", "Unity.app", "Contents", "MacOS", "Unity");
 await mkdir(path.dirname(fakeHubUnityPath), { recursive: true });
@@ -71,6 +72,12 @@ try {
   notify("notifications/initialized", {});
 
   const tools = await request("tools/list", {});
+  const listedToolNames = tools.result.tools.map((tool) => tool.name).sort();
+  const expectedToolNames = (process.env.MCP_EASYAR_TOOL_PROFILE === "full" ? [...toolCatalog] : [...coreToolCatalog]).sort();
+  assert(
+    JSON.stringify(listedToolNames) === JSON.stringify(expectedToolNames),
+    "Registered MCP tool names should match the active catalog exactly"
+  );
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_create_mono_behaviour"),
     "easyar_create_mono_behaviour should be listed"
@@ -1028,7 +1035,7 @@ try {
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
-  assertTextIncludes(deploymentReadiness, "\"ready\": false");
+  assertTextIncludes(deploymentReadiness, "local-key-workflow");
   assertTextIncludes(deploymentReadiness, "package-files-dist");
   assertTextIncludes(deploymentReadiness, "bin-target");
   assertTextIncludes(deploymentReadiness, "release-manifest-install-profiles");
@@ -1504,7 +1511,7 @@ try {
     "utf8"
   );
   assert(deploymentReadinessMarkdown.includes("mcp-easyar Deployment Readiness"), "Deployment readiness markdown should include title");
-  assert(deploymentReadinessMarkdown.includes("account-status-endpoint"), "Deployment readiness markdown should include endpoint blockers");
+  assert(deploymentReadinessMarkdown.includes("local-key-workflow"), "Deployment readiness markdown should include local-key workflow");
   assert(deploymentReadinessMarkdown.includes("Bin: easyar-mcp -> dist/index.js"), "Deployment readiness markdown should include bin target");
   assert(deploymentReadinessMarkdown.includes("Package files: dist"), "Deployment readiness markdown should include package files");
 
