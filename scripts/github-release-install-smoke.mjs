@@ -5,18 +5,18 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.36/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.36";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.37";
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Current scoped objective: about 90%"
-    : expectedReleaseTag === "v0.1.0-local-key.36"
+    : expectedReleaseTag === "v0.1.0-local-key.37"
       ? "Published scoped objective: 100% for the approved Image Tracking, CRS/Cloud Recognition, and Mega target."
       : "Published scoped objective: 100% for the approved Image Tracking and CRS/Cloud Recognition target.");
 const expectedLocalKeyProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_LOCAL_KEY_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
     ? "Local-key MVP public usability: about 93%"
-    : expectedReleaseTag === "v0.1.0-local-key.36"
+    : expectedReleaseTag === "v0.1.0-local-key.37"
       ? "Local-key MVP public usability: about 98%"
       : "Local-key MVP public usability: about 95%");
 const expectFullGoalPlan = !["v0.1.0-local-key.25", "v0.1.0-local-key.26"].includes(expectedReleaseTag);

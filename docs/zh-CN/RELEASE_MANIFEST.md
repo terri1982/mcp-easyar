@@ -1,11 +1,11 @@
 # mcp-easyar 发布清单
 
-当前发布：`v0.1.0-local-key.36`
+当前发布：`v0.1.0-local-key.37`
 
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.36/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
