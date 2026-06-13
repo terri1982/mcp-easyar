@@ -1147,7 +1147,8 @@ try {
   const toolDiagnosticsSource = await readFile(path.join(process.cwd(), "src", "tool-diagnostics.ts"), "utf8");
   const toolProjectSource = await readFile(path.join(process.cwd(), "src", "tool-project.ts"), "utf8");
   const toolSampleWorkflowSource = await readFile(path.join(process.cwd(), "src", "tool-sample-workflow.ts"), "utf8");
-  const mcpSource = `${serverSource}\n${toolsSource}\n${toolsRegistrySource}\n${toolServicesSource}\n${toolMarkdownSource}\n${toolFileUtilsSource}\n${toolLocalConfigSource}\n${toolDiagnosticsSource}\n${toolProjectSource}\n${toolSampleWorkflowSource}`;
+  const toolDeviceEvidenceSource = await readFile(path.join(process.cwd(), "src", "tool-device-evidence.ts"), "utf8");
+  const mcpSource = `${serverSource}\n${toolsSource}\n${toolsRegistrySource}\n${toolServicesSource}\n${toolMarkdownSource}\n${toolFileUtilsSource}\n${toolLocalConfigSource}\n${toolDiagnosticsSource}\n${toolProjectSource}\n${toolSampleWorkflowSource}\n${toolDeviceEvidenceSource}`;
   assert(mcpSource.includes("easyar_write_release_evidence"), "MCP server should expose a safe release evidence writer");
   assert(mcpSource.includes("focusedEvidencePath"), "Production validation should accept safe focused sample evidence files");
   const officialApiCanaryScript = await readFile(path.join(process.cwd(), "scripts", "official-api-canary.mjs"), "utf8");
