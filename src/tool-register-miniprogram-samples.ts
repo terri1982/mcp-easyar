@@ -257,11 +257,11 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_import_miniprogram_sample_from_local_package",
-    "Copy a user-downloaded official EasyAR Mini Program SDK/sample package into the project with a safe dry-run first.",
+    "Copy or extract a user-downloaded official EasyAR Mini Program SDK/sample package directory or .zip into the project with a safe dry-run first.",
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
-      packagePath: z.string().describe("Local path to the official EasyAR Mini Program SDK/sample package downloaded by the user."),
+      packagePath: z.string().describe("Local path to the official EasyAR Mini Program SDK/sample package directory or .zip downloaded by the user."),
       relativeTargetDir: z.string().optional().describe("Optional target directory inside the Mini Program project. Defaults to miniprogram/easyar-samples/<sampleId>."),
       overwrite: z.boolean().default(false).describe("Whether to overwrite an existing target directory."),
       dryRun: z.boolean().default(true).describe("Keep true first to preview files and skipped private paths before copying.")

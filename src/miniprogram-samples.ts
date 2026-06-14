@@ -1,6 +1,8 @@
-import { access, cp, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { runProcess } from "./runtime.js";
 
 export type MiniProgramSampleInfo = {
   id: "wechat-mega" | "wechat-crs";
@@ -1182,6 +1184,47 @@ async function collectCopyPlan(sourceRoot: string, limit = 200) {
   return { files, skipped };
 }
 
+async function resolveOfficialPackageSource(inputRoot: string, packagePath: string) {
+  const resolvedPackagePath = path.resolve(inputRoot, packagePath);
+  if (await isDirectory(resolvedPackagePath)) {
+    return {
+      packageType: "directory" as const,
+      packagePath: resolvedPackagePath,
+      sourceRoot: resolvedPackagePath,
+      cleanup: async () => {}
+    };
+  }
+  if (!/\.zip$/i.test(resolvedPackagePath)) {
+    throw new Error(`Official local package path is not a directory or .zip file: ${resolvedPackagePath}`);
+  }
+  if (!await pathExists(resolvedPackagePath)) {
+    throw new Error(`Official local package path does not exist: ${resolvedPackagePath}`);
+  }
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "mcp-easyar-miniprogram-"));
+  const unzipResult = await runProcess("unzip", ["-q", resolvedPackagePath, "-d", tempRoot], 120);
+  if (unzipResult.exitCode !== 0) {
+    await rm(tempRoot, { recursive: true, force: true });
+    throw new Error(`Failed to extract official .zip package with unzip: ${unzipResult.stderr || unzipResult.stdout || "unknown unzip error"}`);
+  }
+  return {
+    packageType: "zip" as const,
+    packagePath: resolvedPackagePath,
+    sourceRoot: await chooseExtractedPackageRoot(tempRoot),
+    cleanup: async () => {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  };
+}
+
+async function chooseExtractedPackageRoot(tempRoot: string) {
+  const entries = await readdir(tempRoot, { withFileTypes: true });
+  const visibleEntries = entries.filter((entry) => !entry.name.startsWith("__MACOSX") && entry.name !== ".DS_Store");
+  if (visibleEntries.length === 1 && visibleEntries[0]?.isDirectory()) {
+    return path.join(tempRoot, visibleEntries[0].name);
+  }
+  return tempRoot;
+}
+
 function shouldSkipOfficialPackagePath(relativePath: string) {
   return relativePath
     .split(path.sep)
@@ -1199,57 +1242,61 @@ export async function importMiniProgramSampleFromLocalPackage(input: {
   overwrite: boolean;
   dryRun: boolean;
 }) {
-  const source = path.resolve(input.root, input.packagePath);
-  if (!await isDirectory(source)) {
-    throw new Error(`Official local package path is not a directory: ${source}`);
-  }
+  const sourceInfo = await resolveOfficialPackageSource(input.root, input.packagePath);
+  const source = sourceInfo.sourceRoot;
   const target = miniProgramSampleTargetDir(input.root, input.sample, input.relativeTargetDir);
   const targetExists = await pathExists(target);
-  const plan = await collectCopyPlan(source);
-  if (input.dryRun) {
+  try {
+    const plan = await collectCopyPlan(source);
+    if (input.dryRun) {
+      return {
+        dryRun: true,
+        packageType: sourceInfo.packageType,
+        source: sourceInfo.packagePath,
+        target,
+        targetExists,
+        overwrite: input.overwrite,
+        fileCountPreview: plan.files.length,
+        sampleFiles: plan.files.slice(0, 40),
+        skippedPreview: plan.skipped.slice(0, 40),
+        nextActions: [
+          "Confirm this source is the official EasyAR Mini Program SDK/sample package downloaded by the user.",
+          "Run again with dryRun=false to copy files into the Mini Program project.",
+          `Run easyar_inspect_miniprogram_project sampleId=${input.sample.id} after import.`
+        ],
+        security: "This tool copies or extracts local files only. It skips common private config, secret, log, node_modules, and VCS paths."
+      };
+    }
+    if (targetExists && !input.overwrite) {
+      throw new Error(`Target already exists: ${target}`);
+    }
+    await mkdir(path.dirname(target), { recursive: true });
+    await cp(source, target, {
+      recursive: true,
+      force: input.overwrite,
+      filter: (sourcePath) => {
+        const relative = path.relative(source, sourcePath);
+        return relative === "" || !shouldSkipOfficialPackagePath(relative);
+      }
+    });
     return {
-      dryRun: true,
-      source,
+      dryRun: false,
+      packageType: sourceInfo.packageType,
+      source: sourceInfo.packagePath,
       target,
-      targetExists,
-      overwrite: input.overwrite,
+      copied: true,
       fileCountPreview: plan.files.length,
-      sampleFiles: plan.files.slice(0, 40),
       skippedPreview: plan.skipped.slice(0, 40),
       nextActions: [
-        "Confirm this source is the official EasyAR Mini Program SDK/sample package downloaded by the user.",
-        "Run again with dryRun=false to copy files into the Mini Program project.",
-        `Run easyar_inspect_miniprogram_project sampleId=${input.sample.id} after import.`
+        `Run easyar_inspect_miniprogram_project sampleId=${input.sample.id}.`,
+        "Open the project in WeChat Developer Tools and confirm the imported sample compiles.",
+        "Fill local EasyAR config outside chat before previewing on a real device."
       ],
-      security: "This tool copies local files only. It skips common private config, secret, log, node_modules, and VCS paths."
+      security: "No secret values are returned. Review copied files before committing."
     };
+  } finally {
+    await sourceInfo.cleanup();
   }
-  if (targetExists && !input.overwrite) {
-    throw new Error(`Target already exists: ${target}`);
-  }
-  await mkdir(path.dirname(target), { recursive: true });
-  await cp(source, target, {
-    recursive: true,
-    force: input.overwrite,
-    filter: (sourcePath) => {
-      const relative = path.relative(source, sourcePath);
-      return relative === "" || !shouldSkipOfficialPackagePath(relative);
-    }
-  });
-  return {
-    dryRun: false,
-    source,
-    target,
-    copied: true,
-    fileCountPreview: plan.files.length,
-    skippedPreview: plan.skipped.slice(0, 40),
-    nextActions: [
-      `Run easyar_inspect_miniprogram_project sampleId=${input.sample.id}.`,
-      "Open the project in WeChat Developer Tools and confirm the imported sample compiles.",
-      "Fill local EasyAR config outside chat before previewing on a real device."
-    ],
-    security: "No secret values are returned. Review copied files before committing."
-  };
 }
 
 export function analyzeMiniProgramDevtoolsLog(logText: string, sample: MiniProgramSampleInfo | null = null) {

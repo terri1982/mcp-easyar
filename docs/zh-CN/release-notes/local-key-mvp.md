@@ -12,6 +12,7 @@
 - 增加 Mega BlockRoot 配置检查，并记录已定位到 `大厅+办公室+阳台+GPS+0716`。
 - 增加微信小程序 Mega/CRS prompt 与 run-through status 工具，用于在官方包导入、DevTools 检查和真机证据变化后生成下一步建议。
 - 增加微信小程序 workspace scaffold 工具，可在导入用户官网下载的官方 EasyAR 包之前创建安全的小程序工程壳。
+- 微信小程序官方包导入支持已解压目录和下载到本机的 `.zip`，仍会跳过私密配置和疑似密钥文件。
 
 ## 安装
 

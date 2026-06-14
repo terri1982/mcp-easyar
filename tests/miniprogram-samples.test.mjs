@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -22,6 +23,18 @@ import {
 } from "../dist/miniprogram-samples.js";
 import { resourceCatalog } from "../dist/catalog.js";
 import { registerResources } from "../dist/resources.js";
+
+function execFilePromise(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, options, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
 
 async function withTempDir(fn) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mcp-easyar-mini-"));
@@ -121,6 +134,49 @@ test("importMiniProgramSampleFromLocalPackage previews and skips private package
     const copiedSdk = await readFile(path.join(copied.target, "src", "easyar-mega.js"), "utf8");
     assert(copiedSdk.includes("sdk"));
     await assert.rejects(() => readFile(path.join(copied.target, "easyar.mega.local.json"), "utf8"));
+  });
+});
+
+test("importMiniProgramSampleFromLocalPackage accepts a user-downloaded zip package when zip is available", { skip: process.platform === "win32" }, async () => {
+  await withTempDir(async (root) => {
+    await createMiniProgramProject(root, "wechat-crs");
+    const officialPackage = path.join(root, "official-zip-package");
+    await mkdir(path.join(officialPackage, "sdk"), { recursive: true });
+    await mkdir(path.join(officialPackage, "node_modules", "private"), { recursive: true });
+    await writeFile(path.join(officialPackage, "sdk", "easyar-crs.js"), "export const sdk = true;\n");
+    await writeFile(path.join(officialPackage, "easyar.crs.local.json"), "{\"crsApiSecret\":\"secret\"}\n");
+    await writeFile(path.join(officialPackage, "node_modules", "private", "index.js"), "\n");
+    const zipPath = path.join(root, "official-zip-package.zip");
+    try {
+      await execFilePromise("zip", ["-q", "-r", zipPath, "."], { cwd: officialPackage });
+    } catch {
+      return;
+    }
+
+    const sample = findMiniProgramSample("wechat-crs");
+    const preview = await importMiniProgramSampleFromLocalPackage({
+      root,
+      sample,
+      packagePath: zipPath,
+      overwrite: false,
+      dryRun: true
+    });
+    assert.equal(preview.dryRun, true);
+    assert.equal(preview.packageType, "zip");
+    assert(preview.sampleFiles.includes(path.join("sdk", "easyar-crs.js")));
+    assert(preview.skippedPreview.includes("easyar.crs.local.json"));
+
+    const copied = await importMiniProgramSampleFromLocalPackage({
+      root,
+      sample,
+      packagePath: zipPath,
+      overwrite: false,
+      dryRun: false
+    });
+    assert.equal(copied.packageType, "zip");
+    const copiedSdk = await readFile(path.join(copied.target, "sdk", "easyar-crs.js"), "utf8");
+    assert(copiedSdk.includes("sdk"));
+    await assert.rejects(() => readFile(path.join(copied.target, "easyar.crs.local.json"), "utf8"));
   });
 });
 
