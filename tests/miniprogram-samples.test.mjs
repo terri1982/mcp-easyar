@@ -448,7 +448,8 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
         devtoolsStatus: "passed",
         devicePreviewStatus: "passed",
         passedStepIds: requiredStepIds,
-        evidenceSummary: "Real-device WeChat preview recognized the intended CRS cloud target with redacted evidence."
+        evidenceSummary: "Real-device WeChat preview recognized the intended CRS cloud target with redacted evidence.",
+        redactedEvidencePath: "docs/crs-real-evidence.json"
       })
     );
 
@@ -456,7 +457,9 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     assert.equal(report.runThroughComplete, true);
     assert.deepEqual(report.blockers, []);
     assert(report.devtoolsSuccessSignals.some((signal) => signal.id === "devtools-preview-ready"));
-    assert.equal(miniProgramRunResultHasUsableEvidence(await readFile(path.join(generated, "RUN_RESULT.md"), "utf8")), true);
+    const runResultText = await readFile(path.join(generated, "RUN_RESULT.md"), "utf8");
+    assert(runResultText.includes("Redacted evidence path: docs/crs-real-evidence.json"));
+    assert.equal(miniProgramRunResultHasUsableEvidence(runResultText), true);
   });
 });
 

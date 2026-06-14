@@ -77,6 +77,8 @@ For `wechat-crs`, the required proof is recognition of an intended cloud target.
 
 After real-device preview, write the run result. The `passedStepIds` must come from `DEVICE_VALIDATION.md`.
 
+If the project already has a redacted local evidence file, such as `docs/crs-real-evidence.json`, pass it as `redactedEvidencePath`. The path must stay inside the Mini Program project. Do not paste QR codes, raw private logs, license keys, API secrets, or tokens into the summary.
+
 Example for Mega:
 
 ```text

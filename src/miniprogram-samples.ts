@@ -790,6 +790,7 @@ export function buildMiniProgramRunResultForm(sample: MiniProgramSampleInfo) {
       observedBehavior: "",
       redactedLogPath: "",
       redactedScreenshotPath: "",
+      redactedEvidencePath: "",
       notes: ""
     },
     requiredStepIds: checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id),
@@ -851,6 +852,7 @@ export function buildMiniProgramRunResultMarkdown(input: {
   evidenceSummary: string;
   redactedLogPath?: string;
   redactedScreenshotPath?: string;
+  redactedEvidencePath?: string;
   deviceModel?: string;
   wechatVersion?: string;
   notes?: string;
@@ -879,6 +881,7 @@ export function buildMiniProgramRunResultMarkdown(input: {
     `WeChat version: ${input.wechatVersion?.trim() || "not recorded"}`,
     `Redacted log path: ${input.redactedLogPath?.trim() || "not recorded"}`,
     `Redacted screenshot path: ${input.redactedScreenshotPath?.trim() || "not recorded"}`,
+    `Redacted evidence path: ${input.redactedEvidencePath?.trim() || "not recorded"}`,
     "",
     input.evidenceSummary.trim() || "No evidence summary recorded.",
     "",

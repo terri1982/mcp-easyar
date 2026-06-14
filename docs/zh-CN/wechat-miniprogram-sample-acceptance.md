@@ -77,6 +77,8 @@ MCP 创建的新工作区会自动把这些 preview artifacts 加入 `.gitignore
 
 真机预览之后写入 run result。`passedStepIds` 应来自 `DEVICE_VALIDATION.md`。
 
+如果工程里已经有脱敏后的本地证据文件，例如 `docs/crs-real-evidence.json`，可以通过 `redactedEvidencePath` 引用。路径必须留在小程序工程内。不要把二维码、原始私有日志、license key、API secret 或 token 写进摘要。
+
 Mega 示例：
 
 ```text

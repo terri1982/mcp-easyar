@@ -491,15 +491,27 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
       evidenceSummary: z.string().describe("Short redacted evidence summary. Do not include secrets or QR codes."),
       redactedLogPath: z.string().optional().describe("Optional local path to redacted DevTools/device log."),
       redactedScreenshotPath: z.string().optional().describe("Optional local path to redacted screenshot evidence."),
+      redactedEvidencePath: z.string().optional().describe("Optional local path to a redacted evidence artifact, such as docs/crs-real-evidence.json. Must stay inside the Mini Program project."),
       deviceModel: z.string().optional().describe("Optional test phone model."),
       wechatVersion: z.string().optional().describe("Optional WeChat version."),
       notes: z.string().optional().describe("Optional redacted notes."),
       overwrite: z.boolean().default(true).describe("Whether to overwrite RUN_RESULT.md.")
     },
-    async ({ projectPath, sampleId, overallStatus, devtoolsStatus, devicePreviewStatus, passedStepIds, evidenceSummary, redactedLogPath, redactedScreenshotPath, deviceModel, wechatVersion, notes, overwrite }) => {
+    async ({ projectPath, sampleId, overallStatus, devtoolsStatus, devicePreviewStatus, passedStepIds, evidenceSummary, redactedLogPath, redactedScreenshotPath, redactedEvidencePath, deviceModel, wechatVersion, notes, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
+      const normalizeEvidencePath = (filePath?: string) => {
+        if (!filePath?.trim()) {
+          return undefined;
+        }
+        const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath);
+        const relative = path.relative(root, resolved);
+        if (relative.startsWith("..") || path.isAbsolute(relative)) {
+          throw new Error("Evidence paths must stay inside the Mini Program project.");
+        }
+        return relative;
+      };
       const markdown = buildMiniProgramRunResultMarkdown({
         sample,
         overallStatus,
@@ -507,8 +519,9 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         devicePreviewStatus,
         passedStepIds,
         evidenceSummary: redactMiniProgramSecretText(evidenceSummary),
-        redactedLogPath,
-        redactedScreenshotPath,
+        redactedLogPath: normalizeEvidencePath(redactedLogPath),
+        redactedScreenshotPath: normalizeEvidencePath(redactedScreenshotPath),
+        redactedEvidencePath: normalizeEvidencePath(redactedEvidencePath),
         deviceModel,
         wechatVersion,
         notes: notes ? redactMiniProgramSecretText(notes) : undefined
