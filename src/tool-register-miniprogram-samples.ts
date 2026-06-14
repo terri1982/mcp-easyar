@@ -18,6 +18,8 @@ import {
   buildMiniProgramRunResultMarkdown,
   buildMiniProgramRunSequence,
   buildMiniProgramRunSequenceMarkdown,
+  buildMiniProgramRunThroughStatus,
+  buildMiniProgramRunThroughStatusMarkdown,
   buildMiniProgramScopeStatus,
   buildMiniProgramScopeStatusMarkdown,
   findMiniProgramSample,
@@ -492,6 +494,45 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         relativePath: path.relative(root, result.path),
         runThroughComplete: report.runThroughComplete,
         blockers: report.blockers
+      });
+    }
+  );
+
+  registerTool(
+    "easyar_generate_miniprogram_run_through_status",
+    "Generate a single next-step status for an EasyAR WeChat Mini Program Mega or CRS run-through.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id.")
+    },
+    async ({ projectPath, sampleId }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      return jsonText(await buildMiniProgramRunThroughStatus(root, sample));
+    }
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_run_through_status",
+    "Write a single next-step status for an EasyAR WeChat Mini Program Mega or CRS run-through into easyar-generated/<sampleId>/RUN_THROUGH_STATUS.md.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite an existing status report.")
+    },
+    async ({ projectPath, sampleId, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      const status = await buildMiniProgramRunThroughStatus(root, sample);
+      const result = await writeMiniProgramArtifact(root, sample, "RUN_THROUGH_STATUS.md", buildMiniProgramRunThroughStatusMarkdown(status), overwrite);
+      return jsonText({
+        ...result,
+        relativePath: path.relative(root, result.path),
+        runThroughComplete: status.runThroughComplete,
+        blockedCheckCount: status.readiness.blockedCheckCount,
+        nextCalls: status.nextCalls
       });
     }
   );

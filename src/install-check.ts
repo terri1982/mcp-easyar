@@ -24,6 +24,7 @@ const requiredTools = [
   "easyar_inspect_miniprogram_project",
   "easyar_write_miniprogram_device_validation_checklist",
   "easyar_write_miniprogram_completion_report",
+  "easyar_write_miniprogram_run_through_status",
   "easyar_write_miniprogram_scope_status",
   "easyar_unity_environment"
 ];

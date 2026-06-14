@@ -202,6 +202,7 @@ easyar_check_wechat_devtools
 easyar_write_miniprogram_local_config_form projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_import_miniprogram_sample_from_local_package projectPath=/path/to/miniprogram sampleId=wechat-mega packagePath=/path/to/official/package dryRun=true
 easyar_inspect_miniprogram_project projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_run_through_status projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_preflight projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=true
 easyar_analyze_miniprogram_devtools_log projectPath=/path/to/miniprogram sampleId=wechat-mega logPath=easyar-generated/wechat-mega/DEVTOOLS_CHECK.log

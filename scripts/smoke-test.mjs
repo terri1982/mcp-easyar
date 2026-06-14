@@ -400,6 +400,14 @@ try {
     "easyar_import_sample_from_package_cache should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_miniprogram_run_through_status"),
+    "easyar_generate_miniprogram_run_through_status should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_write_miniprogram_run_through_status"),
+    "easyar_write_miniprogram_run_through_status should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_local_config_form"),
     "easyar_generate_local_config_form should be listed"
   );

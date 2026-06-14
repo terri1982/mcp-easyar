@@ -12,7 +12,7 @@ easyar-mcp-check
 ## 已完成
 
 - GitHub Release tarball 可安装。
-- 默认 core profile 启用约 73 个工具，低于常见 MCP 客户端 80 个工具警告线。
+- 默认 core profile 启用约 77 个工具，低于常见 MCP 客户端 80 个工具警告线。
 - full profile 仍可通过 `MCP_EASYAR_TOOL_PROFILE=full easyar-mcp` 启用全部维护工具。
 - 已跑通并具备 safe release evidence：
   - Image Tracking

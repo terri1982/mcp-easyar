@@ -14,7 +14,7 @@ local-key MVP 已完成：
 - Image Tracking
 - CRS / Cloud Recognition
 - GitHub Release 正版包
-- 默认 core profile 工具数约 73
+- 默认 core profile 工具数约 77
 - 中文 README 和中文文档入口
 
 ## 当前扩展阶段

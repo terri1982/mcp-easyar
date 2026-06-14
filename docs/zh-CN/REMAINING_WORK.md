@@ -8,7 +8,7 @@
 - Mega MCP 工作流、Android APK 打包、真机安装启动和一轮 Mega 定位跟踪证据已完成。
 - Mega fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、EasyAR Sense 初始化、Onsite 模式就绪，并已在对应办公室映射场景抓到定位/跟踪日志信号。
 - GitHub Release tarball 安装验证通过。
-- 默认工具数已缩减到约 73。
+- 默认工具数已缩减到约 77。
 - 中文 README 和中文文档入口已加入。
 
 ## 当前范围内剩余

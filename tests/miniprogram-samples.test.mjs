@@ -8,6 +8,8 @@ import {
   buildMiniProgramCompletionReport,
   buildMiniProgramDeviceValidationChecklist,
   buildMiniProgramRunResultMarkdown,
+  buildMiniProgramRunThroughStatus,
+  buildMiniProgramRunThroughStatusMarkdown,
   buildMiniProgramScopeStatus,
   buildMiniProgramScopeStatusMarkdown,
   findMiniProgramSample,
@@ -208,6 +210,51 @@ test("Mini Program scope status aggregates Mega and CRS completion reports", asy
     assert(markdown.includes("All Mini Program samples complete: yes"));
     assert(markdown.includes("wechat-mega"));
     assert(markdown.includes("wechat-crs"));
+  });
+});
+
+test("Mini Program run-through status recommends next calls from current evidence", async () => {
+  await withTempDir(async (root) => {
+    await createMiniProgramProject(root, "wechat-mega");
+    await writeFile(path.join(root, "miniprogram", "easyar-mega.js"), "export const sdk = true;\n");
+    const sample = findMiniProgramSample("wechat-mega");
+
+    let status = await buildMiniProgramRunThroughStatus(root, sample);
+    assert.equal(status.runThroughComplete, false);
+    assert.equal(status.readiness.blockedCheckCount, 0);
+    assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_local_config_form")));
+    assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_preflight")));
+    assert(status.nextCalls.some((call) => call.includes("easyar_run_miniprogram_devtools_check")));
+    assert(!JSON.stringify(status).includes("license-local-only"));
+
+    const generated = path.join(root, "easyar-generated", sample.id);
+    await mkdir(generated, { recursive: true });
+    const checklist = buildMiniProgramDeviceValidationChecklist(sample);
+    const requiredStepIds = checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id);
+    await writeFile(path.join(generated, "LOCAL_CONFIG_FORM.md"), "# form\n");
+    await writeFile(path.join(generated, "PREFLIGHT.md"), "- PASSED - project.config.json: Found.\n");
+    await writeFile(path.join(generated, "RUN_SEQUENCE.md"), "# run sequence\n");
+    await writeFile(path.join(generated, "DEVICE_VALIDATION.md"), "# validation\n");
+    await writeFile(path.join(generated, "RUN_RESULT_FORM.md"), "# form\n");
+    await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "compile ok\npreview ready\n");
+    await writeFile(
+      path.join(generated, "RUN_RESULT.md"),
+      buildMiniProgramRunResultMarkdown({
+        sample,
+        overallStatus: "passed",
+        devtoolsStatus: "passed",
+        devicePreviewStatus: "passed",
+        passedStepIds: requiredStepIds,
+        evidenceSummary: "Real-device WeChat preview localized in the mapped Mega environment with redacted evidence."
+      })
+    );
+
+    status = await buildMiniProgramRunThroughStatus(root, sample);
+    assert.equal(status.runThroughComplete, true);
+    assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_completion_report")));
+    const markdown = buildMiniProgramRunThroughStatusMarkdown(status);
+    assert(markdown.includes("Run-through complete: yes"));
+    assert(markdown.includes("RUN_RESULT.md"));
   });
 });
 

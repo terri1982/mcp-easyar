@@ -827,6 +827,136 @@ export function buildMiniProgramScopeStatusMarkdown(status: Awaited<ReturnType<t
   ].join("\n");
 }
 
+export async function buildMiniProgramRunThroughStatus(root: string, sample: MiniProgramSampleInfo) {
+  const inspection = await inspectMiniProgramProject(root, sample);
+  const completion = await buildMiniProgramCompletionReport(root, sample);
+  const artifactNames = [
+    "LOCAL_CONFIG_FORM.md",
+    "PREFLIGHT.md",
+    "RUN_SEQUENCE.md",
+    "DEVTOOLS_CHECK.log",
+    "DEVICE_VALIDATION.md",
+    "RUN_RESULT_FORM.md",
+    "RUN_RESULT.md",
+    "COMPLETION_REPORT.md"
+  ];
+  const artifacts: Array<{ fileName: string; relativePath: string; exists: boolean }> = [];
+  for (const fileName of artifactNames) {
+    const absolutePath = path.join(root, "easyar-generated", sample.id, fileName);
+    artifacts.push({
+      fileName,
+      relativePath: path.relative(root, absolutePath),
+      exists: await pathExists(absolutePath)
+    });
+  }
+  const blockedChecks = inspection.checks.filter((check) => check.status === "blocked");
+  const warningChecks = inspection.checks.filter((check) => check.status === "warning");
+  const artifactExists = (fileName: string) => artifacts.find((artifact) => artifact.fileName === fileName)?.exists ?? false;
+  const nextCalls = [];
+  if (!artifactExists("LOCAL_CONFIG_FORM.md")) {
+    nextCalls.push(`easyar_write_miniprogram_local_config_form projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (blockedChecks.length > 0) {
+    nextCalls.push(`easyar_inspect_miniprogram_project projectPath=${root} sampleId=${sample.id}`);
+  } else if (!artifactExists("PREFLIGHT.md")) {
+    nextCalls.push(`easyar_write_miniprogram_preflight projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (blockedChecks.length === 0 && !artifactExists("RUN_SEQUENCE.md")) {
+    nextCalls.push(`easyar_write_miniprogram_run_sequence projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (blockedChecks.length === 0 && !artifactExists("DEVTOOLS_CHECK.log")) {
+    nextCalls.push(`easyar_run_miniprogram_devtools_check projectPath=${root} sampleId=${sample.id} dryRun=true`);
+  }
+  if (blockedChecks.length === 0 && !artifactExists("DEVICE_VALIDATION.md")) {
+    nextCalls.push(`easyar_write_miniprogram_device_validation_checklist projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (blockedChecks.length === 0 && !artifactExists("RUN_RESULT_FORM.md")) {
+    nextCalls.push(`easyar_write_miniprogram_run_result_form projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (blockedChecks.length === 0 && !artifactExists("RUN_RESULT.md")) {
+    nextCalls.push("Run the WeChat real-device preview, collect redacted evidence, then call easyar_write_miniprogram_run_result.");
+  }
+  if (!completion.runThroughComplete && artifactExists("RUN_RESULT.md")) {
+    nextCalls.push(`easyar_generate_miniprogram_completion_report projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (completion.runThroughComplete && !artifactExists("COMPLETION_REPORT.md")) {
+    nextCalls.push(`easyar_write_miniprogram_completion_report projectPath=${root} sampleId=${sample.id}`);
+  }
+  if (completion.runThroughComplete && artifactExists("COMPLETION_REPORT.md")) {
+    nextCalls.push("Run easyar_write_miniprogram_scope_status to update the two-sample Mini Program scope summary.");
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name
+    },
+    runThroughComplete: completion.runThroughComplete,
+    readiness: {
+      blockedCheckCount: blockedChecks.length,
+      warningCheckCount: warningChecks.length,
+      blockedChecks: blockedChecks.map((check) => ({ name: check.name, evidence: check.evidence })),
+      warningChecks: warningChecks.map((check) => ({ name: check.name, evidence: check.evidence }))
+    },
+    artifacts,
+    completionBlockers: completion.blockers,
+    nextCalls: nextCalls.length > 0
+      ? nextCalls
+      : [
+          "No immediate MCP action is required for this sample. Review redacted evidence before publishing or committing."
+        ],
+    security: [
+      "This status returns file presence, check names, and redacted next actions only.",
+      "Do not paste EasyAR passwords, WeChat credentials, preview QR codes, license keys, CRS API secrets, or raw private logs in chat.",
+      "Real-device preview evidence is required before a Mini Program sample can be called complete."
+    ]
+  };
+}
+
+export function buildMiniProgramRunThroughStatusMarkdown(status: Awaited<ReturnType<typeof buildMiniProgramRunThroughStatus>>) {
+  return [
+    `# ${status.sample.name} Run-through Status`,
+    "",
+    `Generated: ${status.generatedAt}`,
+    `Project path: \`${status.projectPath}\``,
+    `Run-through complete: ${status.runThroughComplete ? "yes" : "no"}`,
+    "",
+    "## Readiness",
+    "",
+    `Blocked checks: ${status.readiness.blockedCheckCount}`,
+    `Warning checks: ${status.readiness.warningCheckCount}`,
+    "",
+    ...(status.readiness.blockedChecks.length > 0
+      ? status.readiness.blockedChecks.map((check) => `- BLOCKED ${check.name}: ${check.evidence}`)
+      : ["No blocked readiness checks."]),
+    "",
+    ...(status.readiness.warningChecks.length > 0
+      ? status.readiness.warningChecks.map((check) => `- WARNING ${check.name}: ${check.evidence}`)
+      : ["No warning readiness checks."]),
+    "",
+    "## Artifacts",
+    "",
+    ...status.artifacts.map((artifact) => `- ${artifact.exists ? "FOUND" : "MISSING"} \`${artifact.relativePath}\``),
+    "",
+    "## Completion Blockers",
+    "",
+    ...(status.completionBlockers.length > 0
+      ? status.completionBlockers.map((blocker) => `- ${blocker.id}: ${blocker.detail} Action: ${blocker.action}`)
+      : ["No completion blockers."]),
+    "",
+    "## Next Calls",
+    "",
+    ...status.nextCalls.map((call) => `- ${call}`),
+    "",
+    "## Security",
+    "",
+    ...status.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
 export async function writeMiniProgramArtifact(root: string, sample: MiniProgramSampleInfo, fileName: string, contents: string, overwrite: boolean) {
   const target = path.join(root, "easyar-generated", sample.id, fileName);
   const relative = path.relative(root, target);

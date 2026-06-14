@@ -5,11 +5,12 @@
 ## 重点
 
 - GitHub Release 正版 tarball 发布。
-- 默认 core profile 工具数约 73。
+- 默认 core profile 工具数约 77。
 - full profile 保留全部维护工具。
 - 新增中文 README 和中文文档目录。
 - Image Tracking、CRS / Cloud Recognition 与 Mega 已完成 Android 真机验证。
 - 增加 Mega BlockRoot 配置检查，并记录已定位到 `大厅+办公室+阳台+GPS+0716`。
+- 增加微信小程序 Mega/CRS prompt 与 run-through status 工具，用于在官方包导入、DevTools 检查和真机证据变化后生成下一步建议。
 
 ## 安装
 
