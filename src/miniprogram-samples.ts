@@ -1805,6 +1805,12 @@ export function analyzeMiniProgramDevtoolsLog(logText: string, sample: MiniProgr
       action: "Check project.config.json or project.private.config.json and use the official Mini Program app id."
     },
     {
+      id: "wechat-plugin-unauthorized",
+      pattern: /((plugin|插件|provider).*(unauthorized|not authorized|未授权|can not visit app)|user uin can not visit app|插件未授权使用)/i,
+      severity: "blocker",
+      action: "Authorize the EasyAR WeChat Mini Program plugin provider wx27fa3b52b5462e8f version 2.0.3 for this Mini Program app id in the WeChat Mini Program admin console, or use an app id that already has this plugin authorization."
+    },
+    {
       id: "domain-not-configured",
       pattern: /(request合法域名|downloadFile合法域名|uploadFile合法域名|domain|域名).*(not|未|fail|失败|配置)/i,
       severity: "blocker",

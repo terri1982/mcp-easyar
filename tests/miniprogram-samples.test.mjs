@@ -450,6 +450,16 @@ test("Mini Program log analysis reports sample-specific success signals", () => 
   assert(!crsAnalysis.sanitizedTail.includes("local-secret-api"));
 });
 
+test("Mini Program log analysis reports unauthorized EasyAR plugin as blocker", () => {
+  const log = "provider:wx27fa3b52b5462e8f, version:2.0.3, 插件未授权使用,user uin can not visit app (code 10)";
+  const analysis = analyzeMiniProgramDevtoolsLog(log, findMiniProgramSample("wechat-mega"));
+  const finding = analysis.findings.find((item) => item.id === "wechat-plugin-unauthorized");
+
+  assert(finding);
+  assert.equal(finding.severity, "blocker");
+  assert(finding.action.includes("wx27fa3b52b5462e8f"));
+});
+
 test("Mini Program completion report requires preflight, DevTools log, checklist, and run result", async () => {
   await withTempDir(async (root) => {
     const sample = findMiniProgramSample("wechat-crs");
