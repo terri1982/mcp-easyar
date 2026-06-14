@@ -24,6 +24,21 @@ The user must prepare these outside MCP:
 
 `wechat-mega` specifically requires the EasyAR Mega WeChat Mini Program SDK/sample package or an existing WeChat Mini Program Mega project. A Unity Mega project, Android APK, PICO build, or XREAL build is useful reference evidence, but it is not a Mini Program Mega sample and cannot complete this target by itself.
 
+## Official Download Handoff
+
+MCP does not sign in to the EasyAR website for the user and does not bypass download entitlement. The user should open the official EasyAR download page in their own browser:
+
+```text
+https://www.easyar.cn/view/download.html
+```
+
+Suggested search terms:
+
+- `wechat-mega`: 微信小程序, Mega, EasyAR Mega, Mini Program
+- `wechat-crs`: 微信小程序, CRS, Cloud Recognition, Mini Program
+
+After downloading, pass the local extracted directory or `.zip` path to `easyar_import_miniprogram_sample_from_local_package`. If MCP detects a Unity project, it rejects it as a WeChat Mini Program sample source.
+
 ## Recommended MCP Sequence
 
 Replace `/path/to/miniprogram` and `/path/to/official/package-or.zip` with local paths. The official package path can be an extracted directory or a downloaded `.zip`.

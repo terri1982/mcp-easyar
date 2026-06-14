@@ -24,6 +24,21 @@
 
 `wechat-mega` 必须使用 EasyAR Mega 微信小程序 SDK/Sample 包，或一个已有的微信小程序 Mega 工程。Unity Mega 工程、Android APK、PICO 包、XREAL 包都只能作为参考证据，不能替代微信小程序 Mega sample。
 
+## 官方下载 Handoff
+
+MCP 不代替用户登录官网，也不绕过下载权限。用户应在自己的浏览器中打开 EasyAR 官方下载页：
+
+```text
+https://www.easyar.cn/view/download.html
+```
+
+建议搜索/查找关键词：
+
+- `wechat-mega`：微信小程序、Mega、EasyAR Mega、Mini Program
+- `wechat-crs`：微信小程序、CRS、Cloud Recognition、Mini Program
+
+下载完成后，把本机解压目录或 `.zip` 路径传给 `easyar_import_miniprogram_sample_from_local_package`。如果 MCP 检测到传入的是 Unity 工程，会拒绝把它当成微信小程序 Sample。
+
 ## 推荐 MCP 顺序
 
 把 `/path/to/miniprogram` 和 `/path/to/official/package-or.zip` 替换成本机路径。官方包路径可以是已解压目录，也可以是下载到本机的 `.zip`。

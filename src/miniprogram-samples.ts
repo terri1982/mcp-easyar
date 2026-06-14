@@ -17,6 +17,9 @@ export type MiniProgramSampleInfo = {
   }>;
   expectedFiles: string[];
   officialUserActions: string[];
+  officialDownloadPage: string;
+  officialDownloadSearchTerms: string[];
+  requiredUserMaterials: string[];
   handoffBlockers: string[];
 };
 
@@ -54,6 +57,20 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
       "Download the official EasyAR Mega Mini Program SDK/sample package from the EasyAR website.",
       "Find the selected Mega cloud localization library, block name, and block id in the web console or Mega Studio.",
       "Log in to WeChat Developer Tools locally with the user's WeChat account."
+    ],
+    officialDownloadPage: "https://www.easyar.cn/view/download.html",
+    officialDownloadSearchTerms: [
+      "微信小程序",
+      "Mega",
+      "EasyAR Mega",
+      "Mini Program"
+    ],
+    requiredUserMaterials: [
+      "Official EasyAR Mega WeChat Mini Program SDK/sample package downloaded by the user.",
+      "WeChat Mini Program app id that matches the EasyAR license.",
+      "EasyAR Mega license key stored only in easyar.mega.local.json or another local secret store.",
+      "Mega cloud localization library, server address, block name, and block id from the logged-in EasyAR web console or Mega Studio.",
+      "A real WeChat device preview in the mapped environment for localization evidence."
     ],
     handoffBlockers: [
       "A Unity Mega project is not a WeChat Mini Program Mega sample and cannot satisfy this target by itself.",
@@ -94,6 +111,20 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
       "Create or open the Cloud Recognition app and credentials in the EasyAR web console.",
       "Download the official EasyAR Mini Program SDK/sample package from the EasyAR website.",
       "Log in to WeChat Developer Tools locally with the user's WeChat account."
+    ],
+    officialDownloadPage: "https://www.easyar.cn/view/download.html",
+    officialDownloadSearchTerms: [
+      "微信小程序",
+      "CRS",
+      "Cloud Recognition",
+      "Mini Program"
+    ],
+    requiredUserMaterials: [
+      "Official EasyAR WeChat Mini Program SDK/sample package downloaded by the user, or an existing CRS Mini Program project.",
+      "WeChat Mini Program app id that matches the EasyAR license.",
+      "EasyAR license key stored only in easyar.crs.local.json or another local secret store.",
+      "CRS app id, server address, API key, and API secret stored only in local config or backend/cloud functions.",
+      "A target image already uploaded to the user's EasyAR CRS library and a real WeChat device preview for recognition evidence."
     ],
     handoffBlockers: [
       "The user must provide a WeChat Mini Program project or official EasyAR Mini Program CRS sample package.",
@@ -368,11 +399,16 @@ export function buildMiniProgramWorkspacePlan(root: string, sample: MiniProgramS
     localConfigFile: configForm.configFile,
     nextActions: [
       "Open the workspace in WeChat Developer Tools and bind the official Mini Program app id locally.",
-      "Download the official EasyAR Mini Program SDK/sample package from the EasyAR website.",
+      `Download the official EasyAR Mini Program SDK/sample package from ${sample.officialDownloadPage}. Search terms: ${sample.officialDownloadSearchTerms.join(" / ")}.`,
       `Import the official package with easyar_import_miniprogram_sample_from_local_package sampleId=${sample.id} after reviewing a dry run.`,
       `Fill ${configForm.configFile} locally; do not paste license keys, API secrets, QR codes, or passwords into chat.`,
       `Run easyar_write_miniprogram_run_through_status sampleId=${sample.id} after each setup change.`
     ],
+    officialHandoff: {
+      downloadPage: sample.officialDownloadPage,
+      searchTerms: sample.officialDownloadSearchTerms,
+      requiredUserMaterials: sample.requiredUserMaterials
+    },
     handoffBlockers: sample.handoffBlockers,
     security: [
       "This scaffold is not an official EasyAR SDK or runnable AR sample by itself.",
@@ -403,6 +439,15 @@ export function buildMiniProgramWorkspacePlanMarkdown(plan: ReturnType<typeof bu
     "## Next Actions",
     "",
     ...plan.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Official Handoff",
+    "",
+    `Download page: ${plan.officialHandoff.downloadPage}`,
+    `Search terms: ${plan.officialHandoff.searchTerms.join(" / ")}`,
+    "",
+    "Required user materials:",
+    "",
+    ...plan.officialHandoff.requiredUserMaterials.map((item) => `- ${item}`),
     "",
     "## Handoff Blockers",
     "",
@@ -1200,7 +1245,8 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
     nextCalls.push(`easyar_write_miniprogram_local_config_form projectPath=${root} sampleId=${sample.id}`);
   }
   if (warningChecks.some((check) => check.name === "EasyAR Mini Program SDK hints")) {
-    nextCalls.push(`Provide the official ${sample.name} package downloaded from the EasyAR website, then run easyar_import_miniprogram_sample_from_local_package sampleId=${sample.id} dryRun=true.`);
+    nextCalls.push(`Download the official ${sample.name} package from ${sample.officialDownloadPage}; search terms: ${sample.officialDownloadSearchTerms.join(" / ")}.`);
+    nextCalls.push(`Provide the downloaded local package path, then run easyar_import_miniprogram_sample_from_local_package sampleId=${sample.id} dryRun=true.`);
   }
   if (blockedChecks.length > 0) {
     nextCalls.push(`easyar_inspect_miniprogram_project projectPath=${root} sampleId=${sample.id}`);
@@ -1256,6 +1302,11 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
     },
     artifacts,
     evidenceCandidates,
+    officialHandoff: {
+      downloadPage: sample.officialDownloadPage,
+      searchTerms: sample.officialDownloadSearchTerms,
+      requiredUserMaterials: sample.requiredUserMaterials
+    },
     handoffBlockers: sample.handoffBlockers,
     completionBlockers: completion.blockers,
     nextCalls: nextCalls.length > 0
@@ -1303,6 +1354,15 @@ export function buildMiniProgramRunThroughStatusMarkdown(status: Awaited<ReturnT
     "## Handoff Blockers",
     "",
     ...status.handoffBlockers.map((blocker) => `- ${blocker}`),
+    "",
+    "## Official Handoff",
+    "",
+    `Download page: ${status.officialHandoff.downloadPage}`,
+    `Search terms: ${status.officialHandoff.searchTerms.join(" / ")}`,
+    "",
+    "Required user materials:",
+    "",
+    ...status.officialHandoff.requiredUserMaterials.map((item) => `- ${item}`),
     "",
     "## Completion Blockers",
     "",
