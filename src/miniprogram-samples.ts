@@ -175,9 +175,13 @@ export async function inspectMiniProgramProject(root: string, sample: MiniProgra
   }
   const appJson = appJsonPath ? await readJsonFile(appJsonPath) : null;
   const appid = projectConfig?.appid ?? projectPrivateConfig?.appid ?? null;
+  const rootAppJsonPath = path.join(root, "app.json");
+  const hasRootAppJson = await pathExists(rootAppJsonPath);
   const miniprogramRootValue = typeof projectConfig?.miniprogramRoot === "string"
     ? projectConfig.miniprogramRoot
-    : "miniprogram/";
+    : hasRootAppJson
+      ? "."
+      : "miniprogram/";
   const miniprogramRoot = path.resolve(root, miniprogramRootValue);
   const sdkHints = await findFilesByName(root, new Set([
     "easyar.js",

@@ -101,6 +101,25 @@ test("inspectMiniProgramProject reports readiness without returning secret value
   });
 });
 
+test("inspectMiniProgramProject accepts root-level Mini Program app.json when miniprogramRoot is omitted", async () => {
+  await withTempDir(async (root) => {
+    await writeFile(
+      path.join(root, "project.config.json"),
+      JSON.stringify({ appid: "wx-root-appid" }, null, 2)
+    );
+    await writeFile(
+      path.join(root, "app.json"),
+      JSON.stringify({ pages: ["pages/index/index"] }, null, 2)
+    );
+    await writeFile(path.join(root, "easyar-crs.js"), "export const sdk = true;\n");
+
+    const report = await inspectMiniProgramProject(root, findMiniProgramSample("wechat-crs"));
+    assert.equal(report.project.appJson, "app.json");
+    assert.equal(report.project.miniprogramRoot, "");
+    assert(report.checks.some((check) => check.name === "miniprogram root" && check.status === "passed"));
+  });
+});
+
 test("importMiniProgramSampleFromLocalPackage previews and skips private package files", async () => {
   await withTempDir(async (root) => {
     await createMiniProgramProject(root, "wechat-mega");
