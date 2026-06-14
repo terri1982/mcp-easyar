@@ -17,6 +17,7 @@ export type MiniProgramSampleInfo = {
   }>;
   expectedFiles: string[];
   officialUserActions: string[];
+  handoffBlockers: string[];
 };
 
 export const miniProgramSamples: MiniProgramSampleInfo[] = [
@@ -53,6 +54,11 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
       "Download the official EasyAR Mega Mini Program SDK/sample package from the EasyAR website.",
       "Find the selected Mega cloud localization library, block name, and block id in the web console or Mega Studio.",
       "Log in to WeChat Developer Tools locally with the user's WeChat account."
+    ],
+    handoffBlockers: [
+      "A Unity Mega project is not a WeChat Mini Program Mega sample and cannot satisfy this target by itself.",
+      "The user must download or provide the official EasyAR Mega WeChat Mini Program SDK/sample package before MCP can run preview validation.",
+      "The selected Mega cloud localization library/block metadata must be filled locally before real-device localization can be claimed."
     ]
   },
   {
@@ -88,6 +94,11 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
       "Create or open the Cloud Recognition app and credentials in the EasyAR web console.",
       "Download the official EasyAR Mini Program SDK/sample package from the EasyAR website.",
       "Log in to WeChat Developer Tools locally with the user's WeChat account."
+    ],
+    handoffBlockers: [
+      "The user must provide a WeChat Mini Program project or official EasyAR Mini Program CRS sample package.",
+      "The Cloud Recognition target image must already be uploaded to the user's EasyAR CRS library.",
+      "CRS API credentials must stay in local config or backend/cloud functions, never in chat."
     ]
   }
 ];
@@ -357,6 +368,7 @@ export function buildMiniProgramWorkspacePlan(root: string, sample: MiniProgramS
       `Fill ${configForm.configFile} locally; do not paste license keys, API secrets, QR codes, or passwords into chat.`,
       `Run easyar_write_miniprogram_run_through_status sampleId=${sample.id} after each setup change.`
     ],
+    handoffBlockers: sample.handoffBlockers,
     security: [
       "This scaffold is not an official EasyAR SDK or runnable AR sample by itself.",
       "It does not create EasyAR licenses, CRS credentials, Mega credentials, preview QR codes, or upload keys.",
@@ -386,6 +398,10 @@ export function buildMiniProgramWorkspacePlanMarkdown(plan: ReturnType<typeof bu
     "## Next Actions",
     "",
     ...plan.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Handoff Blockers",
+    "",
+    ...plan.handoffBlockers.map((blocker) => `- ${blocker}`),
     "",
     "## Security",
     "",
@@ -1134,6 +1150,9 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
   if (!artifactExists("LOCAL_CONFIG_FORM.md")) {
     nextCalls.push(`easyar_write_miniprogram_local_config_form projectPath=${root} sampleId=${sample.id}`);
   }
+  if (warningChecks.some((check) => check.name === "EasyAR Mini Program SDK hints")) {
+    nextCalls.push(`Provide the official ${sample.name} package downloaded from the EasyAR website, then run easyar_import_miniprogram_sample_from_local_package sampleId=${sample.id} dryRun=true.`);
+  }
   if (blockedChecks.length > 0) {
     nextCalls.push(`easyar_inspect_miniprogram_project projectPath=${root} sampleId=${sample.id}`);
   } else if (!artifactExists("PREFLIGHT.md")) {
@@ -1183,6 +1202,7 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
       warningChecks: warningChecks.map((check) => ({ name: check.name, evidence: check.evidence }))
     },
     artifacts,
+    handoffBlockers: sample.handoffBlockers,
     completionBlockers: completion.blockers,
     nextCalls: nextCalls.length > 0
       ? nextCalls
@@ -1221,6 +1241,10 @@ export function buildMiniProgramRunThroughStatusMarkdown(status: Awaited<ReturnT
     "## Artifacts",
     "",
     ...status.artifacts.map((artifact) => `- ${artifact.exists ? "FOUND" : "MISSING"} \`${artifact.relativePath}\``),
+    "",
+    "## Handoff Blockers",
+    "",
+    ...status.handoffBlockers.map((blocker) => `- ${blocker}`),
     "",
     "## Completion Blockers",
     "",

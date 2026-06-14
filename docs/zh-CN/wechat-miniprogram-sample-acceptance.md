@@ -22,6 +22,8 @@
 - `wechat-mega`：Mega app/server 信息，以及选定云定位库/block 元数据。
 - `wechat-crs`：CRS app id、服务地址、API KEY、API Secret，以及至少一张已上传的云识别目标图。
 
+`wechat-mega` 必须使用 EasyAR Mega 微信小程序 SDK/Sample 包，或一个已有的微信小程序 Mega 工程。Unity Mega 工程、Android APK、PICO 包、XREAL 包都只能作为参考证据，不能替代微信小程序 Mega sample。
+
 ## 推荐 MCP 顺序
 
 把 `/path/to/miniprogram` 和 `/path/to/official/package-or.zip` 替换成本机路径。官方包路径可以是已解压目录，也可以是下载到本机的 `.zip`。

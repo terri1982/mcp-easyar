@@ -82,6 +82,7 @@ async function createMiniProgramProject(root, sampleId = "wechat-mega") {
 test("Mini Program sample catalog focuses on Mega and CRS", () => {
   assert.deepEqual(miniProgramSamples.map((sample) => sample.id), ["wechat-mega", "wechat-crs"]);
   assert.equal(findMiniProgramSample("wechat-mega").name, "WeChat Mini Program Mega");
+  assert(findMiniProgramSample("wechat-mega").handoffBlockers.some((blocker) => blocker.includes("Unity Mega project is not")));
   assert.throws(() => findMiniProgramSample("hello-ar"), /Unknown mini program sampleId/);
 });
 
@@ -465,7 +466,6 @@ test("Mini Program scope status aggregates Mega and CRS completion reports", asy
 test("Mini Program run-through status recommends next calls from current evidence", async () => {
   await withTempDir(async (root) => {
     await createMiniProgramProject(root, "wechat-mega");
-    await writeFile(path.join(root, "miniprogram", "easyar-mega.js"), "export const sdk = true;\n");
     const sample = findMiniProgramSample("wechat-mega");
 
     let status = await buildMiniProgramRunThroughStatus(root, sample);
@@ -475,8 +475,12 @@ test("Mini Program run-through status recommends next calls from current evidenc
     assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_preflight")));
     assert(status.nextCalls.some((call) => call.includes("easyar_run_miniprogram_devtools_check")));
     assert(status.nextCalls.some((call) => call.includes("mode=preview")));
+    assert(status.nextCalls.some((call) => call.includes("official WeChat Mini Program Mega package")));
+    assert(status.handoffBlockers.some((blocker) => blocker.includes("Unity Mega project is not")));
     assert(status.artifacts.some((artifact) => artifact.fileName === "WECHAT_PREVIEW_QR.png" && artifact.exists === false));
     assert(!JSON.stringify(status).includes("license-local-only"));
+
+    await writeFile(path.join(root, "miniprogram", "easyar-mega.js"), "export const sdk = true;\n");
 
     const generated = path.join(root, "easyar-generated", sample.id);
     await mkdir(generated, { recursive: true });

@@ -22,6 +22,8 @@ The user must prepare these outside MCP:
 - For `wechat-mega`: Mega app/server information plus the selected cloud localization library/block metadata.
 - For `wechat-crs`: CRS app id, server address, API key, API secret, and at least one uploaded cloud target image.
 
+`wechat-mega` specifically requires the EasyAR Mega WeChat Mini Program SDK/sample package or an existing WeChat Mini Program Mega project. A Unity Mega project, Android APK, PICO build, or XREAL build is useful reference evidence, but it is not a Mini Program Mega sample and cannot complete this target by itself.
+
 ## Recommended MCP Sequence
 
 Replace `/path/to/miniprogram` and `/path/to/official/package-or.zip` with local paths. The official package path can be an extracted directory or a downloaded `.zip`.
