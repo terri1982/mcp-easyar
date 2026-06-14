@@ -19,6 +19,13 @@ export type MiniProgramSampleInfo = {
   officialUserActions: string[];
   officialDownloadPage: string;
   officialDownloadSearchTerms: string[];
+  officialPackage: {
+    title: string;
+    fileName: string;
+    version: string;
+    docsUrl: string;
+    accessNote: string;
+  };
   requiredUserMaterials: string[];
   handoffBlockers: string[];
 };
@@ -65,6 +72,13 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
       "EasyAR Mega",
       "Mini Program"
     ],
+    officialPackage: {
+      title: "EasyAR Mega 微信小程序示例",
+      fileName: "easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip",
+      version: "2.0.3",
+      docsUrl: "https://www.easyar.cn/doc/zh-cn/develop/wechat/mega/quickstart.html",
+      accessNote: "The download URL is protected by EasyAR website login/entitlement. The user must download it in their own browser session."
+    },
     requiredUserMaterials: [
       "Official EasyAR Mega WeChat Mini Program SDK/sample package downloaded by the user.",
       "WeChat Mini Program app id that matches the EasyAR license.",
@@ -119,6 +133,13 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
       "Cloud Recognition",
       "Mini Program"
     ],
+    officialPackage: {
+      title: "EasyAR CRS 微信小程序示例",
+      fileName: "EasyAR-miniprogram-WebAR-Demo-tracking.zip",
+      version: "2.0.0",
+      docsUrl: "https://www.easyar.cn/doc/zh-cn/develop/wechat/cloud-recognition/quickstart.html",
+      accessNote: "The download URL is protected by EasyAR website login/entitlement. The user must download it in their own browser session."
+    },
     requiredUserMaterials: [
       "Official EasyAR WeChat Mini Program SDK/sample package downloaded by the user, or an existing CRS Mini Program project.",
       "WeChat Mini Program app id that matches the EasyAR license.",
@@ -407,6 +428,7 @@ export function buildMiniProgramWorkspacePlan(root: string, sample: MiniProgramS
     officialHandoff: {
       downloadPage: sample.officialDownloadPage,
       searchTerms: sample.officialDownloadSearchTerms,
+      package: sample.officialPackage,
       requiredUserMaterials: sample.requiredUserMaterials
     },
     handoffBlockers: sample.handoffBlockers,
@@ -444,6 +466,9 @@ export function buildMiniProgramWorkspacePlanMarkdown(plan: ReturnType<typeof bu
     "",
     `Download page: ${plan.officialHandoff.downloadPage}`,
     `Search terms: ${plan.officialHandoff.searchTerms.join(" / ")}`,
+    `Official package: ${plan.officialHandoff.package.title} ${plan.officialHandoff.package.version} (\`${plan.officialHandoff.package.fileName}\`)`,
+    `Docs: ${plan.officialHandoff.package.docsUrl}`,
+    `Access: ${plan.officialHandoff.package.accessNote}`,
     "",
     "Required user materials:",
     "",
@@ -1245,7 +1270,8 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
     nextCalls.push(`easyar_write_miniprogram_local_config_form projectPath=${root} sampleId=${sample.id}`);
   }
   if (warningChecks.some((check) => check.name === "EasyAR Mini Program SDK hints")) {
-    nextCalls.push(`Download the official ${sample.name} package from ${sample.officialDownloadPage}; search terms: ${sample.officialDownloadSearchTerms.join(" / ")}.`);
+    nextCalls.push(`Download ${sample.officialPackage.title} ${sample.officialPackage.version} from ${sample.officialDownloadPage}; expected file: ${sample.officialPackage.fileName}.`);
+    nextCalls.push(`Use official docs: ${sample.officialPackage.docsUrl}. ${sample.officialPackage.accessNote}`);
     nextCalls.push(`Provide the downloaded local package path, then run easyar_import_miniprogram_sample_from_local_package sampleId=${sample.id} dryRun=true.`);
   }
   if (blockedChecks.length > 0) {
@@ -1305,6 +1331,7 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
     officialHandoff: {
       downloadPage: sample.officialDownloadPage,
       searchTerms: sample.officialDownloadSearchTerms,
+      package: sample.officialPackage,
       requiredUserMaterials: sample.requiredUserMaterials
     },
     handoffBlockers: sample.handoffBlockers,
@@ -1359,6 +1386,9 @@ export function buildMiniProgramRunThroughStatusMarkdown(status: Awaited<ReturnT
     "",
     `Download page: ${status.officialHandoff.downloadPage}`,
     `Search terms: ${status.officialHandoff.searchTerms.join(" / ")}`,
+    `Official package: ${status.officialHandoff.package.title} ${status.officialHandoff.package.version} (\`${status.officialHandoff.package.fileName}\`)`,
+    `Docs: ${status.officialHandoff.package.docsUrl}`,
+    `Access: ${status.officialHandoff.package.accessNote}`,
     "",
     "Required user materials:",
     "",

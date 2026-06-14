@@ -291,6 +291,8 @@ test("Mini Program workspace scaffold creates a safe project shell", async () =>
     assert(plan.security.some((rule) => rule.includes("not an official EasyAR SDK")));
     assert.equal(plan.officialHandoff.downloadPage, "https://www.easyar.cn/view/download.html");
     assert(plan.officialHandoff.searchTerms.includes("CRS"));
+    assert.equal(plan.officialHandoff.package.fileName, "EasyAR-miniprogram-WebAR-Demo-tracking.zip");
+    assert.equal(plan.officialHandoff.package.version, "2.0.0");
     assert(plan.officialHandoff.requiredUserMaterials.some((item) => item.includes("target image")));
 
     const result = await createMiniProgramSampleWorkspace({
@@ -543,9 +545,11 @@ test("Mini Program run-through status recommends next calls from current evidenc
     assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_preflight")));
     assert(status.nextCalls.some((call) => call.includes("easyar_run_miniprogram_devtools_check")));
     assert(status.nextCalls.some((call) => call.includes("mode=preview")));
-    assert(status.nextCalls.some((call) => call.includes("official WeChat Mini Program Mega package")));
+    assert(status.nextCalls.some((call) => call.includes("easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip")));
     assert.equal(status.officialHandoff.downloadPage, "https://www.easyar.cn/view/download.html");
     assert(status.officialHandoff.searchTerms.includes("Mega"));
+    assert.equal(status.officialHandoff.package.fileName, "easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip");
+    assert.equal(status.officialHandoff.package.version, "2.0.3");
     assert(status.officialHandoff.requiredUserMaterials.some((item) => item.includes("block id")));
     assert(status.handoffBlockers.some((blocker) => blocker.includes("Unity Mega project is not")));
     assert(status.artifacts.some((artifact) => artifact.fileName === "WECHAT_PREVIEW_QR.png" && artifact.exists === false));
@@ -588,6 +592,7 @@ test("Mini Program run-through status recommends next calls from current evidenc
     assert(markdown.includes("Run-through complete: yes"));
     assert(markdown.includes("RUN_RESULT.md"));
     assert(markdown.includes("Download page: https://www.easyar.cn/view/download.html"));
+    assert(markdown.includes("easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip"));
   });
 });
 

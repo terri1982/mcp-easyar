@@ -37,6 +37,13 @@ Suggested search terms:
 - `wechat-mega`: 微信小程序, Mega, EasyAR Mega, Mini Program
 - `wechat-crs`: 微信小程序, CRS, Cloud Recognition, Mini Program
 
+Current official download entries:
+
+- `wechat-mega`: `EasyAR Mega 微信小程序示例`, version `2.0.3`, file name `easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip`, docs `https://www.easyar.cn/doc/zh-cn/develop/wechat/mega/quickstart.html`
+- `wechat-crs`: `EasyAR CRS 微信小程序示例`, version `2.0.0`, file name `EasyAR-miniprogram-WebAR-Demo-tracking.zip`, docs `https://www.easyar.cn/doc/zh-cn/develop/wechat/cloud-recognition/quickstart.html`
+
+These files are protected by EasyAR website login/entitlement. MCP does not download them with the user's account password and does not bypass authorization; the user should download them in their own official browser session.
+
 After downloading, pass the local extracted directory or `.zip` path to `easyar_import_miniprogram_sample_from_local_package`. If MCP detects a Unity project, it rejects it as a WeChat Mini Program sample source.
 
 ## Recommended MCP Sequence
