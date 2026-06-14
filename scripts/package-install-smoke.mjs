@@ -39,6 +39,8 @@ try {
   assert(check.stdout.includes("OK tools"), "Installed check bin should verify tools.");
   assert(check.stdout.includes("OK prompts"), "Installed check bin should verify prompts.");
   assert(check.stdout.includes("OK resources"), "Installed check bin should verify resources.");
+  assert(check.stdout.includes("OK wechat-miniprogram-acceptance"), "Installed check bin should verify WeChat Mini Program acceptance resource.");
+  assert(check.stdout.includes("OK wechat-miniprogram-samples"), "Installed check bin should verify WeChat Mini Program sample resource.");
   assert(check.stdout.includes("Secret values are not required"), "Installed check should state that secrets are not needed.");
 
   console.log("Package install smoke test passed.");

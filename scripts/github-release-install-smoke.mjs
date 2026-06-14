@@ -59,6 +59,10 @@ try {
   assert(check.stdout.includes("OK resources"), "Release check bin should verify resources.");
   assert(check.stdout.includes("OK client-acceptance"), "Release check bin should verify client acceptance resource.");
   assert(check.stdout.includes("OK fresh-project-acceptance"), "Release check bin should verify fresh project acceptance resource.");
+  if (expectedReleaseTag !== "v0.1.0-local-key.38") {
+    assert(check.stdout.includes("OK wechat-miniprogram-acceptance"), "Release check bin should verify WeChat Mini Program acceptance resource.");
+    assert(check.stdout.includes("OK wechat-miniprogram-samples"), "Release check bin should verify WeChat Mini Program sample resource.");
+  }
   assert(check.stdout.includes("OK current-status"), "Release check bin should verify current status resource.");
   assert(check.stdout.includes("OK remaining-work-status"), "Release check bin should verify remaining work status resource.");
   assert(check.stdout.includes("OK github-release-install"), "Release check bin should verify GitHub Release install resource.");

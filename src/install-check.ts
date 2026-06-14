@@ -20,6 +20,10 @@ const requiredTools = [
   "easyar_write_completion_report",
   "easyar_write_focused_scope_status",
   "easyar_generate_sample_expansion_plan",
+  "easyar_list_miniprogram_samples",
+  "easyar_inspect_miniprogram_project",
+  "easyar_write_miniprogram_device_validation_checklist",
+  "easyar_write_miniprogram_completion_report",
   "easyar_unity_environment"
 ];
 
@@ -36,6 +40,7 @@ const requiredResources = [
   "easyar://official/openapi",
   "easyar://client/acceptance",
   "easyar://acceptance/fresh-project",
+  "easyar://acceptance/wechat-miniprogram",
   "easyar://status/current",
   "easyar://status/remaining-work",
   "easyar://install/github-release",
@@ -44,7 +49,8 @@ const requiredResources = [
   "easyar://roadmap/full-goal",
   "easyar://workflow/focused-scope",
   "easyar://workflow/programming",
-  "easyar://workflow/quickstart"
+  "easyar://workflow/quickstart",
+  "easyar://samples/wechat-miniprogram"
 ];
 
 type JsonRpcMessage = {
@@ -148,6 +154,17 @@ try {
       "fresh-project-acceptance",
       resourceTexts.get("easyar://acceptance/fresh-project")?.includes("mcp-easyar Fresh Project Acceptance") ?? false,
       "Fresh Unity project acceptance resource is readable."
+    ),
+    check(
+      "wechat-miniprogram-acceptance",
+      resourceTexts.get("easyar://acceptance/wechat-miniprogram")?.includes("EasyAR WeChat Mini Program Sample Acceptance") ?? false,
+      "WeChat Mini Program acceptance resource is readable."
+    ),
+    check(
+      "wechat-miniprogram-samples",
+      (resourceTexts.get("easyar://samples/wechat-miniprogram")?.includes("wechat-mega") ?? false)
+        && (resourceTexts.get("easyar://samples/wechat-miniprogram")?.includes("wechat-crs") ?? false),
+      "WeChat Mini Program sample catalog resource is readable."
     ),
     check(
       "current-status",
