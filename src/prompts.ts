@@ -172,12 +172,14 @@ export function registerPrompts(server: any) {
         "Start by calling:",
         "1. easyar_list_miniprogram_samples",
         "2. easyar_check_wechat_devtools",
-        `3. easyar_write_miniprogram_local_config_form projectPath=${projectPath} sampleId=${sampleId}`,
+        `3. If the project does not exist yet, call easyar_create_miniprogram_sample_workspace projectPath=${projectPath} sampleId=${sampleId}`,
+        `4. easyar_write_miniprogram_local_config_form projectPath=${projectPath} sampleId=${sampleId}`,
         packagePath
-          ? `4. easyar_import_miniprogram_sample_from_local_package projectPath=${projectPath} sampleId=${sampleId} packagePath=${packagePath} dryRun=true`
-          : "4. If the user has downloaded the official EasyAR Mini Program package, call easyar_import_miniprogram_sample_from_local_package with packagePath and dryRun=true.",
-        `5. easyar_inspect_miniprogram_project projectPath=${projectPath} sampleId=${sampleId}`,
-        `6. easyar_write_miniprogram_preflight projectPath=${projectPath} sampleId=${sampleId}`,
+          ? `5. easyar_import_miniprogram_sample_from_local_package projectPath=${projectPath} sampleId=${sampleId} packagePath=${packagePath} dryRun=true`
+          : "5. If the user has downloaded the official EasyAR Mini Program package, call easyar_import_miniprogram_sample_from_local_package with packagePath and dryRun=true.",
+        `6. easyar_inspect_miniprogram_project projectPath=${projectPath} sampleId=${sampleId}`,
+        `7. easyar_write_miniprogram_run_through_status projectPath=${projectPath} sampleId=${sampleId}`,
+        `8. easyar_write_miniprogram_preflight projectPath=${projectPath} sampleId=${sampleId}`,
         "",
         "Read PREFLIGHT.md and fix readiness blockers before asking WeChat Developer Tools to preview or upload.",
         "",

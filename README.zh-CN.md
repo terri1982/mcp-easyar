@@ -42,7 +42,7 @@ easyar-mcp-check
 
 ## 工具数量
 
-`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 77 个，低于常见 MCP 客户端 80 个工具的警告线。
+`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 79 个，低于常见 MCP 客户端 80 个工具的警告线。
 
 如果维护仓库、调试官方 API 合同或需要全部工具，可以用 full profile：
 
@@ -96,6 +96,7 @@ easyar://workflow/programming
 ```text
 easyar_list_miniprogram_samples
 easyar_check_wechat_devtools
+easyar_create_miniprogram_sample_workspace projectPath=/path/to/miniprogram sampleId=wechat-mega appId=wx-your-appid
 easyar_write_miniprogram_local_config_form projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_import_miniprogram_sample_from_local_package projectPath=/path/to/miniprogram sampleId=wechat-mega packagePath=/path/to/official/package dryRun=true
 easyar_inspect_miniprogram_project projectPath=/path/to/miniprogram sampleId=wechat-mega

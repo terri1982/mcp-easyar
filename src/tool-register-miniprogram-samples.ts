@@ -22,7 +22,9 @@ import {
   buildMiniProgramRunThroughStatusMarkdown,
   buildMiniProgramScopeStatus,
   buildMiniProgramScopeStatusMarkdown,
+  buildMiniProgramWorkspacePlan,
   findMiniProgramSample,
+  createMiniProgramSampleWorkspace,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
   miniProgramSamples,
@@ -110,6 +112,44 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       return jsonText(await inspectMiniProgramProject(root, sample));
+    }
+  );
+
+  registerTool(
+    "easyar_generate_miniprogram_workspace_plan",
+    "Generate a safe plan for creating a minimal WeChat Mini Program workspace shell for EasyAR Mega or CRS handoff.",
+    {
+      projectPath: z.string().describe("Target WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      appId: z.string().optional().describe("Optional WeChat Mini Program app id. Leave empty if the user will bind it in WeChat Developer Tools.")
+    },
+    async ({ projectPath, sampleId, appId }) => {
+      const root = resolveProjectPath(projectPath);
+      const sample = findMiniProgramSample(sampleId);
+      return jsonText(buildMiniProgramWorkspacePlan(root, sample, appId));
+    }
+  );
+
+  registerTool(
+    "easyar_create_miniprogram_sample_workspace",
+    "Create a minimal WeChat Mini Program workspace shell for EasyAR Mega or CRS official package handoff.",
+    {
+      projectPath: z.string().describe("Target WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      appId: z.string().optional().describe("Optional WeChat Mini Program app id. Leave empty if the user will bind it in WeChat Developer Tools."),
+      projectName: z.string().optional().describe("Optional WeChat Developer Tools project name."),
+      overwrite: z.boolean().default(false).describe("Whether to overwrite existing scaffold files. Defaults to false.")
+    },
+    async ({ projectPath, sampleId, appId, projectName, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      const sample = findMiniProgramSample(sampleId);
+      return jsonText(await createMiniProgramSampleWorkspace({
+        root,
+        sample,
+        appId,
+        projectName,
+        overwrite
+      }));
     }
   );
 

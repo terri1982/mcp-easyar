@@ -169,7 +169,7 @@ For now, use one of the focused sample workflows:
 
 Other EasyAR samples are out of scope for the current Image Tracking, CRS/Cloud Recognition, and Mega target.
 
-For WeChat Mini Program samples, use `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` or `sampleId=wechat-crs`. The prompt keeps the flow on official EasyAR/WeChat browser and DevTools handoff, writes local preflight/evidence artifacts, and requires real-device preview evidence before completion.
+For WeChat Mini Program samples, use `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` or `sampleId=wechat-crs`. The prompt keeps the flow on official EasyAR/WeChat browser and DevTools handoff, can create a minimal Mini Program workspace shell with `easyar_create_miniprogram_sample_workspace`, writes local preflight/evidence artifacts, and requires real-device preview evidence before completion.
 
 During Mini Program work, rerun `easyar_write_miniprogram_run_through_status` whenever the project, official package import, DevTools log, or real-device evidence changes. It writes one local status file with the next recommended MCP call.
 

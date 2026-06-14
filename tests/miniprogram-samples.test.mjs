@@ -12,6 +12,8 @@ import {
   buildMiniProgramRunThroughStatusMarkdown,
   buildMiniProgramScopeStatus,
   buildMiniProgramScopeStatusMarkdown,
+  buildMiniProgramWorkspacePlan,
+  createMiniProgramSampleWorkspace,
   findMiniProgramSample,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
@@ -119,6 +121,45 @@ test("importMiniProgramSampleFromLocalPackage previews and skips private package
     const copiedSdk = await readFile(path.join(copied.target, "src", "easyar-mega.js"), "utf8");
     assert(copiedSdk.includes("sdk"));
     await assert.rejects(() => readFile(path.join(copied.target, "easyar.mega.local.json"), "utf8"));
+  });
+});
+
+test("Mini Program workspace scaffold creates a safe project shell", async () => {
+  await withTempDir(async (root) => {
+    const sample = findMiniProgramSample("wechat-crs");
+    const plan = buildMiniProgramWorkspacePlan(root, sample, "wx-test-appid");
+    assert(plan.files.includes("project.config.json"));
+    assert(plan.files.includes(path.join("miniprogram", "app.json")));
+    assert(plan.security.some((rule) => rule.includes("not an official EasyAR SDK")));
+
+    const result = await createMiniProgramSampleWorkspace({
+      root,
+      sample,
+      appId: "wx-test-appid",
+      projectName: "easyar-crs-test",
+      overwrite: false
+    });
+    assert(result.created.includes("project.config.json"));
+    assert(result.created.includes(path.join("miniprogram", "app.json")));
+    assert(result.created.includes(path.join("miniprogram", "pages", "index", "index.js")));
+    assert(result.created.includes(path.join("easyar-generated", "wechat-crs", "LOCAL_CONFIG_FORM.md")));
+    assert.equal(result.appIdConfigured, true);
+
+    const projectConfig = JSON.parse(await readFile(path.join(root, "project.config.json"), "utf8"));
+    assert.equal(projectConfig.appid, "wx-test-appid");
+    const report = await inspectMiniProgramProject(root, sample);
+    assert.equal(report.project.hasProjectConfig, true);
+    assert.equal(report.project.appidPresent, true);
+    assert.equal(report.project.appJson, path.join("miniprogram", "app.json"));
+    assert(report.checks.some((check) => check.name === "EasyAR Mini Program SDK hints" && check.status === "warning"));
+
+    const second = await createMiniProgramSampleWorkspace({
+      root,
+      sample,
+      appId: "wx-test-appid",
+      overwrite: false
+    });
+    assert(second.skipped.includes("project.config.json"));
   });
 });
 

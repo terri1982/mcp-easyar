@@ -5,12 +5,13 @@
 ## 重点
 
 - GitHub Release 正版 tarball 发布。
-- 默认 core profile 工具数约 77。
+- 默认 core profile 工具数约 79。
 - full profile 保留全部维护工具。
 - 新增中文 README 和中文文档目录。
 - Image Tracking、CRS / Cloud Recognition 与 Mega 已完成 Android 真机验证。
 - 增加 Mega BlockRoot 配置检查，并记录已定位到 `大厅+办公室+阳台+GPS+0716`。
 - 增加微信小程序 Mega/CRS prompt 与 run-through status 工具，用于在官方包导入、DevTools 检查和真机证据变化后生成下一步建议。
+- 增加微信小程序 workspace scaffold 工具，可在导入用户官网下载的官方 EasyAR 包之前创建安全的小程序工程壳。
 
 ## 安装
 

@@ -320,6 +320,176 @@ export function buildMiniProgramLocalConfigFormMarkdown(form: ReturnType<typeof 
   ].join("\n");
 }
 
+export function buildMiniProgramWorkspacePlan(root: string, sample: MiniProgramSampleInfo, appId?: string) {
+  const configForm = buildMiniProgramLocalConfigForm(sample);
+  const pageRoot = path.join("miniprogram", "pages", "index");
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: root,
+    sample: {
+      id: sample.id,
+      name: sample.name
+    },
+    appId: appId?.trim() || "",
+    purpose: "Create a minimal WeChat Mini Program workspace shell for EasyAR MCP inspection and official package handoff.",
+    files: [
+      "project.config.json",
+      path.join("miniprogram", "app.json"),
+      path.join(pageRoot, "index.json"),
+      path.join(pageRoot, "index.wxml"),
+      path.join(pageRoot, "index.wxss"),
+      path.join(pageRoot, "index.js"),
+      path.join("easyar-generated", sample.id, "LOCAL_CONFIG_FORM.md"),
+      ".gitignore",
+      "README.easyar-miniprogram.md"
+    ],
+    localConfigFile: configForm.configFile,
+    nextActions: [
+      "Open the workspace in WeChat Developer Tools and bind the official Mini Program app id locally.",
+      "Download the official EasyAR Mini Program SDK/sample package from the EasyAR website.",
+      `Import the official package with easyar_import_miniprogram_sample_from_local_package sampleId=${sample.id} after reviewing a dry run.`,
+      `Fill ${configForm.configFile} locally; do not paste license keys, API secrets, QR codes, or passwords into chat.`,
+      `Run easyar_write_miniprogram_run_through_status sampleId=${sample.id} after each setup change.`
+    ],
+    security: [
+      "This scaffold is not an official EasyAR SDK or runnable AR sample by itself.",
+      "It does not create EasyAR licenses, CRS credentials, Mega credentials, preview QR codes, or upload keys.",
+      "The user must use the official EasyAR website and WeChat Developer Tools for login, download, license/key creation, preview, and upload."
+    ]
+  };
+}
+
+export function buildMiniProgramWorkspacePlanMarkdown(plan: ReturnType<typeof buildMiniProgramWorkspacePlan>) {
+  return [
+    `# ${plan.sample.name} Workspace Plan`,
+    "",
+    `Generated: ${plan.generatedAt}`,
+    `Project path: \`${plan.projectPath}\``,
+    `AppId: ${plan.appId || "not configured yet"}`,
+    "",
+    plan.purpose,
+    "",
+    "## Files",
+    "",
+    ...plan.files.map((file) => `- \`${file}\``),
+    "",
+    "## Local Config",
+    "",
+    `Fill locally: \`${plan.localConfigFile}\``,
+    "",
+    "## Next Actions",
+    "",
+    ...plan.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    ...plan.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
+async function writeMiniProgramWorkspaceFile(root: string, relativePath: string, contents: string, overwrite: boolean, created: string[], skipped: string[]) {
+  const target = path.resolve(root, relativePath);
+  const relative = path.relative(root, target);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error("Workspace file path must stay inside the Mini Program project.");
+  }
+  if (!overwrite && await pathExists(target)) {
+    skipped.push(relative);
+    return;
+  }
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, contents, "utf8");
+  created.push(relative);
+}
+
+export async function createMiniProgramSampleWorkspace(input: {
+  root: string;
+  sample: MiniProgramSampleInfo;
+  appId?: string;
+  projectName?: string;
+  overwrite: boolean;
+}) {
+  const created: string[] = [];
+  const skipped: string[] = [];
+  const plan = buildMiniProgramWorkspacePlan(input.root, input.sample, input.appId);
+  const appId = input.appId?.trim() ?? "";
+  const projectName = input.projectName?.trim() || `mcp-easyar-${input.sample.id}`;
+  const pageRoot = path.join("miniprogram", "pages", "index");
+  const configForm = buildMiniProgramLocalConfigForm(input.sample);
+  await mkdir(input.root, { recursive: true });
+  await writeMiniProgramWorkspaceFile(input.root, "project.config.json", `${JSON.stringify({
+    appid: appId,
+    projectname: projectName,
+    miniprogramRoot: "miniprogram/",
+    setting: {
+      urlCheck: true,
+      es6: true,
+      postcss: true,
+      minified: true
+    }
+  }, null, 2)}\n`, input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, path.join("miniprogram", "app.json"), `${JSON.stringify({
+    pages: ["pages/index/index"],
+    window: {
+      navigationBarTitleText: input.sample.id === "wechat-mega" ? "EasyAR Mega" : "EasyAR CRS",
+      navigationBarBackgroundColor: "#0ea5e9",
+      navigationBarTextStyle: "white"
+    },
+    permission: {
+      "scope.camera": {
+        desc: "Required for EasyAR sample camera preview."
+      }
+    }
+  }, null, 2)}\n`, input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, path.join(pageRoot, "index.json"), "{}\n", input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, path.join(pageRoot, "index.wxml"), [
+    "<view class=\"page\">",
+    "  <view class=\"title\">EasyAR Mini Program Sample</view>",
+    `  <view class=\"subtitle\">${input.sample.id}</view>`,
+    "  <view class=\"note\">Import the official EasyAR Mini Program SDK/sample package before real AR preview.</view>",
+    "</view>",
+    ""
+  ].join("\n"), input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, path.join(pageRoot, "index.wxss"), [
+    "page { background: #f8fafc; color: #0f172a; }",
+    ".page { min-height: 100vh; padding: 48rpx; box-sizing: border-box; }",
+    ".title { font-size: 40rpx; font-weight: 600; margin-bottom: 20rpx; }",
+    ".subtitle { color: #0369a1; font-size: 28rpx; margin-bottom: 28rpx; }",
+    ".note { color: #475569; font-size: 26rpx; line-height: 1.6; }",
+    ""
+  ].join("\n"), input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, path.join(pageRoot, "index.js"), [
+    "Page({",
+    "  data: {",
+    `    sampleId: \"${input.sample.id}\"`,
+    "  }",
+    "});",
+    ""
+  ].join("\n"), input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, ".gitignore", [
+    "project.private.config.json",
+    "private.*.key",
+    "*.log",
+    "easyar.*.local.json",
+    "easyar-generated/**/DEVTOOLS_CHECK.log",
+    ""
+  ].join("\n"), false, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, path.join("easyar-generated", input.sample.id, "LOCAL_CONFIG_FORM.md"), buildMiniProgramLocalConfigFormMarkdown(configForm), input.overwrite, created, skipped);
+  await writeMiniProgramWorkspaceFile(input.root, "README.easyar-miniprogram.md", buildMiniProgramWorkspacePlanMarkdown(plan), input.overwrite, created, skipped);
+  return {
+    generatedAt: new Date().toISOString(),
+    projectPath: input.root,
+    sample: plan.sample,
+    created,
+    skipped,
+    appIdConfigured: valueLooksSet(appId),
+    localConfigFile: configForm.configFile,
+    nextActions: plan.nextActions,
+    security: plan.security
+  };
+}
+
 export function buildMiniProgramPreflightMarkdown(report: Awaited<ReturnType<typeof inspectMiniProgramProject>>) {
   return [
     `# ${report.sample.name} Preflight`,

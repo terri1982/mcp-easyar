@@ -400,6 +400,14 @@ try {
     "easyar_import_sample_from_package_cache should be listed"
   );
   assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_generate_miniprogram_workspace_plan"),
+    "easyar_generate_miniprogram_workspace_plan should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_create_miniprogram_sample_workspace"),
+    "easyar_create_miniprogram_sample_workspace should be listed"
+  );
+  assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_miniprogram_run_through_status"),
     "easyar_generate_miniprogram_run_through_status should be listed"
   );

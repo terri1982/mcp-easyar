@@ -22,6 +22,7 @@ const requiredTools = [
   "easyar_generate_sample_expansion_plan",
   "easyar_list_miniprogram_samples",
   "easyar_inspect_miniprogram_project",
+  "easyar_create_miniprogram_sample_workspace",
   "easyar_write_miniprogram_device_validation_checklist",
   "easyar_write_miniprogram_completion_report",
   "easyar_write_miniprogram_run_through_status",
