@@ -484,6 +484,8 @@ export async function createMiniProgramSampleWorkspace(input: {
     "*.log",
     "easyar.*.local.json",
     "easyar-generated/**/DEVTOOLS_CHECK.log",
+    "easyar-generated/**/WECHAT_PREVIEW_QR.png",
+    "easyar-generated/**/WECHAT_PREVIEW_INFO.json",
     ""
   ].join("\n"), false, created, skipped);
   await writeMiniProgramWorkspaceFile(input.root, path.join("easyar-generated", input.sample.id, "LOCAL_CONFIG_FORM.md"), buildMiniProgramLocalConfigFormMarkdown(configForm), input.overwrite, created, skipped);
@@ -615,6 +617,8 @@ export function buildMiniProgramDevtoolsCommand(input: {
         "preview",
         "--project",
         input.root,
+        "--qr-format",
+        "image",
         "--qr-output",
         resolvedQrOutputPath!.absolutePath,
         "--info-output",
@@ -895,6 +899,8 @@ export async function buildMiniProgramCompletionReport(root: string, sample: Min
   const checklistPath = path.join(root, "easyar-generated", sample.id, "DEVICE_VALIDATION.md");
   const runResultPath = path.join(root, "easyar-generated", sample.id, "RUN_RESULT.md");
   const devtoolsLogPath = path.join(root, "easyar-generated", sample.id, "DEVTOOLS_CHECK.log");
+  const previewQrPath = path.join(root, "easyar-generated", sample.id, "WECHAT_PREVIEW_QR.png");
+  const previewInfoPath = path.join(root, "easyar-generated", sample.id, "WECHAT_PREVIEW_INFO.json");
   const preflightText = await readOptionalText(preflightPath);
   const checklistText = await readOptionalText(checklistPath);
   const runResultText = await readOptionalText(runResultPath);
@@ -951,6 +957,8 @@ export async function buildMiniProgramCompletionReport(root: string, sample: Min
       preflight: path.relative(root, preflightPath),
       deviceValidation: path.relative(root, checklistPath),
       devtoolsLog: path.relative(root, devtoolsLogPath),
+      previewQr: path.relative(root, previewQrPath),
+      previewInfo: path.relative(root, previewInfoPath),
       runResult: path.relative(root, runResultPath)
     },
     devtoolsFindings: devtoolsAnalysis?.findings ?? [],
@@ -1099,6 +1107,8 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
     "PREFLIGHT.md",
     "RUN_SEQUENCE.md",
     "DEVTOOLS_CHECK.log",
+    "WECHAT_PREVIEW_QR.png",
+    "WECHAT_PREVIEW_INFO.json",
     "DEVICE_VALIDATION.md",
     "RUN_RESULT_FORM.md",
     "RUN_RESULT.md",
@@ -1129,7 +1139,11 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
     nextCalls.push(`easyar_write_miniprogram_run_sequence projectPath=${root} sampleId=${sample.id}`);
   }
   if (blockedChecks.length === 0 && !artifactExists("DEVTOOLS_CHECK.log")) {
-    nextCalls.push(`easyar_run_miniprogram_devtools_check projectPath=${root} sampleId=${sample.id} dryRun=true`);
+    nextCalls.push(`easyar_run_miniprogram_devtools_check projectPath=${root} sampleId=${sample.id} mode=open dryRun=true`);
+    nextCalls.push(`easyar_run_miniprogram_devtools_check projectPath=${root} sampleId=${sample.id} mode=preview dryRun=true`);
+  }
+  if (blockedChecks.length === 0 && artifactExists("DEVTOOLS_CHECK.log") && (!artifactExists("WECHAT_PREVIEW_QR.png") || !artifactExists("WECHAT_PREVIEW_INFO.json"))) {
+    nextCalls.push(`easyar_run_miniprogram_devtools_check projectPath=${root} sampleId=${sample.id} mode=preview dryRun=false`);
   }
   if (blockedChecks.length === 0 && !artifactExists("DEVICE_VALIDATION.md")) {
     nextCalls.push(`easyar_write_miniprogram_device_validation_checklist projectPath=${root} sampleId=${sample.id}`);

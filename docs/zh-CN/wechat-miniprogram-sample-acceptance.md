@@ -54,6 +54,8 @@ CRS 路径把 `sampleId` 改成 `wechat-crs`。
 
 工程能正常打开后，使用 `easyar_run_miniprogram_devtools_check mode=preview` 生成预览。默认会准备 `easyar-generated/<sampleId>/WECHAT_PREVIEW_QR.png` 和 `easyar-generated/<sampleId>/WECHAT_PREVIEW_INFO.json` 作为本地预览 artifacts。二维码属于私有本地证据，不要发到聊天里，也不要提交到仓库。如果当前安装的微信开发者工具版本要求不同的 preview 参数，通过 `devtoolsArgs` 传入精确参数。
 
+MCP 创建的新工作区会自动把这些 preview artifacts 加入 `.gitignore`；已有工程在运行 preview 前应手动补上等价忽略规则。
+
 两个 sample 都要记录：
 
 - 测试手机型号

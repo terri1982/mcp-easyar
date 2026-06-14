@@ -225,6 +225,9 @@ test("Mini Program workspace scaffold creates a safe project shell", async () =>
 
     const projectConfig = JSON.parse(await readFile(path.join(root, "project.config.json"), "utf8"));
     assert.equal(projectConfig.appid, "wx-test-appid");
+    const gitignore = await readFile(path.join(root, ".gitignore"), "utf8");
+    assert(gitignore.includes("easyar-generated/**/WECHAT_PREVIEW_QR.png"));
+    assert(gitignore.includes("easyar-generated/**/WECHAT_PREVIEW_INFO.json"));
     const report = await inspectMiniProgramProject(root, sample);
     assert.equal(report.project.hasProjectConfig, true);
     assert.equal(report.project.appidPresent, true);
@@ -262,6 +265,8 @@ test("Mini Program DevTools command supports open and preview evidence paths", a
       "preview",
       "--project",
       root,
+      "--qr-format",
+      "image",
       "--qr-output",
       path.join(root, "easyar-generated", "wechat-mega", "WECHAT_PREVIEW_QR.png"),
       "--info-output",
@@ -450,6 +455,8 @@ test("Mini Program run-through status recommends next calls from current evidenc
     assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_local_config_form")));
     assert(status.nextCalls.some((call) => call.includes("easyar_write_miniprogram_preflight")));
     assert(status.nextCalls.some((call) => call.includes("easyar_run_miniprogram_devtools_check")));
+    assert(status.nextCalls.some((call) => call.includes("mode=preview")));
+    assert(status.artifacts.some((artifact) => artifact.fileName === "WECHAT_PREVIEW_QR.png" && artifact.exists === false));
     assert(!JSON.stringify(status).includes("license-local-only"));
 
     const generated = path.join(root, "easyar-generated", sample.id);
@@ -462,6 +469,12 @@ test("Mini Program run-through status recommends next calls from current evidenc
     await writeFile(path.join(generated, "DEVICE_VALIDATION.md"), "# validation\n");
     await writeFile(path.join(generated, "RUN_RESULT_FORM.md"), "# form\n");
     await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "compile ok\npreview ready\n");
+
+    status = await buildMiniProgramRunThroughStatus(root, sample);
+    assert(status.nextCalls.some((call) => call.includes("mode=preview dryRun=false")));
+
+    await writeFile(path.join(generated, "WECHAT_PREVIEW_QR.png"), "fake local qr placeholder\n");
+    await writeFile(path.join(generated, "WECHAT_PREVIEW_INFO.json"), "{\"status\":\"ok\"}\n");
     await writeFile(
       path.join(generated, "RUN_RESULT.md"),
       buildMiniProgramRunResultMarkdown({

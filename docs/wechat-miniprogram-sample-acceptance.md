@@ -54,6 +54,8 @@ The sample is not complete until it is previewed on a real phone through WeChat 
 
 Use `easyar_run_miniprogram_devtools_check mode=preview` after the project opens successfully. By default it prepares `easyar-generated/<sampleId>/WECHAT_PREVIEW_QR.png` and `easyar-generated/<sampleId>/WECHAT_PREVIEW_INFO.json` as local preview artifacts. The QR code is private local evidence; do not paste or commit it. If the installed WeChat Developer Tools version uses different preview arguments, pass the exact `devtoolsArgs`.
 
+Workspaces created by MCP add these preview artifacts to `.gitignore`; for existing projects, add equivalent ignore rules before running preview.
+
 For both samples, record:
 
 - tested device model
