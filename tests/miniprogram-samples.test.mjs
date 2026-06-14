@@ -18,6 +18,7 @@ import {
   findMiniProgramSample,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
+  miniProgramRunResultHasUsableEvidence,
   miniProgramSamples,
   redactMiniProgramSecretText,
   validateMiniProgramZipEntries
@@ -274,6 +275,29 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "compile ok\npreview ready\n");
     await writeFile(
       path.join(generated, "RUN_RESULT.md"),
+      [
+        "# WeChat Mini Program Run Result",
+        "",
+        "Run-through complete: yes",
+        "",
+        "## Evidence",
+        "",
+        "placeholder",
+        "",
+        "## Passed Required Steps",
+        "",
+        ...requiredStepIds.map((id) => `- \`${id}\``),
+        ""
+      ].join("\n")
+    );
+
+    report = await buildMiniProgramCompletionReport(root, sample);
+    assert.equal(report.runThroughComplete, false);
+    assert(report.blockers.some((blocker) => blocker.id === "run-result"));
+    assert.equal(miniProgramRunResultHasUsableEvidence(await readFile(path.join(generated, "RUN_RESULT.md"), "utf8")), false);
+
+    await writeFile(
+      path.join(generated, "RUN_RESULT.md"),
       buildMiniProgramRunResultMarkdown({
         sample,
         overallStatus: "passed",
@@ -287,6 +311,7 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     report = await buildMiniProgramCompletionReport(root, sample);
     assert.equal(report.runThroughComplete, true);
     assert.deepEqual(report.blockers, []);
+    assert.equal(miniProgramRunResultHasUsableEvidence(await readFile(path.join(generated, "RUN_RESULT.md"), "utf8")), true);
   });
 });
 

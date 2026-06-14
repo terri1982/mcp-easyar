@@ -813,6 +813,19 @@ export function buildMiniProgramRunResultMarkdown(input: {
   ].join("\n");
 }
 
+export function miniProgramRunResultHasUsableEvidence(runResultText: string | null) {
+  if (!runResultText || !/Run-through complete:\s+yes/i.test(runResultText)) {
+    return false;
+  }
+  const evidenceMatch = runResultText.match(/## Evidence\s+[\s\S]*?\n\n([\s\S]*?)\n\n## Passed Required Steps/i);
+  const evidenceSummary = evidenceMatch?.[1]?.trim() ?? "";
+  if (evidenceSummary.length < 24) {
+    return false;
+  }
+  return !/^(no evidence summary recorded|not recorded|todo|tbd|placeholder|changeme|fake|n\/a)$/i.test(evidenceSummary)
+    && !/\b(no evidence|placeholder|changeme|todo|tbd|fake evidence)\b/i.test(evidenceSummary);
+}
+
 export async function buildMiniProgramCompletionReport(root: string, sample: MiniProgramSampleInfo) {
   const preflightPath = path.join(root, "easyar-generated", sample.id, "PREFLIGHT.md");
   const checklistPath = path.join(root, "easyar-generated", sample.id, "DEVICE_VALIDATION.md");
@@ -841,8 +854,10 @@ export async function buildMiniProgramCompletionReport(root: string, sample: Min
     },
     {
       id: "run-result",
-      status: runResultText && /Run-through complete:\s+yes/i.test(runResultText) ? "passed" : "blocked",
-      evidence: runResultText ? "RUN_RESULT.md exists." : "RUN_RESULT.md is missing."
+      status: miniProgramRunResultHasUsableEvidence(runResultText) ? "passed" : "blocked",
+      evidence: runResultText
+        ? "RUN_RESULT.md exists but must contain run-through complete plus a usable redacted evidence summary."
+        : "RUN_RESULT.md is missing."
     }
   ];
   const blockers = checks
