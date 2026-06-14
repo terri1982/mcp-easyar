@@ -405,6 +405,15 @@ async function writeMiniProgramWorkspaceFile(root: string, relativePath: string,
   created.push(relative);
 }
 
+function resolveInsideMiniProgramRoot(root: string, filePath: string, fieldName: string) {
+  const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(root, filePath);
+  const relativePath = path.relative(root, absolutePath);
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    throw new Error(`${fieldName} must stay inside the Mini Program project.`);
+  }
+  return { absolutePath, relativePath };
+}
+
 export async function createMiniProgramSampleWorkspace(input: {
   root: string;
   sample: MiniProgramSampleInfo;
@@ -574,6 +583,61 @@ export function buildMiniProgramRunSequenceMarkdown(sequence: ReturnType<typeof 
     ...sequence.security.map((rule) => `- ${rule}`),
     ""
   ].join("\n");
+}
+
+export type MiniProgramDevtoolsCommandMode = "open" | "preview";
+
+export function buildMiniProgramDevtoolsCommand(input: {
+  root: string;
+  sample: MiniProgramSampleInfo;
+  mode: MiniProgramDevtoolsCommandMode;
+  devtoolsArgs?: string[];
+  logPath?: string;
+  qrOutputPath?: string;
+  infoOutputPath?: string;
+}) {
+  const relativeLogPath = input.logPath ?? path.join("easyar-generated", input.sample.id, "DEVTOOLS_CHECK.log");
+  const resolvedLogPath = resolveInsideMiniProgramRoot(input.root, relativeLogPath, "logPath");
+  const defaultQrOutputPath = path.join("easyar-generated", input.sample.id, "WECHAT_PREVIEW_QR.png");
+  const defaultInfoOutputPath = path.join("easyar-generated", input.sample.id, "WECHAT_PREVIEW_INFO.json");
+  const resolvedQrOutputPath = input.mode === "preview"
+    ? resolveInsideMiniProgramRoot(input.root, input.qrOutputPath ?? defaultQrOutputPath, "qrOutputPath")
+    : input.qrOutputPath
+      ? resolveInsideMiniProgramRoot(input.root, input.qrOutputPath, "qrOutputPath")
+      : null;
+  const resolvedInfoOutputPath = input.mode === "preview"
+    ? resolveInsideMiniProgramRoot(input.root, input.infoOutputPath ?? defaultInfoOutputPath, "infoOutputPath")
+    : input.infoOutputPath
+      ? resolveInsideMiniProgramRoot(input.root, input.infoOutputPath, "infoOutputPath")
+      : null;
+  const args = input.devtoolsArgs ?? (input.mode === "preview"
+    ? [
+        "preview",
+        "--project",
+        input.root,
+        "--qr-output",
+        resolvedQrOutputPath!.absolutePath,
+        "--info-output",
+        resolvedInfoOutputPath!.absolutePath
+      ]
+    : ["-o", input.root]);
+  return {
+    mode: input.mode,
+    args,
+    logPath: resolvedLogPath,
+    qrOutputPath: resolvedQrOutputPath,
+    infoOutputPath: resolvedInfoOutputPath,
+    notes: input.mode === "preview"
+      ? [
+          "The default preview command uses WeChat Developer Tools CLI preview --project with QR/info output paths.",
+          "Open WeChat Developer Tools, log in, and enable the service port before running preview.",
+          "If the installed CLI version expects different arguments, pass exact devtoolsArgs."
+        ]
+      : [
+          "The default open command opens the project in WeChat Developer Tools.",
+          "Use mode=preview after the official sample package and local config are ready."
+        ]
+  };
 }
 
 export function buildMiniProgramDeviceValidationChecklist(sample: MiniProgramSampleInfo) {

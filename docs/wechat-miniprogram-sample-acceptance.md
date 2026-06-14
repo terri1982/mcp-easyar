@@ -37,8 +37,10 @@ easyar_inspect_miniprogram_project projectPath=/path/to/miniprogram sampleId=wec
 easyar_write_miniprogram_run_through_status projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_preflight projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_run_sequence projectPath=/path/to/miniprogram sampleId=wechat-mega
-easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=true
-easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=false
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=open dryRun=true
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=open dryRun=false
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=preview dryRun=true
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=preview dryRun=false
 easyar_analyze_miniprogram_devtools_log projectPath=/path/to/miniprogram sampleId=wechat-mega logPath=easyar-generated/wechat-mega/DEVTOOLS_CHECK.log
 easyar_write_miniprogram_device_validation_checklist projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_run_result_form projectPath=/path/to/miniprogram sampleId=wechat-mega
@@ -49,6 +51,8 @@ Use `sampleId=wechat-crs` for the CRS path.
 ## Real-Device Validation
 
 The sample is not complete until it is previewed on a real phone through WeChat Developer Tools.
+
+Use `easyar_run_miniprogram_devtools_check mode=preview` after the project opens successfully. By default it prepares `easyar-generated/<sampleId>/WECHAT_PREVIEW_QR.png` and `easyar-generated/<sampleId>/WECHAT_PREVIEW_INFO.json` as local preview artifacts. The QR code is private local evidence; do not paste or commit it. If the installed WeChat Developer Tools version uses different preview arguments, pass the exact `devtoolsArgs`.
 
 For both samples, record:
 

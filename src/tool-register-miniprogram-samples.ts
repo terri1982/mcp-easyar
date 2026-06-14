@@ -13,6 +13,7 @@ import {
   buildMiniProgramLocalConfigForm,
   buildMiniProgramLocalConfigFormMarkdown,
   buildMiniProgramPreflightMarkdown,
+  buildMiniProgramDevtoolsCommand,
   buildMiniProgramRunResultForm,
   buildMiniProgramRunResultFormMarkdown,
   buildMiniProgramRunResultMarkdown,
@@ -324,39 +325,50 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_run_miniprogram_devtools_check",
-    "Run a local WeChat Developer Tools CLI open/compile smoke command and write a redacted log analysis.",
+    "Run a local WeChat Developer Tools CLI open or preview smoke command and write a redacted log analysis.",
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      mode: z.enum(["open", "preview"]).default("open").describe("Use open for a quick IDE launch check, or preview to generate a scan QR through WeChat Developer Tools."),
       cliPath: z.string().optional().describe("Optional explicit WeChat Developer Tools CLI path."),
-      devtoolsArgs: z.array(z.string()).optional().describe("Optional exact CLI args. Defaults to opening the project with -o <projectPath>."),
+      devtoolsArgs: z.array(z.string()).optional().describe("Optional exact CLI args. Defaults to opening the project, or preview --project with QR/info output paths when mode=preview."),
       logPath: z.string().optional().describe("Optional relative log path. Defaults to easyar-generated/<sampleId>/DEVTOOLS_CHECK.log."),
+      qrOutputPath: z.string().optional().describe("Optional relative QR output path for mode=preview. Defaults to easyar-generated/<sampleId>/WECHAT_PREVIEW_QR.png."),
+      infoOutputPath: z.string().optional().describe("Optional relative preview info output path for mode=preview. Defaults to easyar-generated/<sampleId>/WECHAT_PREVIEW_INFO.json."),
       timeoutSeconds: z.number().int().min(5).max(600).default(120).describe("Command timeout in seconds."),
       dryRun: z.boolean().default(true).describe("Preview the command without executing it. Set false only after WeChat Developer Tools is installed and logged in.")
     },
-    async ({ projectPath, sampleId, cliPath, devtoolsArgs, logPath, timeoutSeconds, dryRun }) => {
+    async ({ projectPath, sampleId, mode, cliPath, devtoolsArgs, logPath, qrOutputPath, infoOutputPath, timeoutSeconds, dryRun }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const cli = await findWeChatDevToolsCli(cliPath);
       const command = cli.detectedPath ?? cliPath ?? "cli";
-      const args = devtoolsArgs ?? ["-o", root];
-      const relativeLogPath = logPath ?? path.join("easyar-generated", sample.id, "DEVTOOLS_CHECK.log");
-      const resolvedLogPath = path.resolve(root, relativeLogPath);
-      const relative = path.relative(root, resolvedLogPath);
-      if (relative.startsWith("..") || path.isAbsolute(relative)) {
-        throw new Error("logPath must stay inside the Mini Program project.");
-      }
+      const devtoolsCommand = buildMiniProgramDevtoolsCommand({
+        root,
+        sample,
+        mode,
+        devtoolsArgs,
+        logPath,
+        qrOutputPath,
+        infoOutputPath
+      });
       if (dryRun) {
         return jsonText({
           dryRun: true,
+          mode: devtoolsCommand.mode,
           command,
-          args,
+          args: devtoolsCommand.args,
           detectedCli: cli.detectedPath,
-          logPath: relative,
+          logPath: devtoolsCommand.logPath.relativePath,
+          qrOutputPath: devtoolsCommand.qrOutputPath?.relativePath ?? null,
+          infoOutputPath: devtoolsCommand.infoOutputPath?.relativePath ?? null,
+          notes: devtoolsCommand.notes,
           nextActions: [
             "Open WeChat Developer Tools once and confirm the user is logged in.",
-            "Set dryRun=false to execute the local CLI check.",
+            mode === "preview"
+              ? "Set dryRun=false to generate a WeChat preview QR code, then scan it on a real phone."
+              : "Set dryRun=false to execute the local CLI open check.",
             "If the official CLI requires different compile/preview arguments, pass them in devtoolsArgs."
           ]
         });
@@ -364,11 +376,11 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
       if (!cli.detectedPath && !cliPath) {
         throw new Error("WeChat Developer Tools CLI was not found. Pass cliPath or set WECHAT_DEVTOOLS_CLI.");
       }
-      const result = await runProcess(command, args, timeoutSeconds);
+      const result = await runProcess(command, devtoolsCommand.args, timeoutSeconds);
       const sanitizedStdout = redactMiniProgramSecretText(result.stdout);
       const sanitizedStderr = redactMiniProgramSecretText(result.stderr);
       const combinedLog = [
-        `$ ${[command, ...args].join(" ")}`,
+        `$ ${[command, ...devtoolsCommand.args].join(" ")}`,
         "",
         "## stdout",
         sanitizedStdout,
@@ -376,17 +388,28 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         "## stderr",
         sanitizedStderr
       ].join("\n");
-      await mkdir(path.dirname(resolvedLogPath), { recursive: true });
-      await writeFile(resolvedLogPath, combinedLog, "utf8");
+      await mkdir(path.dirname(devtoolsCommand.logPath.absolutePath), { recursive: true });
+      await writeFile(devtoolsCommand.logPath.absolutePath, combinedLog, "utf8");
       const analysis = analyzeMiniProgramDevtoolsLog(`${sanitizedStdout}\n${sanitizedStderr}`, sample);
       return jsonText({
+        mode: devtoolsCommand.mode,
         command: result.command,
         exitCode: result.exitCode,
         timedOut: result.timedOut,
-        logPath: relative,
+        logPath: devtoolsCommand.logPath.relativePath,
+        qrOutputPath: devtoolsCommand.qrOutputPath?.relativePath ?? null,
+        infoOutputPath: devtoolsCommand.infoOutputPath?.relativePath ?? null,
         stdoutTail: sanitizedStdout.slice(-4000),
         stderrTail: sanitizedStderr.slice(-4000),
-        analysis
+        analysis,
+        nextActions: mode === "preview"
+          ? [
+              "Scan the generated preview QR on a real phone through WeChat.",
+              "Record camera permission and sample-specific Mega/CRS success evidence before writing RUN_RESULT.md."
+            ]
+          : [
+              "Run mode=preview after the project opens successfully and the official package/config are ready."
+            ]
       });
     }
   );

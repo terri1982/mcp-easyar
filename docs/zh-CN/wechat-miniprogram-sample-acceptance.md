@@ -37,8 +37,10 @@ easyar_inspect_miniprogram_project projectPath=/path/to/miniprogram sampleId=wec
 easyar_write_miniprogram_run_through_status projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_preflight projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_run_sequence projectPath=/path/to/miniprogram sampleId=wechat-mega
-easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=true
-easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=false
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=open dryRun=true
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=open dryRun=false
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=preview dryRun=true
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega mode=preview dryRun=false
 easyar_analyze_miniprogram_devtools_log projectPath=/path/to/miniprogram sampleId=wechat-mega logPath=easyar-generated/wechat-mega/DEVTOOLS_CHECK.log
 easyar_write_miniprogram_device_validation_checklist projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_run_result_form projectPath=/path/to/miniprogram sampleId=wechat-mega
@@ -49,6 +51,8 @@ CRS 路径把 `sampleId` 改成 `wechat-crs`。
 ## 真机验收
 
 必须通过微信开发者工具预览到真实手机上，才能声明 Sample 完成。
+
+工程能正常打开后，使用 `easyar_run_miniprogram_devtools_check mode=preview` 生成预览。默认会准备 `easyar-generated/<sampleId>/WECHAT_PREVIEW_QR.png` 和 `easyar-generated/<sampleId>/WECHAT_PREVIEW_INFO.json` 作为本地预览 artifacts。二维码属于私有本地证据，不要发到聊天里，也不要提交到仓库。如果当前安装的微信开发者工具版本要求不同的 preview 参数，通过 `devtoolsArgs` 传入精确参数。
 
 两个 sample 都要记录：
 

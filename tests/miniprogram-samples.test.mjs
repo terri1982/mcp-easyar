@@ -7,6 +7,7 @@ import { test } from "node:test";
 import {
   analyzeMiniProgramDevtoolsLog,
   buildMiniProgramCompletionReport,
+  buildMiniProgramDevtoolsCommand,
   buildMiniProgramDeviceValidationChecklist,
   buildMiniProgramRunResultMarkdown,
   buildMiniProgramRunThroughStatus,
@@ -237,6 +238,44 @@ test("Mini Program workspace scaffold creates a safe project shell", async () =>
       overwrite: false
     });
     assert(second.skipped.includes("project.config.json"));
+  });
+});
+
+test("Mini Program DevTools command supports open and preview evidence paths", async () => {
+  await withTempDir(async (root) => {
+    const sample = findMiniProgramSample("wechat-mega");
+    const openCommand = buildMiniProgramDevtoolsCommand({
+      root,
+      sample,
+      mode: "open"
+    });
+    assert.deepEqual(openCommand.args, ["-o", root]);
+    assert.equal(openCommand.logPath.relativePath, path.join("easyar-generated", "wechat-mega", "DEVTOOLS_CHECK.log"));
+    assert.equal(openCommand.qrOutputPath, null);
+
+    const previewCommand = buildMiniProgramDevtoolsCommand({
+      root,
+      sample,
+      mode: "preview"
+    });
+    assert.deepEqual(previewCommand.args, [
+      "preview",
+      "--project",
+      root,
+      "--qr-output",
+      path.join(root, "easyar-generated", "wechat-mega", "WECHAT_PREVIEW_QR.png"),
+      "--info-output",
+      path.join(root, "easyar-generated", "wechat-mega", "WECHAT_PREVIEW_INFO.json")
+    ]);
+    assert.equal(previewCommand.qrOutputPath.relativePath, path.join("easyar-generated", "wechat-mega", "WECHAT_PREVIEW_QR.png"));
+    assert.equal(previewCommand.infoOutputPath.relativePath, path.join("easyar-generated", "wechat-mega", "WECHAT_PREVIEW_INFO.json"));
+
+    assert.throws(() => buildMiniProgramDevtoolsCommand({
+      root,
+      sample,
+      mode: "preview",
+      qrOutputPath: "../leak.png"
+    }), /qrOutputPath must stay inside/);
   });
 });
 
