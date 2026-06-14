@@ -63,6 +63,8 @@ For `wechat-mega`, the required proof is real-device localization/tracking in th
 
 For `wechat-crs`, the required proof is recognition of an intended cloud target. Good evidence includes a redacted log or screenshot note showing the target name/id or official sample recognition success signal. The target image must already be uploaded to the EasyAR Cloud Recognition library by the user.
 
+`easyar_analyze_miniprogram_devtools_log` reports both blocker findings and `successSignals`. For passing evidence, prefer success signals such as `camera-ready`, `devtools-preview-ready`, `mega-localized`, and `crs-recognized`, then copy the redacted evidence line into the run-result summary.
+
 ## Recording The Result
 
 After real-device preview, write the run result. The `passedStepIds` must come from `DEVICE_VALIDATION.md`.

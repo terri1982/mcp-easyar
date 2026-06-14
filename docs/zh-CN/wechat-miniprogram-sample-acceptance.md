@@ -63,6 +63,8 @@ CRS 路径把 `sampleId` 改成 `wechat-crs`。
 
 `wechat-crs` 的必要证明是识别到指定云端目标。合格证据可以是脱敏日志或截图说明，内容应能证明目标名称/id 或官方 Sample 识别成功信号。目标图必须已由用户上传到 EasyAR Cloud Recognition 识别库。
 
+`easyar_analyze_miniprogram_devtools_log` 会同时报告 blocker findings 和 `successSignals`。通过证据优先使用 `camera-ready`、`devtools-preview-ready`、`mega-localized`、`crs-recognized` 这类成功信号，再把脱敏后的证据行写入 run result 摘要。
+
 ## 记录结果
 
 真机预览之后写入 run result。`passedStepIds` 应来自 `DEVICE_VALIDATION.md`。

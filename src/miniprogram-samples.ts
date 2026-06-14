@@ -1401,14 +1401,59 @@ export function analyzeMiniProgramDevtoolsLog(logText: string, sample: MiniProgr
       action: rule.action,
       evidence: firstMatchingLine(redacted, rule.pattern)
     }));
+  const successRules = [
+    {
+      id: "camera-ready",
+      pattern: /(camera|摄像头|scope\.camera|authorize).*(granted|success|ok|allowed|授权成功|允许)/i,
+      meaning: "Camera permission appears granted on the Mini Program device preview."
+    },
+    {
+      id: "devtools-preview-ready",
+      pattern: /(preview|compile|编译|预览).*(success|ok|ready|done|成功|完成)/i,
+      meaning: "WeChat Developer Tools appears to have compiled or prepared preview successfully."
+    },
+    {
+      id: "mega-localized",
+      pattern: /(mega|localization|localize|定位|block).*(success|succeeded|found|localized|tracking|成功|已定位|找到|跟踪)/i,
+      meaning: "Mega localization or tracking appears successful."
+    },
+    {
+      id: "crs-recognized",
+      pattern: /(crs|cloud|recognition|target|识别|目标).*(success|recognized|found|matched|成功|识别到|找到|匹配)/i,
+      meaning: "Cloud Recognition appears to have recognized the intended target."
+    }
+  ];
+  const successSignals = successRules
+    .filter((rule) => rule.pattern.test(redacted))
+    .filter((rule) => {
+      if (rule.id === "mega-localized") {
+        return !sample || sample.id === "wechat-mega";
+      }
+      if (rule.id === "crs-recognized") {
+        return !sample || sample.id === "wechat-crs";
+      }
+      return true;
+    })
+    .map((rule) => ({
+      id: rule.id,
+      meaning: rule.meaning,
+      evidence: firstMatchingLine(redacted, rule.pattern)
+    }));
   return {
     generatedAt: new Date().toISOString(),
     sample: sample ? { id: sample.id, name: sample.name } : null,
     findingCount: findings.length,
     findings,
+    successSignalCount: successSignals.length,
+    successSignals,
     sanitizedTail: redacted.slice(-12000),
     nextActions: findings.length > 0
       ? Array.from(new Set(findings.map((finding) => finding.action)))
+      : successSignals.length > 0
+        ? [
+            "Use the successSignals as redacted evidence when writing easyar_write_miniprogram_run_result.",
+            "Confirm the evidence came from a real-device WeChat preview before marking the sample complete."
+          ]
       : [
           "No known WeChat/EasyAR Mini Program blocker pattern was detected in the provided log.",
           "If the sample still fails, collect a longer DevTools log and a real-device screenshot with secrets redacted."

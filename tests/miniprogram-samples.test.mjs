@@ -258,6 +258,32 @@ test("redactMiniProgramSecretText and log analysis hide credentials while preser
   assert(!analysis.sanitizedTail.includes("local-secret-license"));
 });
 
+test("Mini Program log analysis reports sample-specific success signals", () => {
+  const megaLog = [
+    "scope.camera authorize success",
+    "EasyAR Mega localization success, block found, tracking started",
+    "licenseKey=local-secret-license"
+  ].join("\n");
+  const megaAnalysis = analyzeMiniProgramDevtoolsLog(megaLog, findMiniProgramSample("wechat-mega"));
+  assert.equal(megaAnalysis.findingCount, 0);
+  assert(megaAnalysis.successSignals.some((signal) => signal.id === "camera-ready"));
+  assert(megaAnalysis.successSignals.some((signal) => signal.id === "mega-localized"));
+  assert(!megaAnalysis.sanitizedTail.includes("local-secret-license"));
+  assert(megaAnalysis.nextActions.some((action) => action.includes("easyar_write_miniprogram_run_result")));
+
+  const crsLog = [
+    "preview compile success",
+    "Cloud Recognition recognized target office-poster successfully",
+    "apiSecret=local-secret-api"
+  ].join("\n");
+  const crsAnalysis = analyzeMiniProgramDevtoolsLog(crsLog, findMiniProgramSample("wechat-crs"));
+  assert.equal(crsAnalysis.findingCount, 0);
+  assert(crsAnalysis.successSignals.some((signal) => signal.id === "devtools-preview-ready"));
+  assert(crsAnalysis.successSignals.some((signal) => signal.id === "crs-recognized"));
+  assert(!crsAnalysis.successSignals.some((signal) => signal.id === "mega-localized"));
+  assert(!crsAnalysis.sanitizedTail.includes("local-secret-api"));
+});
+
 test("Mini Program completion report requires preflight, DevTools log, checklist, and run result", async () => {
   await withTempDir(async (root) => {
     const sample = findMiniProgramSample("wechat-crs");
