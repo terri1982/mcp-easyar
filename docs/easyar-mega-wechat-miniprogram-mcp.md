@@ -38,13 +38,20 @@ The current repository implements the first safe local-key Mini Program slice:
 - `easyar_import_miniprogram_sample_from_local_package`
 - `easyar_analyze_miniprogram_devtools_log`
 - `easyar_run_miniprogram_devtools_check`
+- `easyar_generate_miniprogram_device_validation_checklist`
+- `easyar_write_miniprogram_device_validation_checklist`
+- `easyar_generate_miniprogram_run_result_form`
+- `easyar_write_miniprogram_run_result_form`
+- `easyar_write_miniprogram_run_result`
+- `easyar_generate_miniprogram_completion_report`
+- `easyar_write_miniprogram_completion_report`
 
 Supported focused sample ids:
 
 - `wechat-mega`
 - `wechat-crs`
 
-These tools inspect local files, import user-downloaded official local packages, run local DevTools smoke checks when the CLI is available, and write redacted handoff artifacts. Upload dry-run support and real-device Mini Program evidence capture remain future work until official local sample packages, logged-in WeChat Developer Tools, and test projects are available.
+These tools inspect local files, import user-downloaded official local packages, run local DevTools smoke checks when the CLI is available, write real-device validation forms, and generate completion reports from redacted local evidence. Upload dry-run support and real-device Mini Program evidence capture remain future work until official local sample packages, logged-in WeChat Developer Tools, and test projects are available.
 
 ### Server And Catalog
 

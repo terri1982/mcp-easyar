@@ -38,13 +38,20 @@
 - `easyar_import_miniprogram_sample_from_local_package`
 - `easyar_analyze_miniprogram_devtools_log`
 - `easyar_run_miniprogram_devtools_check`
+- `easyar_generate_miniprogram_device_validation_checklist`
+- `easyar_write_miniprogram_device_validation_checklist`
+- `easyar_generate_miniprogram_run_result_form`
+- `easyar_write_miniprogram_run_result_form`
+- `easyar_write_miniprogram_run_result`
+- `easyar_generate_miniprogram_completion_report`
+- `easyar_write_miniprogram_completion_report`
 
 当前 focused sample id：
 
 - `wechat-mega`
 - `wechat-crs`
 
-这些工具会检查本地文件、导入用户已下载的官方本地包、在微信开发者工具 CLI 可用时执行本地检查，并写入脱敏交接材料。上传 dry-run 和小程序真机证据采集仍需要等用户提供本地官方 Sample 包、已登录的微信开发者工具和测试小程序工程后继续补齐。
+这些工具会检查本地文件、导入用户已下载的官方本地包、在微信开发者工具 CLI 可用时执行本地检查、写入真机验证表单，并根据本地脱敏证据生成 completion report。上传 dry-run 和小程序真机证据采集仍需要等用户提供本地官方 Sample 包、已登录的微信开发者工具和测试小程序工程后继续补齐。
 
 ### Server And Catalog
 

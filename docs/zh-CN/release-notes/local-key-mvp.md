@@ -5,7 +5,7 @@
 ## 重点
 
 - GitHub Release 正版 tarball 发布。
-- 默认 core profile 工具数约 66。
+- 默认 core profile 工具数约 73。
 - full profile 保留全部维护工具。
 - 新增中文 README 和中文文档目录。
 - Image Tracking、CRS / Cloud Recognition 与 Mega 已完成 Android 真机验证。

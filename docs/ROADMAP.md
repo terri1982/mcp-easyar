@@ -25,7 +25,7 @@ easyar-mcp-check
 - MCP guides local Unity configuration without collecting website passwords, verification codes, account tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
 - Focused Image Tracking and CRS/Cloud Recognition workflows are implemented and have safe committed Android evidence.
 - Focused Mega workflow assistance is implemented and has safe committed Android device evidence from a Unity 2022.3.62f3 APK install/startup/localization-tracking run. A separate fresh Unity project now proves official package import, APK build/install/startup, Onsite-mode readiness, and real-device localization/tracking log signals in the selected mapped environment.
-- WeChat Mini Program sample assistance has started for `wechat-mega` and `wechat-crs`: sample metadata, local project inspection, WeChat Developer Tools CLI detection, local config forms, user-downloaded official package import, DevTools smoke checks, log analysis, preflight reports, and run sequences are implemented.
+- WeChat Mini Program sample assistance has started for `wechat-mega` and `wechat-crs`: sample metadata, local project inspection, WeChat Developer Tools CLI detection, local config forms, user-downloaded official package import, DevTools smoke checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, and completion reports are implemented.
 - Unity project programming assistance exists for focused sample preflight, scene audit, run sequence, device validation, log collection, C# planning, script writing, and handoff artifacts.
 
 ## Active Scope

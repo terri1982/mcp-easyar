@@ -6,9 +6,16 @@ import { constants } from "node:fs";
 import { jsonText } from "./mcp-response.js";
 import {
   analyzeMiniProgramDevtoolsLog,
+  buildMiniProgramCompletionReport,
+  buildMiniProgramCompletionReportMarkdown,
+  buildMiniProgramDeviceValidationChecklist,
+  buildMiniProgramDeviceValidationChecklistMarkdown,
   buildMiniProgramLocalConfigForm,
   buildMiniProgramLocalConfigFormMarkdown,
   buildMiniProgramPreflightMarkdown,
+  buildMiniProgramRunResultForm,
+  buildMiniProgramRunResultFormMarkdown,
+  buildMiniProgramRunResultMarkdown,
   buildMiniProgramRunSequence,
   buildMiniProgramRunSequenceMarkdown,
   findMiniProgramSample,
@@ -336,6 +343,153 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         stdoutTail: sanitizedStdout.slice(-4000),
         stderrTail: sanitizedStderr.slice(-4000),
         analysis
+      });
+    }
+  );
+
+  registerTool(
+    "easyar_generate_miniprogram_device_validation_checklist",
+    "Generate a real-device validation checklist for an EasyAR WeChat Mini Program sample.",
+    {
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id.")
+    },
+    async ({ sampleId }) => jsonText(buildMiniProgramDeviceValidationChecklist(findMiniProgramSample(sampleId)))
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_device_validation_checklist",
+    "Write the EasyAR WeChat Mini Program real-device validation checklist into easyar-generated/<sampleId>/DEVICE_VALIDATION.md.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated checklist.")
+    },
+    async ({ projectPath, sampleId, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      const checklist = buildMiniProgramDeviceValidationChecklist(sample);
+      const result = await writeMiniProgramArtifact(root, sample, "DEVICE_VALIDATION.md", buildMiniProgramDeviceValidationChecklistMarkdown(checklist), overwrite);
+      return jsonText({
+        ...result,
+        relativePath: path.relative(root, result.path),
+        requiredStepIds: checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id),
+        note: "This checklist is a gate. Do not mark the sample complete without real-device WeChat preview evidence."
+      });
+    }
+  );
+
+  registerTool(
+    "easyar_generate_miniprogram_run_result_form",
+    "Generate a fillable run-result form and safe write template for an EasyAR WeChat Mini Program sample.",
+    {
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id.")
+    },
+    async ({ sampleId }) => jsonText(buildMiniProgramRunResultForm(findMiniProgramSample(sampleId)))
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_run_result_form",
+    "Write the EasyAR WeChat Mini Program run-result form into easyar-generated/<sampleId>/RUN_RESULT_FORM.md.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated form.")
+    },
+    async ({ projectPath, sampleId, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      const form = buildMiniProgramRunResultForm(sample);
+      const result = await writeMiniProgramArtifact(root, sample, "RUN_RESULT_FORM.md", buildMiniProgramRunResultFormMarkdown(form), overwrite);
+      return jsonText({
+        ...result,
+        relativePath: path.relative(root, result.path),
+        requiredStepIds: form.requiredStepIds,
+        safeWriteTemplate: form.safeWriteTemplate
+      });
+    }
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_run_result",
+    "Write a redacted EasyAR WeChat Mini Program run result after real-device preview evidence is available.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      overallStatus: z.enum(["blocked", "failed", "passed"]).describe("Observed overall result."),
+      devtoolsStatus: z.enum(["not-run", "blocked", "failed", "passed"]).describe("WeChat Developer Tools check result."),
+      devicePreviewStatus: z.enum(["not-run", "blocked", "failed", "passed"]).describe("Real-device WeChat preview result."),
+      passedStepIds: z.array(z.string()).default([]).describe("Required DEVICE_VALIDATION step ids that passed."),
+      evidenceSummary: z.string().describe("Short redacted evidence summary. Do not include secrets or QR codes."),
+      redactedLogPath: z.string().optional().describe("Optional local path to redacted DevTools/device log."),
+      redactedScreenshotPath: z.string().optional().describe("Optional local path to redacted screenshot evidence."),
+      deviceModel: z.string().optional().describe("Optional test phone model."),
+      wechatVersion: z.string().optional().describe("Optional WeChat version."),
+      notes: z.string().optional().describe("Optional redacted notes."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite RUN_RESULT.md.")
+    },
+    async ({ projectPath, sampleId, overallStatus, devtoolsStatus, devicePreviewStatus, passedStepIds, evidenceSummary, redactedLogPath, redactedScreenshotPath, deviceModel, wechatVersion, notes, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      const markdown = buildMiniProgramRunResultMarkdown({
+        sample,
+        overallStatus,
+        devtoolsStatus,
+        devicePreviewStatus,
+        passedStepIds,
+        evidenceSummary: redactMiniProgramSecretText(evidenceSummary),
+        redactedLogPath,
+        redactedScreenshotPath,
+        deviceModel,
+        wechatVersion,
+        notes: notes ? redactMiniProgramSecretText(notes) : undefined
+      });
+      const result = await writeMiniProgramArtifact(root, sample, "RUN_RESULT.md", markdown, overwrite);
+      return jsonText({
+        ...result,
+        relativePath: path.relative(root, result.path),
+        runThroughComplete: /Run-through complete:\s+yes/i.test(markdown),
+        note: "RUN_RESULT.md is only accepted as completion evidence when real-device preview evidence is recorded and all required step ids passed."
+      });
+    }
+  );
+
+  registerTool(
+    "easyar_generate_miniprogram_completion_report",
+    "Generate the completion report for an EasyAR WeChat Mini Program sample from local preflight, DevTools, and run-result evidence.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id.")
+    },
+    async ({ projectPath, sampleId }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      return jsonText(await buildMiniProgramCompletionReport(root, sample));
+    }
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_completion_report",
+    "Write the EasyAR WeChat Mini Program completion report into easyar-generated/<sampleId>/COMPLETION_REPORT.md.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite an existing completion report.")
+    },
+    async ({ projectPath, sampleId, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      const report = await buildMiniProgramCompletionReport(root, sample);
+      const result = await writeMiniProgramArtifact(root, sample, "COMPLETION_REPORT.md", buildMiniProgramCompletionReportMarkdown(report), overwrite);
+      return jsonText({
+        ...result,
+        relativePath: path.relative(root, result.path),
+        runThroughComplete: report.runThroughComplete,
+        blockers: report.blockers
       });
     }
   );

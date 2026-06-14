@@ -12,7 +12,7 @@ easyar-mcp-check
 ## 已完成
 
 - GitHub Release tarball 可安装。
-- 默认 core profile 启用约 66 个工具，低于常见 MCP 客户端 80 个工具警告线。
+- 默认 core profile 启用约 73 个工具，低于常见 MCP 客户端 80 个工具警告线。
 - full profile 仍可通过 `MCP_EASYAR_TOOL_PROFILE=full easyar-mcp` 启用全部维护工具。
 - 已跑通并具备 safe release evidence：
   - Image Tracking
@@ -24,12 +24,12 @@ easyar-mcp-check
 - Codex、Claude Desktop、通用 JSON MCP client 配置生成可用。
 - 新用户注册/登录/下载/key 创建采用浏览器引导，不收集官网密码或密钥。
 - Unity 项目编程辅助可生成 preflight、scene audit、run sequence、device validation、programming context、code plan、C# review、handoff artifact。
-- 微信小程序方向已新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample 元数据，并提供小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence 和 `easyar://samples/wechat-miniprogram` resource。
+- 微信小程序方向已新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample 元数据，并提供小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report 和 `easyar://samples/wechat-miniprogram` resource。
 
 ## 未完成
 
 - Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 尚未纳入当前目标。
-- 微信小程序 Mega / CRS 目前已覆盖本地检查、本地官方包导入、DevTools 检查和日志分析；尚未声明完成微信预览、上传或真机识别/定位验收。
+- 微信小程序 Mega / CRS 目前已覆盖本地检查、本地官方包导入、DevTools 检查、日志分析、真机验证清单、run result 和 completion report；尚未声明完成微信预览、上传或真机识别/定位验收。
 - 生产官方 API 自动化仍需 EasyAR-owned account/license/download/CRS endpoint。
 - npm production publish 仍应等待生产 gate 或明确 prerelease 策略。
 

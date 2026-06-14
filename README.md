@@ -10,7 +10,7 @@
 
 当前公开版本是 local-key MVP：用户在 EasyAR 官网注册、登录、下载官方插件并创建本地 license / CRS key；MCP 只做引导、检查和 Unity 自动化，不接触官网密码、验证码、license key、API Secret 或 appSecret。
 
-当前工作树开始增加微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight 和 run sequence。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
+当前工作树开始增加微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result 和 completion report。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
 
 ## 当前状态
 
@@ -42,7 +42,7 @@ easyar-mcp-check
 
 ## 工具数量
 
-`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 66 个，低于常见 MCP 客户端 80 个工具的警告线。
+`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 73 个，低于常见 MCP 客户端 80 个工具的警告线。
 
 如果维护仓库、调试官方 API 合同或需要全部工具，可以用 full profile：
 
@@ -102,6 +102,9 @@ easyar_write_miniprogram_preflight projectPath=/path/to/miniprogram sampleId=wec
 easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=true
 easyar_analyze_miniprogram_devtools_log projectPath=/path/to/miniprogram sampleId=wechat-mega logPath=easyar-generated/wechat-mega/DEVTOOLS_CHECK.log
 easyar_write_miniprogram_run_sequence projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_device_validation_checklist projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_run_result_form projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram sampleId=wechat-mega
 ```
 
 CRS 小程序把 `sampleId` 改成 `wechat-crs`。用户仍需自己在 EasyAR 官网和微信开发者工具中完成注册、登录、下载、license / CRS key 创建和真机预览。

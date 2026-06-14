@@ -404,6 +404,341 @@ export function buildMiniProgramRunSequenceMarkdown(sequence: ReturnType<typeof 
   ].join("\n");
 }
 
+export function buildMiniProgramDeviceValidationChecklist(sample: MiniProgramSampleInfo) {
+  const sampleSpecificSteps = sample.id === "wechat-mega"
+    ? [
+        {
+          id: "mega-service-ready",
+          title: "Mega service and block metadata",
+          requiredForCompletion: true,
+          passCriteria: "The local config points to the intended Mega app/server and selected block/library metadata.",
+          evidencePrompt: "Record non-secret Mega app id, server host, block name, and block id presence only."
+        },
+        {
+          id: "mega-localized-on-device",
+          title: "Real-device Mega localization",
+          requiredForCompletion: true,
+          passCriteria: "A real phone running the WeChat preview reports localization/tracking success in the mapped environment.",
+          evidencePrompt: "Attach a redacted DevTools/device log excerpt showing Mega localization success, block found, tracking, or equivalent official sample success signal."
+        }
+      ]
+    : [
+        {
+          id: "crs-service-ready",
+          title: "CRS service and target library",
+          requiredForCompletion: true,
+          passCriteria: "The local config points to the intended CRS app/server and test target library.",
+          evidencePrompt: "Record non-secret CRS app id, server host, and target/library name presence only."
+        },
+        {
+          id: "crs-recognized-on-device",
+          title: "Real-device Cloud Recognition",
+          requiredForCompletion: true,
+          passCriteria: "A real phone running the WeChat preview recognizes the intended cloud target.",
+          evidencePrompt: "Attach a redacted DevTools/device log excerpt or screenshot note showing target recognition success."
+        }
+      ];
+  return {
+    generatedAt: new Date().toISOString(),
+    sample: {
+      id: sample.id,
+      name: sample.name
+    },
+    steps: [
+      {
+        id: "official-login",
+        title: "Official tool sessions",
+        requiredForCompletion: true,
+        passCriteria: "EasyAR website and WeChat Developer Tools are used through the user's own official sessions.",
+        evidencePrompt: "Record that official sessions were used; do not store passwords, QR codes, or tokens."
+      },
+      {
+        id: "project-preflight",
+        title: "Local project preflight",
+        requiredForCompletion: true,
+        passCriteria: "PREFLIGHT.md has no blocked project checks and required local config fields are present.",
+        evidencePrompt: "Reference easyar-generated/<sampleId>/PREFLIGHT.md and record blocked check count."
+      },
+      {
+        id: "devtools-check",
+        title: "WeChat Developer Tools check",
+        requiredForCompletion: true,
+        passCriteria: "DevTools opens or compiles/previews the project without blocker findings.",
+        evidencePrompt: "Reference DEVTOOLS_CHECK.log or a redacted log analyzed by easyar_analyze_miniprogram_devtools_log."
+      },
+      {
+        id: "real-device-preview",
+        title: "Real-device WeChat preview",
+        requiredForCompletion: true,
+        passCriteria: "A real phone scans the WeChat preview and grants camera permission.",
+        evidencePrompt: "Record device model, WeChat preview path, camera permission result, and redacted screenshot/log note."
+      },
+      ...sampleSpecificSteps
+    ],
+    completionAcceptanceRules: [
+      "All required validation steps must pass before the Mini Program sample is marked complete.",
+      "A DevTools open check alone is not enough; real-device preview evidence is required.",
+      "Screenshots and logs must be redacted before they are shared or committed.",
+      "Do not commit QR codes, upload keys, EasyAR license keys, CRS API secrets, WeChat credentials, or raw account logs."
+    ],
+    security: [
+      "The checklist records paths, booleans, non-secret ids/names, and redacted excerpts only.",
+      "The user performs EasyAR and WeChat login, package download, license/key creation, and preview in official tools."
+    ]
+  };
+}
+
+export function buildMiniProgramDeviceValidationChecklistMarkdown(checklist: ReturnType<typeof buildMiniProgramDeviceValidationChecklist>) {
+  return [
+    `# ${checklist.sample.name} Device Validation Checklist`,
+    "",
+    `Generated: ${checklist.generatedAt}`,
+    "",
+    "## Steps",
+    "",
+    ...checklist.steps.flatMap((step, index) => [
+      `${index + 1}. ${step.title}`,
+      "",
+      `   - Required for completion: ${step.requiredForCompletion ? "yes" : "no"}`,
+      `   - Pass criteria: ${step.passCriteria}`,
+      `   - Evidence: ${step.evidencePrompt}`,
+      ""
+    ]),
+    "## Completion Acceptance Rules",
+    "",
+    ...checklist.completionAcceptanceRules.map((rule) => `- ${rule}`),
+    "",
+    "## Security",
+    "",
+    ...checklist.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
+export function buildMiniProgramRunResultForm(sample: MiniProgramSampleInfo) {
+  const checklist = buildMiniProgramDeviceValidationChecklist(sample);
+  return {
+    generatedAt: new Date().toISOString(),
+    sample: checklist.sample,
+    resultFile: "RUN_RESULT.md",
+    fields: {
+      overallStatus: "blocked | failed | passed",
+      devtoolsStatus: "not-run | blocked | failed | passed",
+      devicePreviewStatus: "not-run | blocked | failed | passed",
+      deviceModel: "",
+      wechatVersion: "",
+      observedBehavior: "",
+      redactedLogPath: "",
+      redactedScreenshotPath: "",
+      notes: ""
+    },
+    requiredStepIds: checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id),
+    safeWriteTemplate: {
+      projectPath: "/path/to/miniprogram",
+      sampleId: sample.id,
+      overallStatus: "passed",
+      devtoolsStatus: "passed",
+      devicePreviewStatus: "passed",
+      passedStepIds: checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id),
+      evidenceSummary: sample.id === "wechat-mega"
+        ? "Real-device WeChat preview localized in the mapped Mega environment; redacted log/screenshot evidence recorded locally."
+        : "Real-device WeChat preview recognized the intended CRS cloud target; redacted log/screenshot evidence recorded locally."
+    },
+    completionAcceptanceRules: checklist.completionAcceptanceRules,
+    security: checklist.security
+  };
+}
+
+export function buildMiniProgramRunResultFormMarkdown(form: ReturnType<typeof buildMiniProgramRunResultForm>) {
+  return [
+    `# ${form.sample.name} Run Result Form`,
+    "",
+    `Generated: ${form.generatedAt}`,
+    "",
+    "## Fill Locally",
+    "",
+    "```json",
+    JSON.stringify(form.fields, null, 2),
+    "```",
+    "",
+    "## Required Step IDs",
+    "",
+    ...form.requiredStepIds.map((id) => `- \`${id}\``),
+    "",
+    "## Safe MCP Write Template",
+    "",
+    "```json",
+    JSON.stringify(form.safeWriteTemplate, null, 2),
+    "```",
+    "",
+    "## Completion Acceptance Rules",
+    "",
+    ...form.completionAcceptanceRules.map((rule) => `- ${rule}`),
+    "",
+    "## Security",
+    "",
+    ...form.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
+export function buildMiniProgramRunResultMarkdown(input: {
+  sample: MiniProgramSampleInfo;
+  overallStatus: "blocked" | "failed" | "passed";
+  devtoolsStatus: "not-run" | "blocked" | "failed" | "passed";
+  devicePreviewStatus: "not-run" | "blocked" | "failed" | "passed";
+  passedStepIds: string[];
+  evidenceSummary: string;
+  redactedLogPath?: string;
+  redactedScreenshotPath?: string;
+  deviceModel?: string;
+  wechatVersion?: string;
+  notes?: string;
+}) {
+  const checklist = buildMiniProgramDeviceValidationChecklist(input.sample);
+  const requiredStepIds = checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id);
+  const missingRequiredStepIds = requiredStepIds.filter((id) => !input.passedStepIds.includes(id));
+  const runThroughComplete = input.overallStatus === "passed"
+    && input.devtoolsStatus === "passed"
+    && input.devicePreviewStatus === "passed"
+    && missingRequiredStepIds.length === 0
+    && input.evidenceSummary.trim().length > 0;
+  return [
+    `# ${input.sample.name} Run Result`,
+    "",
+    `Generated: ${new Date().toISOString()}`,
+    "",
+    `Overall status: ${input.overallStatus}`,
+    `DevTools status: ${input.devtoolsStatus}`,
+    `Device preview status: ${input.devicePreviewStatus}`,
+    `Run-through complete: ${runThroughComplete ? "yes" : "no"}`,
+    "",
+    "## Evidence",
+    "",
+    `Device model: ${input.deviceModel?.trim() || "not recorded"}`,
+    `WeChat version: ${input.wechatVersion?.trim() || "not recorded"}`,
+    `Redacted log path: ${input.redactedLogPath?.trim() || "not recorded"}`,
+    `Redacted screenshot path: ${input.redactedScreenshotPath?.trim() || "not recorded"}`,
+    "",
+    input.evidenceSummary.trim() || "No evidence summary recorded.",
+    "",
+    "## Passed Required Steps",
+    "",
+    ...input.passedStepIds.map((id) => `- \`${id}\``),
+    "",
+    "## Missing Required Steps",
+    "",
+    ...(missingRequiredStepIds.length > 0 ? missingRequiredStepIds.map((id) => `- \`${id}\``) : ["No missing required steps."]),
+    "",
+    "## Notes",
+    "",
+    input.notes?.trim() || "No notes.",
+    "",
+    "## Security",
+    "",
+    ...checklist.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
+export async function buildMiniProgramCompletionReport(root: string, sample: MiniProgramSampleInfo) {
+  const preflightPath = path.join(root, "easyar-generated", sample.id, "PREFLIGHT.md");
+  const checklistPath = path.join(root, "easyar-generated", sample.id, "DEVICE_VALIDATION.md");
+  const runResultPath = path.join(root, "easyar-generated", sample.id, "RUN_RESULT.md");
+  const devtoolsLogPath = path.join(root, "easyar-generated", sample.id, "DEVTOOLS_CHECK.log");
+  const preflightText = await readOptionalText(preflightPath);
+  const checklistText = await readOptionalText(checklistPath);
+  const runResultText = await readOptionalText(runResultPath);
+  const devtoolsLogText = await readOptionalText(devtoolsLogPath);
+  const devtoolsAnalysis = devtoolsLogText ? analyzeMiniProgramDevtoolsLog(devtoolsLogText, sample) : null;
+  const checks = [
+    {
+      id: "preflight",
+      status: preflightText && !/BLOCKED\s+-/i.test(preflightText) ? "passed" : "blocked",
+      evidence: preflightText ? "PREFLIGHT.md exists and was inspected." : "PREFLIGHT.md is missing."
+    },
+    {
+      id: "device-validation-checklist",
+      status: checklistText ? "passed" : "blocked",
+      evidence: checklistText ? "DEVICE_VALIDATION.md exists." : "DEVICE_VALIDATION.md is missing."
+    },
+    {
+      id: "devtools-log",
+      status: devtoolsLogText && (devtoolsAnalysis?.findingCount ?? 0) === 0 ? "passed" : "blocked",
+      evidence: devtoolsLogText ? `DEVTOOLS_CHECK.log exists; blocker findings=${devtoolsAnalysis?.findingCount ?? "unknown"}.` : "DEVTOOLS_CHECK.log is missing."
+    },
+    {
+      id: "run-result",
+      status: runResultText && /Run-through complete:\s+yes/i.test(runResultText) ? "passed" : "blocked",
+      evidence: runResultText ? "RUN_RESULT.md exists." : "RUN_RESULT.md is missing."
+    }
+  ];
+  const blockers = checks
+    .filter((check) => check.status !== "passed")
+    .map((check) => ({
+      id: check.id,
+      detail: check.evidence,
+      action: miniProgramCompletionAction(check.id, sample)
+    }));
+  const runThroughComplete = blockers.length === 0;
+  return {
+    generatedAt: new Date().toISOString(),
+    sample: {
+      id: sample.id,
+      name: sample.name
+    },
+    runThroughComplete,
+    checks,
+    blockers,
+    evidencePaths: {
+      preflight: path.relative(root, preflightPath),
+      deviceValidation: path.relative(root, checklistPath),
+      devtoolsLog: path.relative(root, devtoolsLogPath),
+      runResult: path.relative(root, runResultPath)
+    },
+    devtoolsFindings: devtoolsAnalysis?.findings ?? [],
+    security: [
+      "Completion requires real-device WeChat preview evidence, not only generated files.",
+      "The report references local redacted artifacts only and must not include secrets, QR codes, license keys, CRS API secrets, or raw private logs."
+    ]
+  };
+}
+
+export function buildMiniProgramCompletionReportMarkdown(report: Awaited<ReturnType<typeof buildMiniProgramCompletionReport>>) {
+  return [
+    `# ${report.sample.name} Completion Report`,
+    "",
+    `Generated: ${report.generatedAt}`,
+    "",
+    `Run-through complete: ${report.runThroughComplete ? "yes" : "no"}`,
+    "",
+    "## Checks",
+    "",
+    ...report.checks.map((check) => `- ${check.status.toUpperCase()} ${check.id}: ${check.evidence}`),
+    "",
+    "## Blockers",
+    "",
+    ...(report.blockers.length > 0
+      ? report.blockers.map((blocker) => `- ${blocker.id}: ${blocker.detail} Action: ${blocker.action}`)
+      : ["No completion blockers."]),
+    "",
+    "## Evidence Paths",
+    "",
+    ...Object.entries(report.evidencePaths).map(([key, value]) => `- ${key}: \`${value}\``),
+    "",
+    "## DevTools Findings",
+    "",
+    ...(report.devtoolsFindings.length > 0
+      ? report.devtoolsFindings.map((finding) => `- ${finding.severity} ${finding.id}: ${finding.evidence ?? "no line evidence"}`)
+      : ["No known DevTools blocker findings."]),
+    "",
+    "## Security",
+    "",
+    ...report.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
 export async function writeMiniProgramArtifact(root: string, sample: MiniProgramSampleInfo, fileName: string, contents: string, overwrite: boolean) {
   const target = path.join(root, "easyar-generated", sample.id, fileName);
   const relative = path.relative(root, target);
@@ -606,6 +941,29 @@ export function analyzeMiniProgramDevtoolsLog(logText: string, sample: MiniProgr
 
 function firstMatchingLine(text: string, pattern: RegExp) {
   return text.split(/\r?\n/).find((line) => pattern.test(line))?.trim() ?? null;
+}
+
+async function readOptionalText(filePath: string) {
+  try {
+    return await readFile(filePath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function miniProgramCompletionAction(checkId: string, sample: MiniProgramSampleInfo) {
+  switch (checkId) {
+    case "preflight":
+      return `Run easyar_write_miniprogram_preflight projectPath=<project> sampleId=${sample.id} and resolve blocked checks.`;
+    case "device-validation-checklist":
+      return `Run easyar_write_miniprogram_device_validation_checklist projectPath=<project> sampleId=${sample.id}.`;
+    case "devtools-log":
+      return `Run easyar_run_miniprogram_devtools_check projectPath=<project> sampleId=${sample.id} dryRun=false, or analyze a redacted DevTools log.`;
+    case "run-result":
+      return `Run easyar_write_miniprogram_run_result after real-device preview evidence is available for ${sample.id}.`;
+    default:
+      return "Collect the missing Mini Program evidence and rerun the completion report.";
+  }
 }
 
 export function redactMiniProgramSecretText(text: string) {
