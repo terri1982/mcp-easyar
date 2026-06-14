@@ -19,7 +19,7 @@ Current readiness is split into two tracks:
 
 Current delivery path: use local-key MVP first. Users register/log in/download/create keys on the official EasyAR website in their own browser, then MCP guides local Unity configuration, validates redacted presence, and runs the focused Unity workflow without handling website passwords.
 
-The current worktree also starts the WeChat Mini Program sample track. It covers `wechat-mega` and `wechat-crs` first with local project inspection, WeChat Developer Tools CLI detection, local config forms, local official package import, DevTools checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, and completion reports. Mini Program support remains an official browser/tool handoff path: no automated login, no download-gate bypass, and no secret collection in chat.
+The current worktree also starts the WeChat Mini Program sample track. It covers `wechat-mega` and `wechat-crs` first with local project inspection, WeChat Developer Tools CLI detection, local config forms, local official package import, DevTools checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, completion reports, and Mini Program scope status. Mini Program support remains an official browser/tool handoff path: no automated login, no download-gate bypass, and no secret collection in chat.
 
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
@@ -209,6 +209,7 @@ easyar_write_miniprogram_run_sequence projectPath=/path/to/miniprogram sampleId=
 easyar_write_miniprogram_device_validation_checklist projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_run_result_form projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 Use `sampleId=wechat-crs` for the CRS path. The user still downloads official packages and manages EasyAR/WeChat credentials in the official website or official developer tools.

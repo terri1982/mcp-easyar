@@ -70,6 +70,7 @@ Mega 示例：
 ```text
 easyar_write_miniprogram_run_result projectPath=/path/to/miniprogram sampleId=wechat-mega overallStatus=passed devtoolsStatus=passed devicePreviewStatus=passed passedStepIds='["official-login","project-preflight","devtools-check","real-device-preview","mega-service-ready","mega-localized-on-device"]' evidenceSummary="Real-device WeChat preview localized in the mapped Mega environment; redacted log/screenshot evidence recorded locally."
 easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 CRS 示例：
@@ -77,6 +78,7 @@ CRS 示例：
 ```text
 easyar_write_miniprogram_run_result projectPath=/path/to/miniprogram sampleId=wechat-crs overallStatus=passed devtoolsStatus=passed devicePreviewStatus=passed passedStepIds='["official-login","project-preflight","devtools-check","real-device-preview","crs-service-ready","crs-recognized-on-device"]' evidenceSummary="Real-device WeChat preview recognized the intended CRS cloud target; redacted log/screenshot evidence recorded locally."
 easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram sampleId=wechat-crs
+easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 `COMPLETION_REPORT.md` 只有在以下条件都满足时才算 complete：
@@ -86,8 +88,8 @@ easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram samp
 - `DEVTOOLS_CHECK.log` 存在，并且没有已知 blocker finding。
 - `RUN_RESULT.md` 显示 `Run-through complete: yes`。
 - run result 记录了真实手机预览证据。
+- `MINIPROGRAM_SCOPE_STATUS.md` 只有在 `wechat-mega` 和 `wechat-crs` 两个 completion report 都通过后，才会显示 `All Mini Program samples complete: yes`。
 
 ## 发布声明原则
 
 不要只凭生成出来的文档就声称 `wechat-mega` 或 `wechat-crs` 已跑通。有效公开声明必须同时具备本地工程 artifacts 和脱敏真机证据。编译/打开成功是有效进展，但不是 Sample 完成。
-

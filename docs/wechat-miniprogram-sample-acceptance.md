@@ -70,6 +70,7 @@ Example for Mega:
 ```text
 easyar_write_miniprogram_run_result projectPath=/path/to/miniprogram sampleId=wechat-mega overallStatus=passed devtoolsStatus=passed devicePreviewStatus=passed passedStepIds='["official-login","project-preflight","devtools-check","real-device-preview","mega-service-ready","mega-localized-on-device"]' evidenceSummary="Real-device WeChat preview localized in the mapped Mega environment; redacted log/screenshot evidence recorded locally."
 easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 Example for CRS:
@@ -77,6 +78,7 @@ Example for CRS:
 ```text
 easyar_write_miniprogram_run_result projectPath=/path/to/miniprogram sampleId=wechat-crs overallStatus=passed devtoolsStatus=passed devicePreviewStatus=passed passedStepIds='["official-login","project-preflight","devtools-check","real-device-preview","crs-service-ready","crs-recognized-on-device"]' evidenceSummary="Real-device WeChat preview recognized the intended CRS cloud target; redacted log/screenshot evidence recorded locally."
 easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram sampleId=wechat-crs
+easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 `COMPLETION_REPORT.md` is complete only when:
@@ -86,8 +88,8 @@ easyar_write_miniprogram_completion_report projectPath=/path/to/miniprogram samp
 - `DEVTOOLS_CHECK.log` exists and has no known blocker findings.
 - `RUN_RESULT.md` says `Run-through complete: yes`.
 - The run result references real-device preview evidence.
+- `MINIPROGRAM_SCOPE_STATUS.md` reports `All Mini Program samples complete: yes` only after both `wechat-mega` and `wechat-crs` completion reports pass.
 
 ## Release Claim Policy
 
 Do not claim `wechat-mega` or `wechat-crs` is run through from generated artifacts alone. A valid public claim needs the local project artifacts plus redacted real-device evidence. Compile/open success alone is useful progress, but it is not sample completion.
-

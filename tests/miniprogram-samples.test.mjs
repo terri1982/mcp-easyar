@@ -8,6 +8,8 @@ import {
   buildMiniProgramCompletionReport,
   buildMiniProgramDeviceValidationChecklist,
   buildMiniProgramRunResultMarkdown,
+  buildMiniProgramScopeStatus,
+  buildMiniProgramScopeStatusMarkdown,
   findMiniProgramSample,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
@@ -166,6 +168,46 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     report = await buildMiniProgramCompletionReport(root, sample);
     assert.equal(report.runThroughComplete, true);
     assert.deepEqual(report.blockers, []);
+  });
+});
+
+test("Mini Program scope status aggregates Mega and CRS completion reports", async () => {
+  await withTempDir(async (root) => {
+    let status = await buildMiniProgramScopeStatus(root);
+    assert.equal(status.allMiniProgramSamplesComplete, false);
+    assert.equal(status.completedCount, 0);
+    assert.deepEqual(status.sampleIds, ["wechat-mega", "wechat-crs"]);
+
+    for (const sampleId of status.sampleIds) {
+      const sample = findMiniProgramSample(sampleId);
+      const generated = path.join(root, "easyar-generated", sample.id);
+      await mkdir(generated, { recursive: true });
+      const checklist = buildMiniProgramDeviceValidationChecklist(sample);
+      const requiredStepIds = checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id);
+      await writeFile(path.join(generated, "PREFLIGHT.md"), "- PASSED - project.config.json: Found.\n");
+      await writeFile(path.join(generated, "DEVICE_VALIDATION.md"), "# Device Validation\n");
+      await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "compile ok\npreview ready\n");
+      await writeFile(
+        path.join(generated, "RUN_RESULT.md"),
+        buildMiniProgramRunResultMarkdown({
+          sample,
+          overallStatus: "passed",
+          devtoolsStatus: "passed",
+          devicePreviewStatus: "passed",
+          passedStepIds: requiredStepIds,
+          evidenceSummary: `${sample.id} real-device WeChat preview passed with redacted evidence.`
+        })
+      );
+    }
+
+    status = await buildMiniProgramScopeStatus(root);
+    assert.equal(status.allMiniProgramSamplesComplete, true);
+    assert.equal(status.completedCount, 2);
+    assert.equal(status.items.every((item) => item.runThroughComplete), true);
+    const markdown = buildMiniProgramScopeStatusMarkdown(status);
+    assert(markdown.includes("All Mini Program samples complete: yes"));
+    assert(markdown.includes("wechat-mega"));
+    assert(markdown.includes("wechat-crs"));
   });
 });
 

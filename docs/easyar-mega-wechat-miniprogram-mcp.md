@@ -45,6 +45,8 @@ The current repository implements the first safe local-key Mini Program slice:
 - `easyar_write_miniprogram_run_result`
 - `easyar_generate_miniprogram_completion_report`
 - `easyar_write_miniprogram_completion_report`
+- `easyar_generate_miniprogram_scope_status`
+- `easyar_write_miniprogram_scope_status`
 
 Supported focused sample ids:
 

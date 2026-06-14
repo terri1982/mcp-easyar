@@ -18,6 +18,8 @@ import {
   buildMiniProgramRunResultMarkdown,
   buildMiniProgramRunSequence,
   buildMiniProgramRunSequenceMarkdown,
+  buildMiniProgramScopeStatus,
+  buildMiniProgramScopeStatusMarkdown,
   findMiniProgramSample,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
@@ -490,6 +492,64 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         relativePath: path.relative(root, result.path),
         runThroughComplete: report.runThroughComplete,
         blockers: report.blockers
+      });
+    }
+  );
+
+  registerTool(
+    "easyar_generate_miniprogram_scope_status",
+    "Generate a scope status across the focused EasyAR WeChat Mini Program samples: wechat-mega and wechat-crs.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path.")
+    },
+    async ({ projectPath }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      return jsonText(await buildMiniProgramScopeStatus(root));
+    }
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_scope_status",
+    "Write a scope status across wechat-mega and wechat-crs into easyar-generated/MINIPROGRAM_SCOPE_STATUS.md.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite an existing Mini Program scope status report.")
+    },
+    async ({ projectPath, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const status = await buildMiniProgramScopeStatus(root);
+      const target = path.join(root, "easyar-generated", "MINIPROGRAM_SCOPE_STATUS.md");
+      const relative = path.relative(root, target);
+      if (relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw new Error("Target path must stay inside the Mini Program project.");
+      }
+      if (!overwrite) {
+        try {
+          await access(target, constants.F_OK);
+          return jsonText({
+            written: false,
+            path: target,
+            relativePath: relative,
+            allMiniProgramSamplesComplete: status.allMiniProgramSamplesComplete,
+            completedCount: status.completedCount,
+            totalCount: status.totalCount
+          });
+        } catch {
+          // File is absent; continue and write it.
+        }
+      }
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, buildMiniProgramScopeStatusMarkdown(status), "utf8");
+      return jsonText({
+        written: true,
+        path: target,
+        relativePath: relative,
+        allMiniProgramSamplesComplete: status.allMiniProgramSamplesComplete,
+        completedCount: status.completedCount,
+        totalCount: status.totalCount,
+        blockers: status.items.flatMap((item) => item.blockers.map((blocker) => ({ sampleId: item.sampleId, ...blocker })))
       });
     }
   );

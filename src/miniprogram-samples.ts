@@ -739,6 +739,94 @@ export function buildMiniProgramCompletionReportMarkdown(report: Awaited<ReturnT
   ].join("\n");
 }
 
+export async function buildMiniProgramScopeStatus(root: string) {
+  const items = [];
+  for (const sample of miniProgramSamples) {
+    const report = await buildMiniProgramCompletionReport(root, sample);
+    const completionReportPath = path.join(root, "easyar-generated", sample.id, "COMPLETION_REPORT.md");
+    const completionReportText = await readOptionalText(completionReportPath);
+    items.push({
+      sampleId: sample.id,
+      sampleName: sample.name,
+      runThroughComplete: report.runThroughComplete,
+      completionReportExists: completionReportText !== null,
+      completionReportPath: path.relative(root, completionReportPath),
+      blockerCount: report.blockers.length,
+      blockers: report.blockers,
+      evidencePaths: report.evidencePaths
+    });
+  }
+  const completedCount = items.filter((item) => item.runThroughComplete).length;
+  const allMiniProgramSamplesComplete = completedCount === items.length;
+  return {
+    generatedAt: new Date().toISOString(),
+    allMiniProgramSamplesComplete,
+    completedCount,
+    totalCount: items.length,
+    sampleIds: items.map((item) => item.sampleId),
+    items,
+    nextActions: allMiniProgramSamplesComplete
+      ? [
+          "Review every referenced artifact and redacted evidence before making a public completion claim.",
+          "Keep raw EasyAR, WeChat, CRS, license, QR code, and private log material out of GitHub."
+        ]
+      : items
+          .filter((item) => !item.runThroughComplete)
+          .flatMap((item) => [
+            `Complete ${item.sampleId}: run the real-device WeChat preview, write RUN_RESULT.md, then regenerate COMPLETION_REPORT.md.`,
+            `Rerun easyar_write_miniprogram_scope_status after ${item.sampleId} completion evidence is updated.`
+          ]),
+    security: [
+      "This status summarizes local redacted artifacts only.",
+      "Do not treat allMiniProgramSamplesComplete=true as valid unless the underlying artifacts contain real-device preview evidence.",
+      "Do not commit raw logs, preview QR codes, EasyAR license keys, CRS API secrets, WeChat credentials, upload keys, or app secrets."
+    ]
+  };
+}
+
+export function buildMiniProgramScopeStatusMarkdown(status: Awaited<ReturnType<typeof buildMiniProgramScopeStatus>>) {
+  return [
+    "# EasyAR WeChat Mini Program Scope Status",
+    "",
+    `Generated: ${status.generatedAt}`,
+    "",
+    `All Mini Program samples complete: ${status.allMiniProgramSamplesComplete ? "yes" : "no"}`,
+    `Completed: ${status.completedCount}/${status.totalCount}`,
+    `Sample IDs: ${status.sampleIds.join(", ")}`,
+    "",
+    "## Samples",
+    "",
+    ...status.items.flatMap((item) => [
+      `### ${item.sampleId}`,
+      "",
+      `Name: ${item.sampleName}`,
+      `Run-through complete: ${item.runThroughComplete ? "yes" : "no"}`,
+      `Completion report exists: ${item.completionReportExists ? "yes" : "no"}`,
+      `Completion report path: \`${item.completionReportPath}\``,
+      `Blocker count: ${item.blockerCount}`,
+      "",
+      "Blockers:",
+      "",
+      ...(item.blockers.length > 0
+        ? item.blockers.map((blocker) => `- ${blocker.id}: ${blocker.detail} Action: ${blocker.action}`)
+        : ["No blockers."]),
+      "",
+      "Evidence paths:",
+      "",
+      ...Object.entries(item.evidencePaths).map(([key, value]) => `- ${key}: \`${value}\``),
+      ""
+    ]),
+    "## Next Actions",
+    "",
+    ...status.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    ...status.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
 export async function writeMiniProgramArtifact(root: string, sample: MiniProgramSampleInfo, fileName: string, contents: string, overwrite: boolean) {
   const target = path.join(root, "easyar-generated", sample.id, fileName);
   const relative = path.relative(root, target);
