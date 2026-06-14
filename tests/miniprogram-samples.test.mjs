@@ -19,7 +19,8 @@ import {
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
   miniProgramSamples,
-  redactMiniProgramSecretText
+  redactMiniProgramSecretText,
+  validateMiniProgramZipEntries
 } from "../dist/miniprogram-samples.js";
 import { resourceCatalog } from "../dist/catalog.js";
 import { registerResources } from "../dist/resources.js";
@@ -178,6 +179,25 @@ test("importMiniProgramSampleFromLocalPackage accepts a user-downloaded zip pack
     assert(copiedSdk.includes("sdk"));
     await assert.rejects(() => readFile(path.join(copied.target, "easyar.crs.local.json"), "utf8"));
   });
+});
+
+test("validateMiniProgramZipEntries rejects zip-slip style paths", () => {
+  assert.deepEqual(
+    validateMiniProgramZipEntries(["sdk/easyar-crs.js", "miniprogram/app.json"]).safe,
+    true
+  );
+  const result = validateMiniProgramZipEntries([
+    "sdk/easyar-crs.js",
+    "../outside.txt",
+    "/tmp/absolute.txt",
+    "C:/Users/example/private.txt",
+    "nested\\..\\outside.txt"
+  ]);
+  assert.equal(result.safe, false);
+  assert(result.unsafeEntries.includes("../outside.txt"));
+  assert(result.unsafeEntries.includes("/tmp/absolute.txt"));
+  assert(result.unsafeEntries.includes("C:/Users/example/private.txt"));
+  assert(result.unsafeEntries.includes("nested\\..\\outside.txt"));
 });
 
 test("Mini Program workspace scaffold creates a safe project shell", async () => {

@@ -1201,6 +1201,16 @@ async function resolveOfficialPackageSource(inputRoot: string, packagePath: stri
     throw new Error(`Official local package path does not exist: ${resolvedPackagePath}`);
   }
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "mcp-easyar-miniprogram-"));
+  const listResult = await runProcess("unzip", ["-Z", "-1", resolvedPackagePath], 120);
+  if (listResult.exitCode !== 0) {
+    await rm(tempRoot, { recursive: true, force: true });
+    throw new Error(`Failed to inspect official .zip package with unzip: ${listResult.stderr || listResult.stdout || "unknown unzip list error"}`);
+  }
+  const zipValidation = validateMiniProgramZipEntries(listResult.stdout.split(/\r?\n/));
+  if (!zipValidation.safe) {
+    await rm(tempRoot, { recursive: true, force: true });
+    throw new Error(`Refusing to extract unsafe official .zip package entries: ${zipValidation.unsafeEntries.join(", ")}`);
+  }
   const unzipResult = await runProcess("unzip", ["-q", resolvedPackagePath, "-d", tempRoot], 120);
   if (unzipResult.exitCode !== 0) {
     await rm(tempRoot, { recursive: true, force: true });
@@ -1223,6 +1233,23 @@ async function chooseExtractedPackageRoot(tempRoot: string) {
     return path.join(tempRoot, visibleEntries[0].name);
   }
   return tempRoot;
+}
+
+export function validateMiniProgramZipEntries(entries: string[]) {
+  const unsafeEntries = entries
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .filter((entry) => {
+      const normalizedEntry = entry.replace(/\\/g, "/");
+      const parts = normalizedEntry.split("/").filter(Boolean);
+      return normalizedEntry.startsWith("/")
+        || /^[A-Za-z]:/.test(normalizedEntry)
+        || parts.some((part) => part === "..");
+    });
+  return {
+    safe: unsafeEntries.length === 0,
+    unsafeEntries
+  };
 }
 
 function shouldSkipOfficialPackagePath(relativePath: string) {

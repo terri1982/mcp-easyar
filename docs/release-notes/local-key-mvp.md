@@ -19,7 +19,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 - Adds `easyar-run-wechat-miniprogram` so MCP clients can run the focused `wechat-mega` and `wechat-crs` handoff without collecting user secrets in chat.
 - Adds Mini Program run-through status tools so users can regenerate a single next-call report after official package import, DevTools checks, or real-device evidence changes.
 - Adds a Mini Program workspace scaffold tool for creating a safe project shell before importing the user-downloaded official EasyAR package.
-- Mini Program official package import accepts either an extracted directory or a downloaded `.zip`, while still skipping private config and secret-like files.
+- Mini Program official package import accepts either an extracted directory or a downloaded `.zip`, validates zip entry paths before extraction, and still skips private config and secret-like files.
 - Server status, quickstart, install guide, and generated client setup now point fresh users to the same fresh project acceptance resource before Unity automation.
 - Provides Unity project assistance tools for local config, preflight, import guidance, build/run sequencing, log diagnostics, C# planning, script writing, and support bundles.
 
