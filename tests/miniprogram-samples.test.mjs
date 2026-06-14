@@ -337,6 +337,23 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     const requiredStepIds = checklist.steps.filter((step) => step.requiredForCompletion).map((step) => step.id);
     await writeFile(path.join(generated, "PREFLIGHT.md"), "- PASSED - project.config.json: Found.\n");
     await writeFile(path.join(generated, "DEVICE_VALIDATION.md"), "# Device Validation\n");
+    await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "local command emitted unrelated output\n");
+    await writeFile(
+      path.join(generated, "RUN_RESULT.md"),
+      buildMiniProgramRunResultMarkdown({
+        sample,
+        overallStatus: "passed",
+        devtoolsStatus: "passed",
+        devicePreviewStatus: "passed",
+        passedStepIds: requiredStepIds,
+        evidenceSummary: "Real-device WeChat preview recognized the intended CRS cloud target with redacted evidence."
+      })
+    );
+
+    report = await buildMiniProgramCompletionReport(root, sample);
+    assert.equal(report.runThroughComplete, false);
+    assert(report.blockers.some((blocker) => blocker.id === "devtools-log"));
+
     await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "compile ok\npreview ready\n");
     await writeFile(
       path.join(generated, "RUN_RESULT.md"),
@@ -376,6 +393,7 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     report = await buildMiniProgramCompletionReport(root, sample);
     assert.equal(report.runThroughComplete, true);
     assert.deepEqual(report.blockers, []);
+    assert(report.devtoolsSuccessSignals.some((signal) => signal.id === "devtools-preview-ready"));
     assert.equal(miniProgramRunResultHasUsableEvidence(await readFile(path.join(generated, "RUN_RESULT.md"), "utf8")), true);
   });
 });

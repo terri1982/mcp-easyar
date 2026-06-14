@@ -93,7 +93,7 @@ easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 
 - `PREFLIGHT.md` exists and has no blocked checks.
 - `DEVICE_VALIDATION.md` exists.
-- `DEVTOOLS_CHECK.log` exists and has no known blocker findings.
+- `DEVTOOLS_CHECK.log` exists, has no known blocker findings, and includes at least one recognized success signal such as `devtools-preview-ready`, `camera-ready`, `mega-localized`, or `crs-recognized`.
 - `RUN_RESULT.md` says `Run-through complete: yes` and contains a usable redacted evidence summary, not placeholder text.
 - The run result references real-device preview evidence.
 - `MINIPROGRAM_SCOPE_STATUS.md` reports `All Mini Program samples complete: yes` only after both `wechat-mega` and `wechat-crs` completion reports pass.

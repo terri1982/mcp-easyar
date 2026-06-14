@@ -913,8 +913,14 @@ export async function buildMiniProgramCompletionReport(root: string, sample: Min
     },
     {
       id: "devtools-log",
-      status: devtoolsLogText && (devtoolsAnalysis?.findingCount ?? 0) === 0 ? "passed" : "blocked",
-      evidence: devtoolsLogText ? `DEVTOOLS_CHECK.log exists; blocker findings=${devtoolsAnalysis?.findingCount ?? "unknown"}.` : "DEVTOOLS_CHECK.log is missing."
+      status: devtoolsLogText
+        && (devtoolsAnalysis?.findingCount ?? 0) === 0
+        && (devtoolsAnalysis?.successSignalCount ?? 0) > 0
+        ? "passed"
+        : "blocked",
+      evidence: devtoolsLogText
+        ? `DEVTOOLS_CHECK.log exists; blocker findings=${devtoolsAnalysis?.findingCount ?? "unknown"}; success signals=${devtoolsAnalysis?.successSignalCount ?? 0}.`
+        : "DEVTOOLS_CHECK.log is missing."
     },
     {
       id: "run-result",
@@ -948,6 +954,7 @@ export async function buildMiniProgramCompletionReport(root: string, sample: Min
       runResult: path.relative(root, runResultPath)
     },
     devtoolsFindings: devtoolsAnalysis?.findings ?? [],
+    devtoolsSuccessSignals: devtoolsAnalysis?.successSignals ?? [],
     security: [
       "Completion requires real-device WeChat preview evidence, not only generated files.",
       "The report references local redacted artifacts only and must not include secrets, QR codes, license keys, CRS API secrets, or raw private logs."
@@ -982,6 +989,12 @@ export function buildMiniProgramCompletionReportMarkdown(report: Awaited<ReturnT
     ...(report.devtoolsFindings.length > 0
       ? report.devtoolsFindings.map((finding) => `- ${finding.severity} ${finding.id}: ${finding.evidence ?? "no line evidence"}`)
       : ["No known DevTools blocker findings."]),
+    "",
+    "## DevTools Success Signals",
+    "",
+    ...(report.devtoolsSuccessSignals.length > 0
+      ? report.devtoolsSuccessSignals.map((signal) => `- ${signal.id}: ${signal.evidence ?? "no line evidence"}`)
+      : ["No known DevTools success signals."]),
     "",
     "## Security",
     "",
