@@ -137,6 +137,7 @@ try {
     check("server-name", statusText.includes('"name": "mcp-easyar"'), "easyar_server_status returns mcp-easyar."),
     check("focused-scope", statusText.includes("image-tracking") && statusText.includes("cloud-recognition"), "Focused samples are discoverable."),
     check("tools", missingTools.length === 0, missingTools.length === 0 ? "Required tools are listed." : `Missing tools: ${missingTools.join(", ")}.`),
+    check("core-tool-count", toolNames.length <= 79, `Core profile exposes ${toolNames.length} tools; keep it below the common 80-tool client warning line.`),
     check("prompts", missingPrompts.length === 0, missingPrompts.length === 0 ? "Required prompts are listed." : `Missing prompts: ${missingPrompts.join(", ")}.`),
     check("resources", missingResources.length === 0, missingResources.length === 0 ? "Required resources are readable." : `Missing resources: ${missingResources.join(", ")}.`),
     check(

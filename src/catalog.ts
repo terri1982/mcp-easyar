@@ -188,7 +188,6 @@ export const coreToolCatalog = [
   "easyar_list_miniprogram_samples",
   "easyar_check_wechat_devtools",
   "easyar_inspect_miniprogram_project",
-  "easyar_generate_miniprogram_workspace_plan",
   "easyar_create_miniprogram_sample_workspace",
   "easyar_write_miniprogram_local_config_form",
   "easyar_write_miniprogram_preflight",

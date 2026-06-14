@@ -11,7 +11,7 @@ easyar-mcp-check
 应看到：
 
 - server name 为 `mcp-easyar`
-- tools listed 约 79
+- tools listed 约 78
 - prompts listed 6
 - resources checked 15
 - 无 secret 要求
