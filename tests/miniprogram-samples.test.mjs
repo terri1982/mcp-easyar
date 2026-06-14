@@ -562,6 +562,32 @@ test("Mini Program run-through status recommends next calls from current evidenc
   });
 });
 
+test("Mini Program run-through status discovers local evidence candidates", async () => {
+  await withTempDir(async (root) => {
+    await createMiniProgramProject(root, "wechat-crs");
+    await writeFile(path.join(root, "miniprogram", "easyar-crs.js"), "export const sdk = true;\n");
+    await mkdir(path.join(root, "docs"), { recursive: true });
+    await writeFile(path.join(root, "docs", "crs-real-evidence.json"), "{\"result\":\"passed\"}\n");
+
+    const sample = findMiniProgramSample("wechat-crs");
+    const generated = path.join(root, "easyar-generated", sample.id);
+    await mkdir(generated, { recursive: true });
+    await writeFile(path.join(generated, "LOCAL_CONFIG_FORM.md"), "# form\n");
+    await writeFile(path.join(generated, "PREFLIGHT.md"), "- PASSED - project.config.json: Found.\n");
+    await writeFile(path.join(generated, "RUN_SEQUENCE.md"), "# run sequence\n");
+    await writeFile(path.join(generated, "DEVICE_VALIDATION.md"), "# validation\n");
+    await writeFile(path.join(generated, "RUN_RESULT_FORM.md"), "# form\n");
+    await writeFile(path.join(generated, "DEVTOOLS_CHECK.log"), "compile ok\npreview ready\n");
+    await writeFile(path.join(generated, "WECHAT_PREVIEW_QR.png"), "fake local qr placeholder\n");
+    await writeFile(path.join(generated, "WECHAT_PREVIEW_INFO.json"), "{\"status\":\"ok\"}\n");
+
+    const status = await buildMiniProgramRunThroughStatus(root, sample);
+    assert(status.evidenceCandidates.some((candidate) => candidate.relativePath === path.join("docs", "crs-real-evidence.json") && candidate.exists));
+    assert(status.nextCalls.some((call) => call.includes("redactedEvidencePath=docs/crs-real-evidence.json")));
+    assert(buildMiniProgramRunThroughStatusMarkdown(status).includes("FOUND `docs/crs-real-evidence.json`"));
+  });
+});
+
 test("WeChat Mini Program acceptance resource is registered and readable", async () => {
   assert(resourceCatalog.includes("easyar://acceptance/wechat-miniprogram"));
   const registered = new Map();

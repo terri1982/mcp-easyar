@@ -1145,9 +1145,27 @@ export function buildMiniProgramScopeStatusMarkdown(status: Awaited<ReturnType<t
   ].join("\n");
 }
 
+async function findMiniProgramEvidenceCandidates(root: string, sample: MiniProgramSampleInfo) {
+  const baseName = sample.id.replace(/^wechat-/, "");
+  const candidates = [
+    path.join("docs", `${baseName}-real-evidence.json`),
+    path.join("docs", `${sample.id}-real-evidence.json`),
+    path.join("easyar-generated", sample.id, "REAL_DEVICE_EVIDENCE.md"),
+    path.join("easyar-generated", sample.id, "REAL_DEVICE_EVIDENCE.json"),
+    path.join("easyar-generated", sample.id, "DEVICE_EVIDENCE.md"),
+    path.join("easyar-generated", sample.id, "DEVICE_EVIDENCE.json")
+  ];
+  const uniqueCandidates = Array.from(new Set(candidates));
+  return Promise.all(uniqueCandidates.map(async (relativePath) => ({
+    relativePath,
+    exists: await pathExists(path.join(root, relativePath))
+  })));
+}
+
 export async function buildMiniProgramRunThroughStatus(root: string, sample: MiniProgramSampleInfo) {
   const inspection = await inspectMiniProgramProject(root, sample);
   const completion = await buildMiniProgramCompletionReport(root, sample);
+  const evidenceCandidates = await findMiniProgramEvidenceCandidates(root, sample);
   const artifactNames = [
     "LOCAL_CONFIG_FORM.md",
     "PREFLIGHT.md",
@@ -1202,6 +1220,10 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
   }
   if (blockedChecks.length === 0 && !artifactExists("RUN_RESULT.md")) {
     nextCalls.push("Run the WeChat real-device preview, collect redacted evidence, then call easyar_write_miniprogram_run_result.");
+    const existingEvidenceCandidate = evidenceCandidates.find((candidate) => candidate.exists);
+    if (existingEvidenceCandidate) {
+      nextCalls.push(`When writing RUN_RESULT.md, reference redactedEvidencePath=${existingEvidenceCandidate.relativePath} if it matches the real-device preview result.`);
+    }
   }
   if (!completion.runThroughComplete && artifactExists("RUN_RESULT.md")) {
     nextCalls.push(`easyar_generate_miniprogram_completion_report projectPath=${root} sampleId=${sample.id}`);
@@ -1228,6 +1250,7 @@ export async function buildMiniProgramRunThroughStatus(root: string, sample: Min
       warningChecks: warningChecks.map((check) => ({ name: check.name, evidence: check.evidence }))
     },
     artifacts,
+    evidenceCandidates,
     handoffBlockers: sample.handoffBlockers,
     completionBlockers: completion.blockers,
     nextCalls: nextCalls.length > 0
@@ -1267,6 +1290,10 @@ export function buildMiniProgramRunThroughStatusMarkdown(status: Awaited<ReturnT
     "## Artifacts",
     "",
     ...status.artifacts.map((artifact) => `- ${artifact.exists ? "FOUND" : "MISSING"} \`${artifact.relativePath}\``),
+    "",
+    "## Evidence Candidates",
+    "",
+    ...status.evidenceCandidates.map((candidate) => `- ${candidate.exists ? "FOUND" : "MISSING"} \`${candidate.relativePath}\``),
     "",
     "## Handoff Blockers",
     "",
