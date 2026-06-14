@@ -7,6 +7,7 @@ import { test } from "node:test";
 import {
   analyzeMiniProgramDevtoolsLog,
   buildMiniProgramCompletionReport,
+  buildMiniProgramCompletionReportMarkdown,
   buildMiniProgramDevtoolsCommand,
   buildMiniProgramDeviceValidationChecklist,
   buildMiniProgramRunResultMarkdown,
@@ -457,6 +458,8 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     assert.equal(report.runThroughComplete, true);
     assert.deepEqual(report.blockers, []);
     assert(report.devtoolsSuccessSignals.some((signal) => signal.id === "devtools-preview-ready"));
+    assert.equal(report.runResultEvidence.redactedEvidencePath, "docs/crs-real-evidence.json");
+    assert(buildMiniProgramCompletionReportMarkdown(report).includes("redactedEvidencePath: `docs/crs-real-evidence.json`"));
     const runResultText = await readFile(path.join(generated, "RUN_RESULT.md"), "utf8");
     assert(runResultText.includes("Redacted evidence path: docs/crs-real-evidence.json"));
     assert.equal(miniProgramRunResultHasUsableEvidence(runResultText), true);

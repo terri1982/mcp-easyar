@@ -917,6 +917,22 @@ export function miniProgramRunResultHasUsableEvidence(runResultText: string | nu
     && !/\b(no evidence|placeholder|changeme|todo|tbd|fake evidence)\b/i.test(evidenceSummary);
 }
 
+function extractMiniProgramRunResultEvidencePaths(runResultText: string | null) {
+  if (!runResultText) {
+    return {};
+  }
+  const readPath = (label: string) => {
+    const match = runResultText.match(new RegExp(`^${label}:\\s*(.+)$`, "im"));
+    const value = match?.[1]?.trim();
+    return value && value !== "not recorded" ? value : undefined;
+  };
+  return {
+    redactedLogPath: readPath("Redacted log path"),
+    redactedScreenshotPath: readPath("Redacted screenshot path"),
+    redactedEvidencePath: readPath("Redacted evidence path")
+  };
+}
+
 export async function buildMiniProgramCompletionReport(root: string, sample: MiniProgramSampleInfo) {
   const preflightPath = path.join(root, "easyar-generated", sample.id, "PREFLIGHT.md");
   const checklistPath = path.join(root, "easyar-generated", sample.id, "DEVICE_VALIDATION.md");
@@ -984,6 +1000,7 @@ export async function buildMiniProgramCompletionReport(root: string, sample: Min
       previewInfo: path.relative(root, previewInfoPath),
       runResult: path.relative(root, runResultPath)
     },
+    runResultEvidence: extractMiniProgramRunResultEvidencePaths(runResultText),
     devtoolsFindings: devtoolsAnalysis?.findings ?? [],
     devtoolsSuccessSignals: devtoolsAnalysis?.successSignals ?? [],
     security: [
@@ -1014,6 +1031,12 @@ export function buildMiniProgramCompletionReportMarkdown(report: Awaited<ReturnT
     "## Evidence Paths",
     "",
     ...Object.entries(report.evidencePaths).map(([key, value]) => `- ${key}: \`${value}\``),
+    "",
+    "## Run Result Evidence",
+    "",
+    ...(Object.entries(report.runResultEvidence).length > 0
+      ? Object.entries(report.runResultEvidence).map(([key, value]) => `- ${key}: \`${value}\``)
+      : ["No RUN_RESULT evidence paths recorded."]),
     "",
     "## DevTools Findings",
     "",
