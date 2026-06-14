@@ -155,7 +155,7 @@ export function registerPrompts(server: any) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).default("wechat-mega"),
-      packagePath: z.string().optional().describe("Optional path to the official EasyAR Mini Program sample or SDK package downloaded by the user.")
+      packagePath: z.string().optional().describe("Optional path to the official EasyAR Mini Program sample or SDK package directory or .zip downloaded by the user.")
     },
     ({ projectPath, sampleId, packagePath }: any) => promptText(
       "Focused WeChat Mini Program run-through",
@@ -176,7 +176,7 @@ export function registerPrompts(server: any) {
         `4. easyar_write_miniprogram_local_config_form projectPath=${projectPath} sampleId=${sampleId}`,
         packagePath
           ? `5. easyar_import_miniprogram_sample_from_local_package projectPath=${projectPath} sampleId=${sampleId} packagePath=${packagePath} dryRun=true`
-          : "5. If the user has downloaded the official EasyAR Mini Program package, call easyar_import_miniprogram_sample_from_local_package with packagePath and dryRun=true.",
+          : "5. If the user has downloaded the official EasyAR Mini Program package directory or .zip, call easyar_import_miniprogram_sample_from_local_package with packagePath and dryRun=true.",
         `6. easyar_inspect_miniprogram_project projectPath=${projectPath} sampleId=${sampleId}`,
         `7. easyar_write_miniprogram_run_through_status projectPath=${projectPath} sampleId=${sampleId}`,
         `8. easyar_write_miniprogram_preflight projectPath=${projectPath} sampleId=${sampleId}`,

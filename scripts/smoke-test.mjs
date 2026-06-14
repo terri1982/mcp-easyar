@@ -533,6 +533,7 @@ try {
   assertPromptIncludes(miniProgramPrompt, "easyar://acceptance/wechat-miniprogram");
   assertPromptIncludes(miniProgramPrompt, "easyar://samples/wechat-miniprogram");
   assertPromptIncludes(miniProgramPrompt, "sampleId=wechat-crs");
+  assertPromptIncludes(miniProgramPrompt, "packagePath=/tmp/easyar-miniprogram.zip");
   assertPromptIncludes(miniProgramPrompt, "easyar_write_miniprogram_preflight");
   assertPromptIncludes(miniProgramPrompt, "easyar_write_miniprogram_run_result");
   assertPromptIncludes(miniProgramPrompt, "Do not ask the user for EasyAR passwords");
