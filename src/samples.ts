@@ -74,7 +74,7 @@ export const samples: SampleInfo[] = [
       "For PICO 4 Ultra Enterprise, also install the official EasyAR Unity XR device extension package and PICO Unity Integration SDK 3.1.0 or newer.",
       "Use the user's logged-in EasyAR website or Mega Studio session to find non-secret library and block identifiers.",
       "Keep license keys and service credentials in local EasyAR settings or local config files; do not paste secrets into chat.",
-      "Use Onsite location input for Android phone validation. For PICO 4 Ultra Enterprise, Simulator location input is the verified headset path because the headset does not expose an Android GPS provider.",
+      "Use Onsite location input for Android phone, PICO, and XREAL real-device validation. Simulator mode is only for editor or non-acceptance debugging.",
       "Build and validate on a real Android phone or PICO headset; editor or emulator launch is not enough to prove cloud localization."
     ]
   }
@@ -138,4 +138,3 @@ export function focusedSamples(): SampleInfo[] {
 export function deferredSamples(): SampleInfo[] {
   return samples.filter((sample) => sample.implementationStatus === "deferred");
 }
-

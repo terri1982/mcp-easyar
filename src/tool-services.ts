@@ -2006,7 +2006,7 @@ export async function writeFocusedSampleSupportFiles(root: string, sample: Sampl
         "",
         "Configure `Assets/XR/Settings/EasyAR Settings.asset` locally with the package-bound Sense license and Global Mega Block AppID/server/API Key/API Secret. Keep those values local.",
         "",
-        "For Android phone validation, set the Mega sample scene `LocationInputMode` to `Onsite`. For PICO 4 Ultra Enterprise, use `Simulator` location input with the official EasyAR Unity XR device extension package and `PicoFrameSource`; the headset does not expose an Android GPS provider.",
+        "For Android phone, PICO, and XREAL real-device validation, set the Mega sample scene `LocationInputMode` to `Onsite`. Use `Simulator` only for editor or non-acceptance debugging.",
         "",
         "PICO 4 Ultra Enterprise verified baseline: Unity 2022.3.62f3, EasyAR Sense Unity Plugin 4002.0.0, EasyAR Mega 2.12.6, EasyAR Unity XR device extension package 4000.0.0, PICO Unity Integration SDK 3.4.0, package name `com.easyar.mega.xrtest`, and a matching `4.x XR正式版` license.",
         "",

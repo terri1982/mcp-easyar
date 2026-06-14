@@ -1,11 +1,11 @@
 # mcp-easyar 发布清单
 
-当前发布：`v0.1.0-local-key.37`
+当前发布：`v0.1.0-local-key.38`
 
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -35,7 +35,7 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 
 - Image Tracking
 - CRS / Cloud Recognition
-- Mega（Android 手机 Onsite 路径与 PICO 4 Ultra Enterprise 眼镜 Simulator 路径均已有验证证据）
+- Mega（Android 手机、PICO 4 Ultra Enterprise 眼镜与 XREAL 眼镜均以 Onsite 作为验收基线）
 
 ## local-key 用户配置
 

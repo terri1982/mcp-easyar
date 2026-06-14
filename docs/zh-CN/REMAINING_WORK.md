@@ -2,7 +2,7 @@
 
 ## 当前已完成
 
-- 当前公开版本：`v0.1.0-local-key.37`
+- 当前公开版本：`v0.1.0-local-key.38`
 - Image Tracking 已真机跑通。
 - CRS / Cloud Recognition 已真机跑通。
 - Mega MCP 工作流、Android APK 打包、真机安装启动和一轮 Mega 定位跟踪证据已完成。

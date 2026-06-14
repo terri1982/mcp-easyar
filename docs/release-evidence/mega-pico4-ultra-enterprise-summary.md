@@ -39,19 +39,13 @@ Safe evidence only. This summary intentionally excludes EasyAR website passwords
 
 ## Location Input Note
 
-The PICO path intentionally uses Mega `LocationInputMode=Simulator`. When the same scene was changed to `Onsite`, Unity/EasyAR attempted to start Android location service and PICO returned:
-
-```text
-provider "gps" does not exist
-```
-
-This is expected because the headset does not expose an Android GPS provider. Therefore, the EasyAR diagnostics caution:
+The PICO path now uses Mega `LocationInputMode=Onsite`, matching Android phone/tablet and XREAL validation. If the headset shows:
 
 ```text
 Mega is running in Simulator mode with simulated or no location input.
 ```
 
-is expected for the verified PICO 4 Ultra Enterprise headset path and does not indicate localization failure. Android phone/tablet Mega validation should still use `Onsite`.
+the scene is still in Simulator/non-onsite input mode and should be switched to Onsite before rebuilding the APK.
 
 ## Screenshot Note
 
@@ -64,5 +58,6 @@ The raw logs and Unity project remain local and should not be committed because 
 - Fresh Unity project: `/Users/tuyi/UnityProjects/xrtest`
 - Build log: `/Users/tuyi/UnityProjects/xrtest/Logs/build-pico-mega-simulator-vst-bootstrap-fixed.log`
 - Focused PICO run log: `/Users/tuyi/UnityProjects/xrtest/Logs/pico-mega-simulator-vst-bootstrap-fixed-focused-20260612.log`
+- Latest Onsite PICO APK: `/Users/tuyi/UnityProjects/xrtest/Builds/xrtest-pico-mega-onsite.apk`
 - Active headset screenshot: `/Users/tuyi/UnityProjects/xrtest/Logs/pico_easyar_active.png`
 - APK path: `/Users/tuyi/UnityProjects/xrtest/Builds/xrtest-pico-mega.apk`

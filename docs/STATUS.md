@@ -6,12 +6,12 @@ It is not a completion claim for every EasyAR sample. The active goal now covers
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.37`
+Current GitHub prerelease: `v0.1.0-local-key.38`
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -33,7 +33,7 @@ These percentages are evidence-weighted estimates. The published prerelease cove
 - Local-key onboarding is implemented without collecting EasyAR website passwords or secret keys in chat.
 - Focused Image Tracking, CRS/Cloud Recognition, and Mega workflows are implemented or under active development.
 - Safe committed Android evidence exists for the Image Tracking, CRS/Cloud Recognition, and Mega target scope.
-- Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals. Fresh-project Mega evidence now also includes localization/tracking signals such as `successfully localized against ADF`. PICO 4 Ultra Enterprise evidence uses the documented headset path with `PicoFrameSource` and `LocationInputMode=Simulator`; the EasyAR Simulator diagnostics caution is expected because the headset does not expose an Android GPS provider.
+- Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals. Fresh-project Mega evidence now also includes localization/tracking signals such as `successfully localized against ADF`. PICO 4 Ultra Enterprise evidence uses the documented headset path with `PicoFrameSource` and `LocationInputMode=Onsite`; any EasyAR Simulator diagnostics caution indicates the scene still needs to be switched to Onsite and rebuilt.
 - Unity project programming assistance exists for focused preflight, scene audit, run sequence, device validation, log analysis, C# planning, script writing, review, and handoff artifacts.
 
 ## Active Scope

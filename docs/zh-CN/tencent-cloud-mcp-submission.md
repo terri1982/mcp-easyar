@@ -13,8 +13,8 @@
 - 仓库：https://github.com/terri1982/mcp-easyar
 - 主页：https://github.com/terri1982/mcp-easyar#readme
 - 英文 README：https://github.com/terri1982/mcp-easyar/blob/main/README.en.md
-- Release：https://github.com/terri1982/mcp-easyar/releases/tag/v0.1.0-local-key.37
-- Release tarball：https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+- Release：https://github.com/terri1982/mcp-easyar/releases/tag/v0.1.0-local-key.38
+- Release tarball：https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 - Logo：`assets/easyar-icon.png`
 
 ## 简短描述
@@ -36,7 +36,7 @@ The server does not ask users for EasyAR website passwords, verification codes, 
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -80,6 +80,6 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 - 已验证：Image Tracking local-key workflow。
 - 已验证：CRS / Cloud Recognition local-key workflow。
 - 已验证：Mega Android 手机 Onsite 路径。
-- 已验证：Mega PICO 4 Ultra Enterprise 眼镜路径，使用 `PicoFrameSource` 和 `LocationInputMode=Simulator`。
+- 已验证：Mega PICO 4 Ultra Enterprise 眼镜路径，使用 `PicoFrameSource` 和 `LocationInputMode=Onsite`。
 - 暂缓：Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample。
 - Unity 基线：`2022.3.62f3`。

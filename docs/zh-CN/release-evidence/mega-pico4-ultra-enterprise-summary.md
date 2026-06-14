@@ -39,19 +39,13 @@
 
 ## 位置输入说明
 
-PICO 路径有意使用 Mega `LocationInputMode=Simulator`。同一场景切到 `Onsite` 后，Unity/EasyAR 会启动 Android 位置服务，PICO 返回：
-
-```text
-provider "gps" does not exist
-```
-
-这是预期现象，因为 PICO 头显不提供 Android GPS provider。因此，眼镜路径中 EasyAR diagnostics 的提示：
+PICO 路径现统一使用 Mega `LocationInputMode=Onsite`，与 Android 手机/平板和 XREAL 验证保持一致。如果眼镜中出现：
 
 ```text
 Mega is running in Simulator mode with simulated or no location input.
 ```
 
-是预期开发提示，不代表定位失败。Android 手机/平板的 Mega 验证仍应使用 `Onsite`。
+说明场景仍处于 Simulator/非现场输入模式，应先切换到 Onsite 再重新打包 APK。
 
 ## 截图说明
 
@@ -64,5 +58,6 @@ ADB `screencap` 可能抓不到 PICO VST 透视合成层。仓库证据不应要
 - 新建 Unity 工程：`/Users/tuyi/UnityProjects/xrtest`
 - 构建日志：`/Users/tuyi/UnityProjects/xrtest/Logs/build-pico-mega-simulator-vst-bootstrap-fixed.log`
 - PICO 聚焦运行日志：`/Users/tuyi/UnityProjects/xrtest/Logs/pico-mega-simulator-vst-bootstrap-fixed-focused-20260612.log`
+- 最新 Onsite PICO APK：`/Users/tuyi/UnityProjects/xrtest/Builds/xrtest-pico-mega-onsite.apk`
 - 激活状态下的眼镜截图：`/Users/tuyi/UnityProjects/xrtest/Logs/pico_easyar_active.png`
 - APK 路径：`/Users/tuyi/UnityProjects/xrtest/Builds/xrtest-pico-mega.apk`

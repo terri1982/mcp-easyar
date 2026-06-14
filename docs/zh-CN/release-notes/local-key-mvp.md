@@ -1,6 +1,6 @@
 # mcp-easyar local-key MVP 发布说明
 
-当前版本：`v0.1.0-local-key.37`
+当前版本：`v0.1.0-local-key.38`
 
 ## 重点
 
@@ -14,7 +14,7 @@
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

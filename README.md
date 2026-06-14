@@ -12,7 +12,7 @@
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.37`
+- 当前 GitHub 预发布版：`v0.1.0-local-key.38`
 - 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
@@ -29,7 +29,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -102,7 +102,7 @@ PICO 4 Ultra Enterprise sample 已验证的基线：
 - PICO Unity Integration SDK `3.4.0`（EasyAR 文档要求 `3.1.0` 或更新版本）
 - 官网 license 类型：`4.x XR正式版`
 
-注意：PICO 头显没有 Android GPS provider，所以 Mega 场景使用 `LocationInputMode=Simulator` 是当前已验证的头显路径。画面中的 EasyAR Simulator diagnostics caution 是预期提示，不代表定位失败；验收以眼镜内 VST 实景可见、Mega 返回 `Found`、并定位到对应办公室 block 为准。`adb screencap` 可能抓不到 PICO 的透视合成层。
+注意：PICO 和 XREAL 的 Mega 头显验收包也应使用 `LocationInputMode=Onsite`。如果眼镜中出现 EasyAR Simulator diagnostics caution，说明场景仍处于 Simulator/非现场输入模式，需要先切到 Onsite 后重新打包。验收以眼镜内 VST 实景可见、Mega 返回 `Found`、并定位到对应办公室 block 为准。`adb screencap` 可能抓不到 PICO 的透视合成层。
 
 ## 中文文档目录
 

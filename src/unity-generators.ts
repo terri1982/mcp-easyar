@@ -268,18 +268,13 @@ ${sampleValidation}
             var match = Regex.Match(scene, @"locationInputMode:\\s*(\\d+)");
             if (!match.Success)
             {
-                throw new InvalidOperationException("Mega scene does not serialize locationInputMode. Set Location Input Mode to Onsite for Android phone validation, or Simulator for the documented PICO 4 Ultra Enterprise headset path.");
+                throw new InvalidOperationException("Mega scene does not serialize locationInputMode. Set Location Input Mode to Onsite for real-device validation.");
             }
             if (match.Groups[1].Value == "0")
             {
                 return;
             }
-            if (match.Groups[1].Value == "1" && IsPicoHeadsetProject())
-            {
-                UnityEngine.Debug.Log("Mega LocationInputMode is Simulator in a PICO headset project. This is accepted for PICO 4 Ultra Enterprise because the headset does not expose an Android GPS provider; the EasyAR Simulator diagnostics caution should be recorded in run evidence.");
-                return;
-            }
-            throw new InvalidOperationException("Mega LocationInputMode must be Onsite (0) for Android phone validation. Simulator (1) is accepted only for the documented PICO 4 Ultra Enterprise headset path.");
+            throw new InvalidOperationException("Mega LocationInputMode must be Onsite (0) for real-device validation. Simulator (1) is only for editor or non-acceptance debugging.");
         }
 
         private static bool IsPicoHeadsetProject()
@@ -844,7 +839,7 @@ export function buildLocalConfigExample(sample: SampleInfo): string {
           serverAddress: needsMega ? "local-only-placeholder-fill-from-local-mega-settings" : "",
           apiKey: needsMega ? "local-only-placeholder-fill-locally-never-share" : "",
           apiSecret: needsMega ? "local-only-placeholder-fill-locally-never-share" : "",
-          locationInputMode: needsMega ? "Onsite for Android phone validation; Simulator for documented PICO 4 Ultra Enterprise headset validation" : ""
+          locationInputMode: needsMega ? "Onsite for Android phone, PICO, and XREAL real-device validation" : ""
         }
       },
       unity: {
@@ -931,7 +926,7 @@ export function buildFocusedSampleRunbook(sample: SampleInfo): string {
       "2. Use the already logged-in EasyAR website or Mega Studio session to locate the cloud localization library, Mega Block storage, Mega Block name, and Block ID.",
       "3. Load or bind the selected Mega Block in Unity/Mega Studio before building.",
       "4. Configure `Assets/XR/Settings/EasyAR Settings.asset` locally with the package-bound Sense license plus Global Mega Block AppID, server address, API Key, and API Secret. Do not paste those values into chat.",
-      "5. Set Mega `LocationInputMode` to `Onsite` for Android phone validation. For PICO 4 Ultra Enterprise, use the official EasyAR Unity XR device extension package, keep only `PicoFrameSource`, and use `Simulator` location input because the headset does not expose an Android GPS provider.",
+      "5. Set Mega `LocationInputMode` to `Onsite` for Android phone, PICO, and XREAL real-device validation. Do not ship headset validation packages in Simulator mode.",
       "6. Confirm Android minSdk is at least 24 when ONNX Runtime is included, and prefer ARM64 for device builds.",
       "7. If the project uses HybridCLR, run the HybridCLR Installer and `HybridCLR/Generate/All` for the same build target before APK packaging.",
       "8. For PICO 4 Ultra Enterprise, install PICO Unity Integration SDK 3.1.0 or newer, use a `4.x XR正式版` EasyAR license whose package name matches the APK, and validate while wearing/activating the headset in the mapped environment.",
@@ -941,7 +936,7 @@ export function buildFocusedSampleRunbook(sample: SampleInfo): string {
       "",
       "- `mega-assets` should find Mega, MegaBlock, CloudLocalizer, or project-specific Mega scene assets.",
       "- `mega-settings` should report local license and Global Mega Block credential presence without printing secret values.",
-      "- `mega-location-input-mode` should report `Onsite` for Android phone validation, or `Simulator` with PICO headset signals for the documented PICO 4 Ultra Enterprise path.",
+      "- `mega-location-input-mode` should report `Onsite` for real-device validation, including Android phone, PICO, and XREAL headset builds.",
       "- `sample-scene` should find an official or project Mega scene.",
       "- `RUN_RESULT.md` should record build success plus real-device localization evidence without secret values."
     ].join("\n") + "\n";

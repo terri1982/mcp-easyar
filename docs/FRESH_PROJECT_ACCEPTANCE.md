@@ -27,7 +27,7 @@ Out of scope until the user explicitly continues:
 Install the current prerelease:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.37/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -128,7 +128,7 @@ easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=mega pl
 easyar_write_run_sequence projectPath=/path/to/UnityProject sampleId=mega platform=android
 ```
 
-For Android phone/tablet Mega validation, set the Mega sample `LocationInputMode` to `Onsite`. For PICO 4 Ultra Enterprise headset validation, install the official EasyAR Unity XR device extension package, keep only `PicoFrameSource`, use PICO Unity Integration SDK `3.1.0` or newer, and keep `LocationInputMode` as `Simulator` because the headset does not expose an Android GPS provider. A passed Mega result requires build/install/launch/readiness plus localization/tracking signals in the selected mapped physical environment.
+For Android phone/tablet, PICO, and XREAL Mega validation, set the Mega sample `LocationInputMode` to `Onsite`. For PICO 4 Ultra Enterprise headset validation, install the official EasyAR Unity XR device extension package, keep only `PicoFrameSource`, and use PICO Unity Integration SDK `3.1.0` or newer. A passed Mega result requires build/install/launch/readiness plus localization/tracking signals in the selected mapped physical environment.
 
 Build and device validation should then write focused evidence:
 
@@ -153,7 +153,7 @@ easyar_write_focused_scope_status projectPath=/path/to/UnityProject platform=and
 - `ProjectSettings/EasyAR/easyar.local.json` validates locally without printing secret values.
 - Image Tracking completes a real-device recognition pass.
 - CRS/Cloud Recognition completes a real-device recognition pass against a cloud target.
-- Mega completes a real-device localization pass on Android phone/tablet with `Onsite`, or on PICO 4 Ultra Enterprise with the documented `PicoFrameSource` + `Simulator` headset path.
+- Mega completes a real-device localization pass on Android phone/tablet, PICO, or XREAL with `LocationInputMode=Onsite`.
 - `FOCUSED_SCOPE_STATUS.md` reports `allFocusedSamplesComplete=true`.
 - Generated reports contain paths, redacted presence, and next actions, not raw secrets.
 - GitHub Release tarball smoke passes for the same release tag.

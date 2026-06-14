@@ -2,7 +2,7 @@
 
 本目录提供 `mcp-easyar` 公开文档的中文版入口。GitHub 默认 README 已切换为中文；英文文档仍保留用于命令、API contract、自动化测试和海外用户阅读。
 
-当前目标只覆盖图像跟踪（Image Tracking）、CRS / Cloud Recognition 和 Mega Sample。当前工作树已有 Mega Android 手机 Onsite 路径和 PICO 4 Ultra Enterprise 眼镜 Simulator 路径的验证证据，可作为下一版 local-key release 的刷新依据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
+当前目标只覆盖图像跟踪（Image Tracking）、CRS / Cloud Recognition 和 Mega Sample。当前工作树已有 Mega Android 手机 Onsite 路径，并已将 PICO / XREAL 眼镜路径统一为 Onsite 验收基线，可作为下一版 local-key release 的刷新依据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
 
 ## 快速入口
 

@@ -932,8 +932,7 @@ export async function buildSampleSpecificReadinessChecks(root: string, sample: S
     const megaSettings = await readMegaSettingsSummary(root);
     const megaLocationInputMode = await readMegaLocationInputModeSummary(root);
     const megaBlockRoot = await readMegaBlockRootSummary(root);
-    const picoHeadset = await hasPicoHeadsetMegaSignals(root);
-    const locationInputModeOk = megaLocationInputMode.hasOnsite || (picoHeadset && megaLocationInputMode.hasSimulator);
+    const locationInputModeOk = megaLocationInputMode.hasOnsite;
     const missingMegaSettings = [
       megaSettings.licensePresent ? null : "license",
       megaSettings.appIdPresent ? null : "GlobalMegaBlock.AppID",
@@ -964,10 +963,8 @@ export async function buildSampleSpecificReadinessChecks(root: string, sample: S
         detail: megaLocationInputMode.modes.length > 0
           ? megaLocationInputMode.hasOnsite
             ? `Mega scene LocationInputMode includes Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}.`
-            : picoHeadset && megaLocationInputMode.hasSimulator
-              ? `Mega scene LocationInputMode is Simulator in a PICO headset project: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. This is the verified PICO 4 Ultra Enterprise path because the headset does not expose an Android GPS provider; document the EasyAR diagnostics caution in the run result.`
-              : `Mega scene LocationInputMode was found but not Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. Use Onsite for Android phone validation. Use Simulator only for editor/remote debugging or the documented PICO 4 Ultra Enterprise headset path.`
-          : "No serialized Mega locationInputMode was found in Mega scene assets. Open the Mega sample scene and set Location Input Mode to Onsite for Android phone validation, or Simulator for the documented PICO 4 Ultra Enterprise headset path."
+            : `Mega scene LocationInputMode was found but not Onsite: ${megaLocationInputMode.modes.map((item) => `${item.path}=${item.mode}`).join(", ")}. Use Onsite for real-device validation. Use Simulator only for editor or non-acceptance debugging.`
+          : "No serialized Mega locationInputMode was found in Mega scene assets. Open the Mega sample scene and set Location Input Mode to Onsite for real-device validation."
       },
       {
         id: "mega-block-root",

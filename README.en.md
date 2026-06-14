@@ -123,7 +123,7 @@ See [docs/FRESH_PROJECT_ACCEPTANCE.md](docs/FRESH_PROJECT_ACCEPTANCE.md) for the
 Mega currently has two documented validation paths:
 
 - Android phone/tablet: use `LocationInputMode=Onsite` with camera, location, and network permissions.
-- PICO 4 Ultra Enterprise: use EasyAR Sense Unity Plugin `4002.0.0`, EasyAR Mega `2.12.6`, EasyAR Unity XR device extension package `4000.0.0`, PICO Unity Integration SDK `3.1.0+` (validated with `3.4.0`), `PicoFrameSource`, and `LocationInputMode=Simulator` because the headset does not expose an Android GPS provider. The EasyAR Simulator diagnostics caution is expected for this headset path; validation is based on headset-visible VST passthrough plus Mega `Found`/block evidence.
+- PICO 4 Ultra Enterprise: use EasyAR Sense Unity Plugin `4002.0.0`, EasyAR Mega `2.12.6`, EasyAR Unity XR device extension package `4000.0.0`, PICO Unity Integration SDK `3.1.0+` (validated with `3.4.0`), `PicoFrameSource`, and `LocationInputMode=Onsite` for real-device validation. If the EasyAR Simulator diagnostics caution appears in the headset, the scene is still in Simulator/non-onsite input mode and must be rebuilt after switching to Onsite. Validation is based on headset-visible VST passthrough plus Mega `Found`/block evidence.
 See [docs/STATUS.md](docs/STATUS.md) for the current evidence-weighted progress, ready scope, and known remaining work.
 See [docs/REMAINING_WORK.md](docs/REMAINING_WORK.md) or MCP resource `easyar://status/remaining-work` for the current scoped gaps and full production blockers.
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the current local-key MVP boundary, and [docs/FULL_GOAL_PLAN.md](docs/FULL_GOAL_PLAN.md) for the staged path toward the full EasyAR MCP service goal.
