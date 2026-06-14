@@ -122,6 +122,28 @@ test("inspectMiniProgramProject accepts root-level Mini Program app.json when mi
   });
 });
 
+test("inspectMiniProgramProject treats EasyAR client/config files as Mini Program SDK hints", async () => {
+  await withTempDir(async (root) => {
+    await writeFile(
+      path.join(root, "project.config.json"),
+      JSON.stringify({ appid: "wx-root-appid" }, null, 2)
+    );
+    await writeFile(
+      path.join(root, "app.json"),
+      JSON.stringify({ pages: ["pages/index/index"] }, null, 2)
+    );
+    await mkdir(path.join(root, "utils"), { recursive: true });
+    await mkdir(path.join(root, "config"), { recursive: true });
+    await writeFile(path.join(root, "utils", "easyar-client.js"), "module.exports = {};\n");
+    await writeFile(path.join(root, "config", "easyar.config.js"), "module.exports = {};\n");
+
+    const report = await inspectMiniProgramProject(root, findMiniProgramSample("wechat-crs"));
+    assert(report.project.sdkHints.includes(path.join("utils", "easyar-client.js")));
+    assert(report.project.sdkHints.includes(path.join("config", "easyar.config.js")));
+    assert(report.checks.some((check) => check.name === "EasyAR Mini Program SDK hints" && check.status === "passed"));
+  });
+});
+
 test("importMiniProgramSampleFromLocalPackage previews and skips private package files", async () => {
   await withTempDir(async (root) => {
     await createMiniProgramProject(root, "wechat-mega");

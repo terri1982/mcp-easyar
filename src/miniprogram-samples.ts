@@ -103,6 +103,17 @@ export const miniProgramSamples: MiniProgramSampleInfo[] = [
   }
 ];
 
+const easyarMiniProgramHintFileNames = new Set([
+  "easyar.js",
+  "easyar.min.js",
+  "easyar-wechat.js",
+  "easyar-mega.js",
+  "easyar-crs.js",
+  "easyar-client.js",
+  "easyar.config.js",
+  "easyar-crs-targets.json"
+]);
+
 export function findMiniProgramSample(sampleId: string): MiniProgramSampleInfo {
   const sample = miniProgramSamples.find((candidate) => candidate.id === sampleId);
   if (!sample) {
@@ -194,13 +205,7 @@ export async function inspectMiniProgramProject(root: string, sample: MiniProgra
       ? "."
       : "miniprogram/";
   const miniprogramRoot = path.resolve(root, miniprogramRootValue);
-  const sdkHints = await findFilesByName(root, new Set([
-    "easyar.js",
-    "easyar.min.js",
-    "easyar-wechat.js",
-    "easyar-mega.js",
-    "easyar-crs.js"
-  ]));
+  const sdkHints = await findFilesByName(root, easyarMiniProgramHintFileNames);
   const configFile = sample.id === "wechat-mega" ? "easyar.mega.local.json" : "easyar.crs.local.json";
   const localConfigPath = path.join(root, configFile);
   const localConfig = await readJsonFile(localConfigPath);
@@ -1463,13 +1468,7 @@ async function classifyMiniProgramPackageSource(sourceRoot: string) {
   const hasProjectConfig = await pathExists(path.join(sourceRoot, "project.config.json"));
   const hasRootAppJson = await pathExists(path.join(sourceRoot, "app.json"));
   const hasMiniProgramAppJson = await pathExists(path.join(sourceRoot, "miniprogram", "app.json"));
-  const sdkHints = await findFilesByName(sourceRoot, new Set([
-    "easyar.js",
-    "easyar.min.js",
-    "easyar-wechat.js",
-    "easyar-mega.js",
-    "easyar-crs.js"
-  ]), 20);
+  const sdkHints = await findFilesByName(sourceRoot, easyarMiniProgramHintFileNames, 20);
   if (hasProjectConfig || hasRootAppJson || hasMiniProgramAppJson || sdkHints.length > 0) {
     return {
       kind: "wechat-miniprogram-or-sdk" as const,
