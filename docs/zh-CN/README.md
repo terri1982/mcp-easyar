@@ -4,6 +4,8 @@
 
 当前目标只覆盖图像跟踪（Image Tracking）、CRS / Cloud Recognition 和 Mega Sample。当前工作树已有 Mega Android 手机 Onsite 路径，并已将 PICO / XREAL 眼镜路径统一为 Onsite 验收基线，可作为下一版 local-key release 的刷新依据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
 
+新增小程序方向先覆盖 EasyAR Mega 微信小程序和 CRS / Cloud Recognition 微信小程序。当前提供 MCP 工具做本地小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight 和 run sequence；官方下载、登录、license / CRS key 创建和微信真机预览仍由用户在官方网页或官方工具中完成。
+
 ## 快速入口
 
 - [当前状态](STATUS.md)

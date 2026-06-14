@@ -17,6 +17,7 @@
 当前工作树已补齐：
 
 - Mega：MCP 工作流、Android APK 打包、真机安装启动、EasyAR 初始化、Mega Block 加载和一轮定位跟踪日志证据已完成。fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式就绪，并已在对应办公室映射场景抓到定位/跟踪日志信号，可进入下一版 local-key GitHub Release 发布前验证。
+- 微信小程序：新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample。当前已完成 MCP 层的本地工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight 和 run sequence，不声明已完成小程序预览/上传/真机验收。
 
 ## 2. Sample 扩展
 
@@ -24,6 +25,12 @@
 
 1. Hello AR
 2. Surface Tracking
+
+小程序方向的下一步：
+
+1. 用真实官方小程序 SDK/Sample 包和测试小程序工程跑导入、DevTools 检查和预览。
+2. 为 `wechat-mega` 和 `wechat-crs` 分别补真机定位/识别证据模板和 release gate。
+3. 需要上传流程时再补明确的 dry-run / safety gate，不默认发布到微信后台。
 
 扩展前先调用：
 

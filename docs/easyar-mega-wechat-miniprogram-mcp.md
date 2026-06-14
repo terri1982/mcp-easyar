@@ -22,6 +22,30 @@ The service must not collect EasyAR passwords, WeChat passwords, verification co
 
 ## Core Tool Interfaces
 
+## Current Implemented MVP Tools
+
+The current repository implements the first safe local-key Mini Program slice:
+
+- `easyar_list_miniprogram_samples`
+- `easyar_check_wechat_devtools`
+- `easyar_inspect_miniprogram_project`
+- `easyar_generate_miniprogram_local_config_form`
+- `easyar_write_miniprogram_local_config_form`
+- `easyar_generate_miniprogram_preflight`
+- `easyar_write_miniprogram_preflight`
+- `easyar_generate_miniprogram_run_sequence`
+- `easyar_write_miniprogram_run_sequence`
+- `easyar_import_miniprogram_sample_from_local_package`
+- `easyar_analyze_miniprogram_devtools_log`
+- `easyar_run_miniprogram_devtools_check`
+
+Supported focused sample ids:
+
+- `wechat-mega`
+- `wechat-crs`
+
+These tools inspect local files, import user-downloaded official local packages, run local DevTools smoke checks when the CLI is available, and write redacted handoff artifacts. Upload dry-run support and real-device Mini Program evidence capture remain future work until official local sample packages, logged-in WeChat Developer Tools, and test projects are available.
+
 ### Server And Catalog
 
 - `easyar_mega_server_status`
@@ -397,4 +421,3 @@ Tests:
 12. Real-device scan and validation.
 13. `easyar_mega_write_run_result`
 14. `easyar_mega_write_completion_report`
-

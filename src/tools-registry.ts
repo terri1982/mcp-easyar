@@ -5,6 +5,7 @@ import { registerClientReleaseTools } from "./tool-register-client-release.js";
 import { registerDeviceEvidenceTools } from "./tool-register-device-evidence.js";
 import { registerGuidesWorkflowTools } from "./tool-register-guides-workflow.js";
 import { registerLocalDiagnosticsTools } from "./tool-register-local-diagnostics.js";
+import { registerMiniProgramSampleTools } from "./tool-register-miniprogram-samples.js";
 import { registerSampleArtifactTools } from "./tool-register-sample-artifacts.js";
 import { registerStatusAccountTools } from "./tool-register-status-account.js";
 import { registerUnityProgrammingTools } from "./tool-register-unity-programming.js";
@@ -17,6 +18,7 @@ export function registerTools(server: McpServer, options: { shouldRegisterTool?:
   registerClientReleaseTools(registerTool);
   registerGuidesWorkflowTools(registerTool);
   registerSampleArtifactTools(registerTool);
+  registerMiniProgramSampleTools(registerTool);
   registerDeviceEvidenceTools(registerTool);
   registerLocalDiagnosticsTools(registerTool);
   registerUnityProgrammingTools(registerTool);

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { miniProgramSamples } from "./miniprogram-samples.js";
 
 type ResourceContext = {
   samples: unknown;
@@ -37,6 +38,20 @@ export function registerResources(server: any, context: ResourceContext) {
           uri: uri.href,
           mimeType: "application/json",
           text: JSON.stringify(officialInfo, null, 2)
+        }
+      ]
+    })
+  );
+
+  server.resource(
+    "easyar-wechat-miniprogram-samples",
+    "easyar://samples/wechat-miniprogram",
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "application/json",
+          text: JSON.stringify(miniProgramSamples, null, 2)
         }
       ]
     })

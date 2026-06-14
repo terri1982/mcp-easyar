@@ -10,8 +10,6 @@
   "files": [
     "dist",
     "docs",
-    "!docs/easyar-mega-wechat-miniprogram-mcp.md",
-    "!docs/zh-CN/easyar-mega-wechat-miniprogram-mcp.md",
     "assets/easyar-icon.png",
     "scripts/github-release-install-smoke.mjs",
     "scripts/official-api-canary.mjs",

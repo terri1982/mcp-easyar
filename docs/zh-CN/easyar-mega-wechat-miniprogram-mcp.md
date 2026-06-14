@@ -22,6 +22,30 @@
 
 ## 核心工具接口
 
+## 当前已实现 MVP 工具
+
+当前仓库先实现安全的 local-key 小程序切片：
+
+- `easyar_list_miniprogram_samples`
+- `easyar_check_wechat_devtools`
+- `easyar_inspect_miniprogram_project`
+- `easyar_generate_miniprogram_local_config_form`
+- `easyar_write_miniprogram_local_config_form`
+- `easyar_generate_miniprogram_preflight`
+- `easyar_write_miniprogram_preflight`
+- `easyar_generate_miniprogram_run_sequence`
+- `easyar_write_miniprogram_run_sequence`
+- `easyar_import_miniprogram_sample_from_local_package`
+- `easyar_analyze_miniprogram_devtools_log`
+- `easyar_run_miniprogram_devtools_check`
+
+当前 focused sample id：
+
+- `wechat-mega`
+- `wechat-crs`
+
+这些工具会检查本地文件、导入用户已下载的官方本地包、在微信开发者工具 CLI 可用时执行本地检查，并写入脱敏交接材料。上传 dry-run 和小程序真机证据采集仍需要等用户提供本地官方 Sample 包、已登录的微信开发者工具和测试小程序工程后继续补齐。
+
 ### Server And Catalog
 
 - `easyar_mega_server_status`：返回服务版本、支持平台、官方 endpoint 配置、本地工具可用性和推荐首次调用。

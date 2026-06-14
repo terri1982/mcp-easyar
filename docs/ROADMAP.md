@@ -25,6 +25,7 @@ easyar-mcp-check
 - MCP guides local Unity configuration without collecting website passwords, verification codes, account tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
 - Focused Image Tracking and CRS/Cloud Recognition workflows are implemented and have safe committed Android evidence.
 - Focused Mega workflow assistance is implemented and has safe committed Android device evidence from a Unity 2022.3.62f3 APK install/startup/localization-tracking run. A separate fresh Unity project now proves official package import, APK build/install/startup, Onsite-mode readiness, and real-device localization/tracking log signals in the selected mapped environment.
+- WeChat Mini Program sample assistance has started for `wechat-mega` and `wechat-crs`: sample metadata, local project inspection, WeChat Developer Tools CLI detection, local config forms, user-downloaded official package import, DevTools smoke checks, log analysis, preflight reports, and run sequences are implemented.
 - Unity project programming assistance exists for focused sample preflight, scene audit, run sequence, device validation, log collection, C# planning, script writing, and handoff artifacts.
 
 ## Active Scope
@@ -37,6 +38,11 @@ The active sample target is intentionally limited to:
 
 Hello AR, Surface Tracking, and other EasyAR samples are not part of the current goal.
 
+The new Mini Program focus is limited to:
+
+- WeChat Mini Program Mega
+- WeChat Mini Program CRS / Cloud Recognition
+
 ## Remaining For Scoped Goal
 
 ### Target Samples
@@ -45,6 +51,7 @@ Hello AR, Surface Tracking, and other EasyAR samples are not part of the current
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega release evidence aligned with every public prerelease.
 - Keep install docs, client acceptance docs, and smoke tests aligned with the latest GitHub Release.
 - Continue hardening Unity programming workflows using real Image Tracking and CRS project cases.
+- Capture WeChat Developer Tools preview/upload evidence and real-device evidence for `wechat-mega` and `wechat-crs` once official local sample packages, logged-in DevTools, and test Mini Program projects are available.
 
 ### Official API Integration
 

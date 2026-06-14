@@ -10,6 +10,8 @@
 
 当前公开版本是 local-key MVP：用户在 EasyAR 官网注册、登录、下载官方插件并创建本地 license / CRS key；MCP 只做引导、检查和 Unity 自动化，不接触官网密码、验证码、license key、API Secret 或 appSecret。
 
+当前工作树开始增加微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight 和 run sequence。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
+
 ## 当前状态
 
 - 当前 GitHub 预发布版：`v0.1.0-local-key.38`
@@ -21,6 +23,9 @@
   - Hello AR
   - Surface Tracking
   - 其他 EasyAR Sense Unity Plugin 官方 Sample
+- 新增小程序目标：
+  - WeChat Mini Program Mega（本地检查、本地官方包导入、DevTools 检查和 runbook）
+  - WeChat Mini Program CRS / Cloud Recognition（本地检查、本地官方包导入、DevTools 检查和 runbook）
 - Unity 验证基线：`2022.3.62f3`
 - GitHub Release tarball、CI、安装 smoke、安全检查均已通过。
 
@@ -37,7 +42,7 @@ easyar-mcp-check
 
 ## 工具数量
 
-`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 57 个，低于常见 MCP 客户端 80 个工具的警告线。
+`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 66 个，低于常见 MCP 客户端 80 个工具的警告线。
 
 如果维护仓库、调试官方 API 合同或需要全部工具，可以用 full profile：
 
@@ -51,6 +56,7 @@ MCP_EASYAR_TOOL_PROFILE=full easyar-mcp
 
 ```text
 easyar_server_status
+easyar_list_miniprogram_samples
 easyar_check_client_setup client=codex entrypointMode=package-bin includeTokenPlaceholder=false
 easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition platform=android
 easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition platform=android
@@ -60,6 +66,7 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 
 ```text
 easyar://acceptance/fresh-project
+easyar://samples/wechat-miniprogram
 easyar://roadmap/full-goal
 easyar://workflow/programming
 ```
@@ -75,6 +82,29 @@ easyar://workflow/programming
 5. 用户在本机 Unity 工程里填写 `ProjectSettings/EasyAR/easyar.local.json`。
 6. MCP 只检查字段是否存在、是否像占位符，不输出 secret。
 7. Unity 构建和真机验证使用本地配置运行，不需要在运行时登录官网。
+
+## 微信小程序 Sample
+
+当前小程序支持先覆盖两类官方 Sample：
+
+- `wechat-mega`：EasyAR Mega 微信小程序 Sample。
+- `wechat-crs`：EasyAR CRS / Cloud Recognition 微信小程序 Sample。
+
+推荐调用：
+
+```text
+easyar_list_miniprogram_samples
+easyar_check_wechat_devtools
+easyar_write_miniprogram_local_config_form projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_import_miniprogram_sample_from_local_package projectPath=/path/to/miniprogram sampleId=wechat-mega packagePath=/path/to/official/package dryRun=true
+easyar_inspect_miniprogram_project projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_preflight projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=true
+easyar_analyze_miniprogram_devtools_log projectPath=/path/to/miniprogram sampleId=wechat-mega logPath=easyar-generated/wechat-mega/DEVTOOLS_CHECK.log
+easyar_write_miniprogram_run_sequence projectPath=/path/to/miniprogram sampleId=wechat-mega
+```
+
+CRS 小程序把 `sampleId` 改成 `wechat-crs`。用户仍需自己在 EasyAR 官网和微信开发者工具中完成注册、登录、下载、license / CRS key 创建和真机预览。
 
 ## 安全边界
 
@@ -121,6 +151,7 @@ PICO 4 Ultra Enterprise sample 已验证的基线：
 - [local-key MVP 发布说明](docs/zh-CN/release-notes/local-key-mvp.md)
 - [官方 API 合同](docs/zh-CN/OFFICIAL_API_CONTRACT.md)
 - [官方 API 接入交接](docs/zh-CN/OFFICIAL_API_HANDOFF.md)
+- [EasyAR Mega 微信小程序 MCP 设计](docs/zh-CN/easyar-mega-wechat-miniprogram-mcp.md)
 
 ## 英文文档
 

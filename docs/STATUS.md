@@ -4,6 +4,8 @@ This status page summarizes the current evidence-backed state of `mcp-easyar`.
 
 It is not a completion claim for every EasyAR sample. The active goal now covers Image Tracking, CRS/Cloud Recognition, and Mega only.
 
+An additional WeChat Mini Program sample track is now being added for EasyAR Mega and CRS/Cloud Recognition. The current implementation provides local inspection, user-downloaded official package import, DevTools smoke checks, log analysis, and handoff artifacts; it is not yet a claim of preview, upload, or real-device Mini Program completion.
+
 ## Current Release
 
 Current GitHub prerelease: `v0.1.0-local-key.38`
@@ -35,6 +37,7 @@ These percentages are evidence-weighted estimates. The published prerelease cove
 - Safe committed Android evidence exists for the Image Tracking, CRS/Cloud Recognition, and Mega target scope.
 - Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals. Fresh-project Mega evidence now also includes localization/tracking signals such as `successfully localized against ADF`. PICO 4 Ultra Enterprise evidence uses the documented headset path with `PicoFrameSource` and `LocationInputMode=Onsite`; any EasyAR Simulator diagnostics caution indicates the scene still needs to be switched to Onsite and rebuilt.
 - Unity project programming assistance exists for focused preflight, scene audit, run sequence, device validation, log analysis, C# planning, script writing, review, and handoff artifacts.
+- WeChat Mini Program support now includes focused sample metadata for `wechat-mega` and `wechat-crs`, project inspection, WeChat Developer Tools CLI detection, local config forms, user-downloaded official package import, DevTools smoke checks, log analysis, preflight reports, run sequences, and resource `easyar://samples/wechat-miniprogram`.
 
 ## Active Scope
 
@@ -50,12 +53,15 @@ Out of scope for the current goal:
 - Surface Tracking
 - Additional official EasyAR Sense Unity Plugin samples
 
+Additional Mini Program samples beyond `wechat-mega` and `wechat-crs` are out of scope until requested.
+
 ## Known Remaining Work
 
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence current when supported Unity versions or target platforms expand.
 - Continue hardening Unity programming workflows with more real project cases.
+- Capture WeChat Developer Tools preview/upload and real-device evidence for `wechat-mega` and `wechat-crs` after official local sample packages, logged-in DevTools, and test Mini Program projects are available.
 
 ## Safety Boundary
 

@@ -19,6 +19,8 @@ Current readiness is split into two tracks:
 
 Current delivery path: use local-key MVP first. Users register/log in/download/create keys on the official EasyAR website in their own browser, then MCP guides local Unity configuration, validates redacted presence, and runs the focused Unity workflow without handling website passwords.
 
+The current worktree also starts the WeChat Mini Program sample track. It covers `wechat-mega` and `wechat-crs` first with local project inspection, WeChat Developer Tools CLI detection, local config forms, local official package import, DevTools checks, log analysis, preflight reports, and run sequences. Mini Program support remains an official browser/tool handoff path: no automated login, no download-gate bypass, and no secret collection in chat.
+
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
@@ -34,6 +36,10 @@ Current delivery path: use local-key MVP first. Users register/log in/download/c
 - report EasyAR PackageCache `Samples~` candidates when focused sample scenes have not been imported into `Assets/Samples`
 - generate Unity Package Manager sample import guides for moving focused samples from `Samples~` into `Assets/Samples`
 - generate focused support bundles that summarize project state, scene audit, run report, and latest Unity log diagnostics
+- list focused EasyAR WeChat Mini Program samples for Mega and CRS/Cloud Recognition
+- inspect WeChat Mini Program project structure, app id presence, SDK hints, app pages, and local config presence without returning secrets
+- find WeChat Developer Tools CLI candidates
+- write Mini Program local config forms, preflight reports, and run sequences into `easyar-generated/<sampleId>/`
 - generate real-device validation checklists for focused Image Tracking, Cloud Recognition, and Mega tests
 - write device validation checklists into Unity projects as Markdown artifacts
 - record focused sample run results for compile, build, and device validation handoff
@@ -120,6 +126,8 @@ See [docs/install-from-github-release.md](docs/install-from-github-release.md) f
 See [docs/CLIENT_ACCEPTANCE.md](docs/CLIENT_ACCEPTANCE.md) for the Codex/Claude client acceptance checklist after installing the package.
 See [docs/FRESH_PROJECT_ACCEPTANCE.md](docs/FRESH_PROJECT_ACCEPTANCE.md) for the fresh Unity project acceptance path for Image Tracking, CRS/Cloud Recognition, and Mega.
 
+For WeChat Mini Program sample planning, see [docs/easyar-mega-wechat-miniprogram-mcp.md](docs/easyar-mega-wechat-miniprogram-mcp.md) and resource `easyar://samples/wechat-miniprogram`.
+
 Mega currently has two documented validation paths:
 
 - Android phone/tablet: use `LocationInputMode=Onsite` with camera, location, and network permissions.
@@ -178,6 +186,29 @@ EASYAR_STUB_HOST=127.0.0.1
 EASYAR_STUB_PORT=8787
 EASYAR_STUB_TOKEN=your_local_stub_token
 ```
+
+## WeChat Mini Program Samples
+
+Focused Mini Program sample ids:
+
+- `wechat-mega`: EasyAR Mega WeChat Mini Program sample.
+- `wechat-crs`: EasyAR CRS / Cloud Recognition WeChat Mini Program sample.
+
+Recommended first calls:
+
+```text
+easyar_list_miniprogram_samples
+easyar_check_wechat_devtools
+easyar_write_miniprogram_local_config_form projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_import_miniprogram_sample_from_local_package projectPath=/path/to/miniprogram sampleId=wechat-mega packagePath=/path/to/official/package dryRun=true
+easyar_inspect_miniprogram_project projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_write_miniprogram_preflight projectPath=/path/to/miniprogram sampleId=wechat-mega
+easyar_run_miniprogram_devtools_check projectPath=/path/to/miniprogram sampleId=wechat-mega dryRun=true
+easyar_analyze_miniprogram_devtools_log projectPath=/path/to/miniprogram sampleId=wechat-mega logPath=easyar-generated/wechat-mega/DEVTOOLS_CHECK.log
+easyar_write_miniprogram_run_sequence projectPath=/path/to/miniprogram sampleId=wechat-mega
+```
+
+Use `sampleId=wechat-crs` for the CRS path. The user still downloads official packages and manages EasyAR/WeChat credentials in the official website or official developer tools.
 
 Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, license keys, and Cloud Recognition credentials local.
 
