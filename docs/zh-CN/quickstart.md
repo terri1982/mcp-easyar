@@ -78,9 +78,9 @@ easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega p
 
 Mega 只有 APK 打包成功还不算完成；必须有真机安装、启动和定位成功证据。当前工作树已有一轮 Android 真机 Mega 定位跟踪证据，新 Unity 项目仍需按自己的官网 package name、license 和 Mega Block 重新验证。
 
-微信小程序 Sample 使用 `easyar-run-wechat-miniprogram`，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会引导读取 `easyar://acceptance/wechat-miniprogram` 和 `easyar://samples/wechat-miniprogram`，必要时用 `easyar_create_miniprogram_sample_workspace` 创建最小小程序工程壳，走 EasyAR 官网和微信开发者工具的官方 handoff，不在聊天里收集密钥，并要求真机预览证据后才生成完成报告。
+微信小程序 Sample 使用 `easyar-run-wechat-miniprogram`，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会引导读取 `easyar://acceptance/wechat-miniprogram` 和 `easyar://samples/wechat-miniprogram`，必要时用 `easyar_create_miniprogram_sample_workspace` 创建最小小程序工程壳，用 `easyar_find_miniprogram_official_package` 和 `easyar_write_miniprogram_official_package_search` 查找并记录官方包搜索证据，走 EasyAR 官网和微信开发者工具的官方 handoff，不在聊天里收集密钥，并要求真机预览证据后才生成完成报告。
 
-小程序工程、官方包导入、DevTools 日志或真机证据有变化时，可以反复调用 `easyar_write_miniprogram_run_through_status`。它会写一个本地状态文件，并给出下一次最应该调用的 MCP 工具。
+小程序工程、官方包查找/导入、DevTools 日志或真机证据有变化时，可以反复调用 `easyar_write_miniprogram_run_through_status`。它会写一个本地状态文件，并给出下一次最应该调用的 MCP 工具。
 
 ## 6. 编程服务
 

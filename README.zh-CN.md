@@ -96,6 +96,8 @@ easyar://workflow/programming
 ```text
 easyar_list_miniprogram_samples
 easyar_check_wechat_devtools
+easyar_find_miniprogram_official_package sampleId=wechat-mega searchRoots='["/Users/you/Downloads","/Users/you/Documents"]'
+easyar_write_miniprogram_official_package_search projectPath=/path/to/miniprogram sampleId=wechat-mega searchRoots='["/Users/you/Downloads","/Users/you/Documents"]'
 easyar_create_miniprogram_sample_workspace projectPath=/path/to/miniprogram sampleId=wechat-mega appId=wx-your-appid
 easyar_write_miniprogram_local_config_form projectPath=/path/to/miniprogram sampleId=wechat-mega
 easyar_import_miniprogram_sample_from_local_package projectPath=/path/to/miniprogram sampleId=wechat-mega packagePath=/path/to/official/package-or.zip dryRun=true
@@ -113,6 +115,8 @@ easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 CRS 小程序把 `sampleId` 改成 `wechat-crs`。用户仍需自己在 EasyAR 官网和微信开发者工具中完成注册、登录、下载、license / CRS key 创建和真机预览。
+
+官方包查找工具会按 EasyAR 官方文件名在本机目录里找用户已下载的包，并可把结果写到 `easyar-generated/<sampleId>/OFFICIAL_PACKAGE_SEARCH.json` 和 `.md`。例如 Mega 目标包是 `easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip`；CRS 目标包是 `EasyAR-miniprogram-WebAR-Demo-tracking.zip`。如果没找到，用户仍需在自己的 EasyAR 官网登录会话里下载，MCP 不代下、不绕过授权。
 
 支持 prompts 的 MCP 客户端可以直接从 `easyar-run-wechat-miniprogram` 开始，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会先读取小程序验收资源，禁止在聊天里收集密钥，并要求有真机预览证据后才允许声明完成。
 
