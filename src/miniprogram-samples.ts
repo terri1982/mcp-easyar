@@ -1395,6 +1395,43 @@ function shouldSkipOfficialPackagePath(relativePath: string) {
     || /\.(log|key|p12|p8|pem)$/i.test(relativePath);
 }
 
+async function classifyMiniProgramPackageSource(sourceRoot: string) {
+  const hasUnityProject = await pathExists(path.join(sourceRoot, "Assets"))
+    && await pathExists(path.join(sourceRoot, "ProjectSettings"));
+  if (hasUnityProject) {
+    return {
+      kind: "unity-project" as const,
+      warnings: [
+        "This source looks like a Unity project, not an EasyAR WeChat Mini Program SDK/sample package.",
+        "Use the official EasyAR Mega or CRS WeChat Mini Program package downloaded from the EasyAR website instead."
+      ]
+    };
+  }
+  const hasProjectConfig = await pathExists(path.join(sourceRoot, "project.config.json"));
+  const hasRootAppJson = await pathExists(path.join(sourceRoot, "app.json"));
+  const hasMiniProgramAppJson = await pathExists(path.join(sourceRoot, "miniprogram", "app.json"));
+  const sdkHints = await findFilesByName(sourceRoot, new Set([
+    "easyar.js",
+    "easyar.min.js",
+    "easyar-wechat.js",
+    "easyar-mega.js",
+    "easyar-crs.js"
+  ]), 20);
+  if (hasProjectConfig || hasRootAppJson || hasMiniProgramAppJson || sdkHints.length > 0) {
+    return {
+      kind: "wechat-miniprogram-or-sdk" as const,
+      warnings: [] as string[]
+    };
+  }
+  return {
+    kind: "unknown" as const,
+    warnings: [
+      "This source does not contain obvious WeChat Mini Program project files or EasyAR Mini Program SDK hints.",
+      "Continue only if the user confirms it is the official EasyAR Mini Program package."
+    ]
+  };
+}
+
 export async function importMiniProgramSampleFromLocalPackage(input: {
   root: string;
   sample: MiniProgramSampleInfo;
@@ -1408,6 +1445,10 @@ export async function importMiniProgramSampleFromLocalPackage(input: {
   const target = miniProgramSampleTargetDir(input.root, input.sample, input.relativeTargetDir);
   const targetExists = await pathExists(target);
   try {
+    const sourceClassification = await classifyMiniProgramPackageSource(source);
+    if (sourceClassification.kind === "unity-project") {
+      throw new Error(sourceClassification.warnings.join(" "));
+    }
     const plan = await collectCopyPlan(source);
     if (input.dryRun) {
       return {
@@ -1420,7 +1461,9 @@ export async function importMiniProgramSampleFromLocalPackage(input: {
         fileCountPreview: plan.files.length,
         sampleFiles: plan.files.slice(0, 40),
         skippedPreview: plan.skipped.slice(0, 40),
+        sourceClassification,
         nextActions: [
+          ...sourceClassification.warnings,
           "Confirm this source is the official EasyAR Mini Program SDK/sample package downloaded by the user.",
           "Run again with dryRun=false to copy files into the Mini Program project.",
           `Run easyar_inspect_miniprogram_project sampleId=${input.sample.id} after import.`
@@ -1448,7 +1491,9 @@ export async function importMiniProgramSampleFromLocalPackage(input: {
       copied: true,
       fileCountPreview: plan.files.length,
       skippedPreview: plan.skipped.slice(0, 40),
+      sourceClassification,
       nextActions: [
+        ...sourceClassification.warnings,
         `Run easyar_inspect_miniprogram_project sampleId=${input.sample.id}.`,
         "Open the project in WeChat Developer Tools and confirm the imported sample compiles.",
         "Fill local EasyAR config outside chat before previewing on a real device."

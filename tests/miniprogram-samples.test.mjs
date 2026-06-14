@@ -160,6 +160,43 @@ test("importMiniProgramSampleFromLocalPackage previews and skips private package
   });
 });
 
+test("importMiniProgramSampleFromLocalPackage rejects Unity projects for Mini Program samples", async () => {
+  await withTempDir(async (root) => {
+    await createMiniProgramProject(root, "wechat-mega");
+    const unityProject = path.join(root, "unity-mega-project");
+    await mkdir(path.join(unityProject, "Assets"), { recursive: true });
+    await mkdir(path.join(unityProject, "ProjectSettings"), { recursive: true });
+    await writeFile(path.join(unityProject, "ProjectSettings", "ProjectVersion.txt"), "m_EditorVersion: 2022.3.62f3\n");
+
+    await assert.rejects(() => importMiniProgramSampleFromLocalPackage({
+      root,
+      sample: findMiniProgramSample("wechat-mega"),
+      packagePath: unityProject,
+      overwrite: false,
+      dryRun: true
+    }), /Unity project, not an EasyAR WeChat Mini Program/);
+  });
+});
+
+test("importMiniProgramSampleFromLocalPackage warns for unknown package shape", async () => {
+  await withTempDir(async (root) => {
+    await createMiniProgramProject(root, "wechat-crs");
+    const packageRoot = path.join(root, "unknown-package");
+    await mkdir(packageRoot, { recursive: true });
+    await writeFile(path.join(packageRoot, "README.txt"), "official package contents pending\n");
+
+    const preview = await importMiniProgramSampleFromLocalPackage({
+      root,
+      sample: findMiniProgramSample("wechat-crs"),
+      packagePath: packageRoot,
+      overwrite: false,
+      dryRun: true
+    });
+    assert.equal(preview.sourceClassification.kind, "unknown");
+    assert(preview.nextActions.some((action) => action.includes("does not contain obvious WeChat Mini Program")));
+  });
+});
+
 test("importMiniProgramSampleFromLocalPackage accepts a user-downloaded zip package when zip is available", { skip: process.platform === "win32" }, async () => {
   await withTempDir(async (root) => {
     await createMiniProgramProject(root, "wechat-crs");
