@@ -33,7 +33,8 @@ const requiredPrompts = [
   "easyar-run-cloud-recognition",
   "easyar-validate-official-endpoints",
   "easyar-close-focused-scope",
-  "easyar-unity-programming-assistant"
+  "easyar-unity-programming-assistant",
+  "easyar-run-wechat-miniprogram"
 ];
 
 const requiredResources = [

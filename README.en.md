@@ -68,7 +68,7 @@ The current worktree also starts the WeChat Mini Program sample track. It covers
 - analyze Unity Editor/build logs for common EasyAR issues plus Image Tracking, Cloud Recognition, and Mega specifics
 - find and analyze the latest Unity log after a failed batch run
 - expose EasyAR workflow guidance as MCP resources
-- expose MCP prompts for Image Tracking, Cloud Recognition, and Unity programming assistance
+- expose MCP prompts for Image Tracking, Cloud Recognition, Unity programming assistance, and WeChat Mini Program Mega/CRS run-throughs
 - guide unregistered users through official EasyAR registration, development center login, license creation, and Cloud Recognition credential setup without collecting passwords
 - generate account material checklists that classify EasyAR fields by source, storage location, and share policy
 - check Codex/Claude/generic MCP client setup before users paste config
@@ -213,6 +213,8 @@ easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 ```
 
 Use `sampleId=wechat-crs` for the CRS path. The user still downloads official packages and manages EasyAR/WeChat credentials in the official website or official developer tools.
+
+MCP clients that support prompts can start from `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` or `sampleId=wechat-crs`. The prompt reads the Mini Program acceptance resources, keeps secrets out of chat, and does not allow completion claims until real-device preview evidence is recorded.
 
 Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, license keys, and Cloud Recognition credentials local.
 
@@ -492,3 +494,4 @@ The first MCP screen is intentionally account-stage driven:
 - `easyar-validate-official-endpoints`
 - `easyar-close-focused-scope`
 - `easyar-unity-programming-assistant`
+- `easyar-run-wechat-miniprogram`

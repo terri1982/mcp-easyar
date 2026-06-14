@@ -16,6 +16,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 - Includes committed safe Android release evidence for the focused scope, including Mega APK install/startup and localization-tracking evidence.
 - Adds Mega BlockRoot readiness validation for the official sample scene and records the successful localized block `大厅+办公室+阳台+GPS+0716`.
 - Prompts for Image Tracking, CRS/Cloud Recognition, and focused close-out now tell clients to read `easyar://acceptance/fresh-project` first.
+- Adds `easyar-run-wechat-miniprogram` so MCP clients can run the focused `wechat-mega` and `wechat-crs` handoff without collecting user secrets in chat.
 - Server status, quickstart, install guide, and generated client setup now point fresh users to the same fresh project acceptance resource before Unity automation.
 - Provides Unity project assistance tools for local config, preflight, import guidance, build/run sequencing, log diagnostics, C# planning, script writing, and support bundles.
 

@@ -111,6 +111,8 @@ easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 
 CRS 小程序把 `sampleId` 改成 `wechat-crs`。用户仍需自己在 EasyAR 官网和微信开发者工具中完成注册、登录、下载、license / CRS key 创建和真机预览。
 
+支持 prompts 的 MCP 客户端可以直接从 `easyar-run-wechat-miniprogram` 开始，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会先读取小程序验收资源，禁止在聊天里收集密钥，并要求有真机预览证据后才允许声明完成。
+
 ## 安全边界
 
 不要把以下内容发到聊天、提交到 GitHub 或写进公开日志：

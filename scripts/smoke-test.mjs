@@ -445,6 +445,10 @@ try {
     prompts.result.prompts.some((prompt) => prompt.name === "easyar-close-focused-scope"),
     "easyar-close-focused-scope prompt should be listed"
   );
+  assert(
+    prompts.result.prompts.some((prompt) => prompt.name === "easyar-run-wechat-miniprogram"),
+    "easyar-run-wechat-miniprogram prompt should be listed"
+  );
 
   const imageTrackingPrompt = await request("prompts/get", {
     name: "easyar-run-image-tracking",
@@ -501,6 +505,21 @@ try {
   assertPromptIncludes(focusedScopePrompt, "easyar://acceptance/fresh-project");
   assertPromptIncludes(focusedScopePrompt, "easyar://workflow/focused-scope");
   assertPromptIncludes(focusedScopePrompt, "easyar_write_focused_scope_status");
+
+  const miniProgramPrompt = await request("prompts/get", {
+    name: "easyar-run-wechat-miniprogram",
+    arguments: {
+      projectPath: "/tmp/EasyARMiniProgram",
+      sampleId: "wechat-crs",
+      packagePath: "/tmp/easyar-miniprogram.zip"
+    }
+  });
+  assertPromptIncludes(miniProgramPrompt, "easyar://acceptance/wechat-miniprogram");
+  assertPromptIncludes(miniProgramPrompt, "easyar://samples/wechat-miniprogram");
+  assertPromptIncludes(miniProgramPrompt, "sampleId=wechat-crs");
+  assertPromptIncludes(miniProgramPrompt, "easyar_write_miniprogram_preflight");
+  assertPromptIncludes(miniProgramPrompt, "easyar_write_miniprogram_run_result");
+  assertPromptIncludes(miniProgramPrompt, "Do not ask the user for EasyAR passwords");
 
   const status = await callTool("easyar_server_status", {});
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");

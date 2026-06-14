@@ -159,7 +159,7 @@ easyar_write_official_access_report projectPath=/path/to/UnityProject sampleId=i
 
 ## 3. Choose A Sample
 
-If your MCP client supports prompts, start from `easyar-run-image-tracking`, `easyar-run-cloud-recognition`, or the generic programming assistant with `sampleId=mega`.
+If your MCP client supports prompts, start from `easyar-run-image-tracking`, `easyar-run-cloud-recognition`, `easyar-run-wechat-miniprogram`, or the generic programming assistant with `sampleId=mega`.
 
 For now, use one of the focused sample workflows:
 
@@ -168,6 +168,8 @@ For now, use one of the focused sample workflows:
 - `mega`
 
 Other EasyAR samples are out of scope for the current Image Tracking, CRS/Cloud Recognition, and Mega target.
+
+For WeChat Mini Program samples, use `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` or `sampleId=wechat-crs`. The prompt keeps the flow on official EasyAR/WeChat browser and DevTools handoff, writes local preflight/evidence artifacts, and requires real-device preview evidence before completion.
 
 Call:
 

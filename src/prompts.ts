@@ -148,4 +148,49 @@ export function registerPrompts(server: any) {
       ].join("\n")
     )
   );
+
+  server.prompt(
+    "easyar-run-wechat-miniprogram",
+    "Guide Codex or Claude through the focused WeChat Mini Program Mega or CRS run-through.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).default("wechat-mega"),
+      packagePath: z.string().optional().describe("Optional path to the official EasyAR Mini Program sample or SDK package downloaded by the user.")
+    },
+    ({ projectPath, sampleId, packagePath }: any) => promptText(
+      "Focused WeChat Mini Program run-through",
+      [
+        `Use the mcp-easyar tools to run the ${sampleId} sample for Mini Program project: ${projectPath}`,
+        "",
+        "Read `easyar://acceptance/wechat-miniprogram` and `easyar://samples/wechat-miniprogram` first.",
+        "",
+        "Security boundary:",
+        "- Do not ask the user for EasyAR passwords, WeChat passwords, SMS codes, QR codes, license keys, API keys, API secrets, or EASYAR_API_TOKEN in chat.",
+        "- The user signs in, downloads official packages, creates licenses/keys, and fills local config in the official EasyAR website or WeChat Developer Tools.",
+        "- MCP may inspect local project files and write redacted evidence artifacts only.",
+        "",
+        "Start by calling:",
+        "1. easyar_list_miniprogram_samples",
+        "2. easyar_check_wechat_devtools",
+        `3. easyar_write_miniprogram_local_config_form projectPath=${projectPath} sampleId=${sampleId}`,
+        packagePath
+          ? `4. easyar_import_miniprogram_sample_from_local_package projectPath=${projectPath} sampleId=${sampleId} packagePath=${packagePath} dryRun=true`
+          : "4. If the user has downloaded the official EasyAR Mini Program package, call easyar_import_miniprogram_sample_from_local_package with packagePath and dryRun=true.",
+        `5. easyar_inspect_miniprogram_project projectPath=${projectPath} sampleId=${sampleId}`,
+        `6. easyar_write_miniprogram_preflight projectPath=${projectPath} sampleId=${sampleId}`,
+        "",
+        "Read PREFLIGHT.md and fix readiness blockers before asking WeChat Developer Tools to preview or upload.",
+        "",
+        "After preflight blockers are clear, call:",
+        `1. easyar_write_miniprogram_run_sequence projectPath=${projectPath} sampleId=${sampleId}`,
+        `2. easyar_run_miniprogram_devtools_check projectPath=${projectPath} sampleId=${sampleId} dryRun=true`,
+        `3. easyar_write_miniprogram_device_validation_checklist projectPath=${projectPath} sampleId=${sampleId}`,
+        `4. easyar_write_miniprogram_run_result_form projectPath=${projectPath} sampleId=${sampleId}`,
+        "",
+        "Only after real-device WeChat preview evidence exists, call easyar_write_miniprogram_run_result and then easyar_write_miniprogram_completion_report.",
+        "Do not claim the sample is complete from generated docs, DevTools open success, or a dry run alone.",
+        "After both wechat-mega and wechat-crs have passing completion reports, call easyar_write_miniprogram_scope_status."
+      ].join("\n")
+    )
+  );
 }

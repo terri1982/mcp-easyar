@@ -32,6 +32,8 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 
 如果目标是 Mega，可把后续 `sampleId` 改为 `mega`。用户仍然在浏览器里自行登录 EasyAR 官网或 Mega Studio，MCP 只引导查找云定位库、Mega Block storage、Block 名称和 Block ID，不收集官网密码或密钥。
 
+如果 MCP 客户端支持 prompts，可以从 `easyar-run-image-tracking`、`easyar-run-cloud-recognition`、`easyar-run-wechat-miniprogram` 或 `easyar-unity-programming-assistant` 开始。
+
 ## 4. Unity 工程准备
 
 ```text
@@ -75,6 +77,8 @@ easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega p
 ```
 
 Mega 只有 APK 打包成功还不算完成；必须有真机安装、启动和定位成功证据。当前工作树已有一轮 Android 真机 Mega 定位跟踪证据，新 Unity 项目仍需按自己的官网 package name、license 和 Mega Block 重新验证。
+
+微信小程序 Sample 使用 `easyar-run-wechat-miniprogram`，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会引导读取 `easyar://acceptance/wechat-miniprogram` 和 `easyar://samples/wechat-miniprogram`，走 EasyAR 官网和微信开发者工具的官方 handoff，不在聊天里收集密钥，并要求真机预览证据后才生成完成报告。
 
 ## 6. 编程服务
 
