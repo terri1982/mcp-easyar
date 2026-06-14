@@ -14,6 +14,8 @@ import {
   miniProgramSamples,
   redactMiniProgramSecretText
 } from "../dist/miniprogram-samples.js";
+import { resourceCatalog } from "../dist/catalog.js";
+import { registerResources } from "../dist/resources.js";
 
 async function withTempDir(fn) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mcp-easyar-mini-"));
@@ -165,4 +167,35 @@ test("Mini Program completion report requires preflight, DevTools log, checklist
     assert.equal(report.runThroughComplete, true);
     assert.deepEqual(report.blockers, []);
   });
+});
+
+test("WeChat Mini Program acceptance resource is registered and readable", async () => {
+  assert(resourceCatalog.includes("easyar://acceptance/wechat-miniprogram"));
+  const registered = new Map();
+  const fakeServer = {
+    resource(name, uri, handler) {
+      registered.set(uri, { name, handler });
+    }
+  };
+
+  registerResources(fakeServer, {
+    samples: [],
+    officialInfo: {},
+    officialOpenApiPath: path.join(process.cwd(), "docs", "openapi", "easyar-mcp-account-api.openapi.json"),
+    packageRoot: process.cwd(),
+    quickstartWorkflow: "quickstart",
+    buildOfficialApiContract: () => ({}),
+    buildOfficialApiContractMarkdown: () => "# contract\n"
+  });
+
+  const resource = registered.get("easyar://acceptance/wechat-miniprogram");
+  assert(resource, "wechat-miniprogram acceptance resource should be registered");
+  assert.equal(resource.name, "easyar-wechat-miniprogram-acceptance");
+
+  const result = await resource.handler({ href: "easyar://acceptance/wechat-miniprogram" });
+  assert.equal(result.contents[0].mimeType, "text/markdown");
+  assert(result.contents[0].text.includes("EasyAR WeChat Mini Program Sample Acceptance"));
+  assert(result.contents[0].text.includes("wechat-mega"));
+  assert(result.contents[0].text.includes("wechat-crs"));
+  assert(result.contents[0].text.includes("COMPLETION_REPORT.md"));
 });
