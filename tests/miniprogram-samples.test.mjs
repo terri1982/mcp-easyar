@@ -10,6 +10,7 @@ import {
   buildMiniProgramCompletionReportMarkdown,
   buildMiniProgramDevtoolsCommand,
   buildMiniProgramDeviceValidationChecklist,
+  buildMiniProgramOfficialPackageSearchMarkdown,
   buildMiniProgramRunResultMarkdown,
   buildMiniProgramRunThroughStatus,
   buildMiniProgramRunThroughStatusMarkdown,
@@ -301,6 +302,11 @@ test("findMiniProgramOfficialPackage locates user-downloaded official package na
     assert.equal(found.candidates[0].path, expectedPath);
     assert.equal(found.candidates[0].matchType, "exact");
     assert(found.nextActions.some((action) => action.includes("easyar_import_miniprogram_sample_from_local_package")));
+    const markdown = buildMiniProgramOfficialPackageSearchMarkdown(found);
+    assert(markdown.includes("Official Package Search"));
+    assert(markdown.includes(sample.officialPackage.fileName));
+    assert(markdown.includes(expectedPath));
+    assert(!markdown.includes("fake zip bytes"));
 
     const missing = await findMiniProgramOfficialPackage({
       sample: findMiniProgramSample("wechat-crs"),

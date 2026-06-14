@@ -84,6 +84,7 @@ export const toolCatalog = [
   "easyar_list_miniprogram_samples",
   "easyar_check_wechat_devtools",
   "easyar_find_miniprogram_official_package",
+  "easyar_write_miniprogram_official_package_search",
   "easyar_inspect_miniprogram_project",
   "easyar_generate_miniprogram_workspace_plan",
   "easyar_create_miniprogram_sample_workspace",

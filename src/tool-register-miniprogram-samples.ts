@@ -13,6 +13,7 @@ import {
   buildMiniProgramDeviceValidationChecklistMarkdown,
   buildMiniProgramLocalConfigForm,
   buildMiniProgramLocalConfigFormMarkdown,
+  buildMiniProgramOfficialPackageSearchMarkdown,
   buildMiniProgramPreflightMarkdown,
   buildMiniProgramDevtoolsCommand,
   buildMiniProgramRunResultForm,
@@ -126,6 +127,46 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         maxDepth,
         limit
       }));
+    }
+  );
+
+  registerTool(
+    "easyar_write_miniprogram_official_package_search",
+    "Search for the user-downloaded official EasyAR WeChat Mini Program package and write JSON/Markdown evidence into easyar-generated/<sampleId>/.",
+    {
+      projectPath: z.string().describe("WeChat Mini Program project path where the search report should be written."),
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      searchRoots: z.array(z.string()).min(1).optional().describe("Local directories to search. Defaults to ~/Downloads and ~/Documents."),
+      maxDepth: z.number().int().min(0).max(8).default(5).describe("Maximum directory depth under each search root."),
+      limit: z.number().int().min(1).max(50).default(20).describe("Maximum number of candidate paths to return."),
+      overwrite: z.boolean().default(true).describe("Whether to overwrite existing OFFICIAL_PACKAGE_SEARCH files.")
+    },
+    async ({ projectPath, sampleId, searchRoots, maxDepth, limit, overwrite }) => {
+      const root = resolveProjectPath(projectPath);
+      await ensureDirectory(root);
+      const sample = findMiniProgramSample(sampleId);
+      const roots = searchRoots && searchRoots.length > 0
+        ? searchRoots
+        : [
+            path.join(os.homedir(), "Downloads"),
+            path.join(os.homedir(), "Documents")
+          ];
+      const report = await findMiniProgramOfficialPackage({
+        sample,
+        searchRoots: roots,
+        maxDepth,
+        limit
+      });
+      const jsonResult = await writeMiniProgramArtifact(root, sample, "OFFICIAL_PACKAGE_SEARCH.json", JSON.stringify(report, null, 2), overwrite);
+      const markdownResult = await writeMiniProgramArtifact(root, sample, "OFFICIAL_PACKAGE_SEARCH.md", buildMiniProgramOfficialPackageSearchMarkdown(report), overwrite);
+      return jsonText({
+        found: report.found,
+        candidates: report.candidates,
+        nextActions: report.nextActions,
+        jsonPath: path.relative(root, jsonResult.path),
+        markdownPath: path.relative(root, markdownResult.path),
+        officialPackage: report.officialPackage
+      });
     }
   );
 

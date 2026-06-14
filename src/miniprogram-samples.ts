@@ -280,6 +280,42 @@ export async function findMiniProgramOfficialPackage(input: {
   };
 }
 
+export function buildMiniProgramOfficialPackageSearchMarkdown(report: Awaited<ReturnType<typeof findMiniProgramOfficialPackage>>) {
+  return [
+    `# ${report.sample.name} Official Package Search`,
+    "",
+    `Generated: ${report.generatedAt}`,
+    `Found: ${report.found ? "yes" : "no"}`,
+    "",
+    "## Official Package",
+    "",
+    `Title: ${report.officialPackage.title}`,
+    `Version: ${report.officialPackage.version}`,
+    `File name: \`${report.officialPackage.fileName}\``,
+    `Docs: ${report.officialPackage.docsUrl}`,
+    `Access: ${report.officialPackage.accessNote}`,
+    "",
+    "## Search Roots",
+    "",
+    ...report.searchRoots.map((root) => `- \`${root}\``),
+    "",
+    "## Candidates",
+    "",
+    ...(report.candidates.length > 0
+      ? report.candidates.map((candidate) => `- ${candidate.matchType}: \`${candidate.path}\` (${candidate.sizeBytes ?? "unknown"} bytes)`)
+      : ["No matching local package was found."]),
+    "",
+    "## Next Actions",
+    "",
+    ...report.nextActions.map((action) => `- ${action}`),
+    "",
+    "## Security",
+    "",
+    ...report.security.map((rule) => `- ${rule}`),
+    ""
+  ].join("\n");
+}
+
 export async function pathExists(filePath: string): Promise<boolean> {
   try {
     await access(filePath, constants.F_OK);
