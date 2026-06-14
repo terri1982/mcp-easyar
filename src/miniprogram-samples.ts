@@ -174,6 +174,112 @@ export function findMiniProgramSample(sampleId: string): MiniProgramSampleInfo {
   return sample;
 }
 
+export async function findMiniProgramOfficialPackage(input: {
+  sample: MiniProgramSampleInfo;
+  searchRoots: string[];
+  maxDepth?: number;
+  limit?: number;
+}) {
+  const maxDepth = input.maxDepth ?? 5;
+  const limit = input.limit ?? 20;
+  const expectedFileName = input.sample.officialPackage.fileName;
+  const expectedLower = expectedFileName.toLowerCase();
+  const expectedStem = expectedLower.replace(/\.(zip|7z|tar\.gz|tgz)$/i, "");
+  const visited = new Set<string>();
+  const candidates: Array<{
+    path: string;
+    fileName: string;
+    matchType: "exact" | "case-insensitive" | "stem";
+    sizeBytes: number | null;
+  }> = [];
+
+  async function walk(dirPath: string, depth: number) {
+    if (depth < 0 || candidates.length >= limit) {
+      return;
+    }
+    const resolvedDir = path.resolve(dirPath);
+    if (visited.has(resolvedDir)) {
+      return;
+    }
+    visited.add(resolvedDir);
+    let entries;
+    try {
+      entries = await readdir(resolvedDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (candidates.length >= limit) {
+        return;
+      }
+      if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "Library" || entry.name === "Temp") {
+        continue;
+      }
+      const fullPath = path.join(resolvedDir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath, depth - 1);
+        continue;
+      }
+      const lower = entry.name.toLowerCase();
+      const matchType =
+        entry.name === expectedFileName
+          ? "exact"
+          : lower === expectedLower
+            ? "case-insensitive"
+            : lower.includes(expectedStem)
+              ? "stem"
+              : null;
+      if (!matchType) {
+        continue;
+      }
+      let sizeBytes: number | null = null;
+      try {
+        sizeBytes = (await stat(fullPath)).size;
+      } catch {
+        sizeBytes = null;
+      }
+      candidates.push({
+        path: fullPath,
+        fileName: entry.name,
+        matchType,
+        sizeBytes
+      });
+    }
+  }
+
+  for (const root of input.searchRoots) {
+    await walk(root, maxDepth);
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    sample: {
+      id: input.sample.id,
+      name: input.sample.name
+    },
+    officialPackage: input.sample.officialPackage,
+    searchRoots: input.searchRoots.map((root) => path.resolve(root)),
+    maxDepth,
+    found: candidates.length > 0,
+    candidates,
+    nextActions: candidates.length > 0
+      ? [
+          `Run easyar_import_miniprogram_sample_from_local_package with packagePath=${candidates[0].path} and dryRun=true.`,
+          "Review skipped private files before running the import with dryRun=false."
+        ]
+      : [
+          `Download ${input.sample.officialPackage.title} ${input.sample.officialPackage.version} from ${input.sample.officialDownloadPage}.`,
+          `Expected file name: ${input.sample.officialPackage.fileName}.`,
+          input.sample.officialPackage.accessNote
+        ],
+    security: [
+      "This search only returns local file paths, file names, match types, and sizes.",
+      "It does not read archive contents, credentials, QR codes, or private config values.",
+      "Official downloads remain user-controlled browser handoffs."
+    ]
+  };
+}
+
 export async function pathExists(filePath: string): Promise<boolean> {
   try {
     await access(filePath, constants.F_OK);

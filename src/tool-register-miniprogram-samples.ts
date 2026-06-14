@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import path from "node:path";
+import os from "node:os";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { jsonText } from "./mcp-response.js";
@@ -26,6 +27,7 @@ import {
   buildMiniProgramWorkspacePlan,
   findMiniProgramSample,
   createMiniProgramSampleWorkspace,
+  findMiniProgramOfficialPackage,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
   miniProgramSamples,
@@ -99,6 +101,32 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
       cliPath: z.string().optional().describe("Optional explicit WeChat Developer Tools CLI path.")
     },
     async ({ cliPath }) => jsonText(await findWeChatDevToolsCli(cliPath))
+  );
+
+  registerTool(
+    "easyar_find_miniprogram_official_package",
+    "Find a user-downloaded official EasyAR WeChat Mini Program sample package by the expected official file name.",
+    {
+      sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      searchRoots: z.array(z.string()).min(1).optional().describe("Local directories to search. Defaults to ~/Downloads and ~/Documents."),
+      maxDepth: z.number().int().min(0).max(8).default(5).describe("Maximum directory depth under each search root."),
+      limit: z.number().int().min(1).max(50).default(20).describe("Maximum number of candidate paths to return.")
+    },
+    async ({ sampleId, searchRoots, maxDepth, limit }) => {
+      const sample = findMiniProgramSample(sampleId);
+      const roots = searchRoots && searchRoots.length > 0
+        ? searchRoots
+        : [
+            path.join(os.homedir(), "Downloads"),
+            path.join(os.homedir(), "Documents")
+          ];
+      return jsonText(await findMiniProgramOfficialPackage({
+        sample,
+        searchRoots: roots,
+        maxDepth,
+        limit
+      }));
+    }
   );
 
   registerTool(

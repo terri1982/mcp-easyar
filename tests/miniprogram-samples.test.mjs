@@ -17,6 +17,7 @@ import {
   buildMiniProgramScopeStatusMarkdown,
   buildMiniProgramWorkspacePlan,
   createMiniProgramSampleWorkspace,
+  findMiniProgramOfficialPackage,
   findMiniProgramSample,
   importMiniProgramSampleFromLocalPackage,
   inspectMiniProgramProject,
@@ -280,6 +281,36 @@ test("validateMiniProgramZipEntries rejects zip-slip style paths", () => {
   assert(result.unsafeEntries.includes("/tmp/absolute.txt"));
   assert(result.unsafeEntries.includes("C:/Users/example/private.txt"));
   assert(result.unsafeEntries.includes("nested\\..\\outside.txt"));
+});
+
+test("findMiniProgramOfficialPackage locates user-downloaded official package names", async () => {
+  await withTempDir(async (root) => {
+    const downloads = path.join(root, "Downloads");
+    const nested = path.join(downloads, "EasyAR");
+    await mkdir(nested, { recursive: true });
+    const sample = findMiniProgramSample("wechat-mega");
+    const expectedPath = path.join(nested, sample.officialPackage.fileName);
+    await writeFile(expectedPath, "fake zip bytes\n");
+
+    const found = await findMiniProgramOfficialPackage({
+      sample,
+      searchRoots: [downloads],
+      maxDepth: 3
+    });
+    assert.equal(found.found, true);
+    assert.equal(found.candidates[0].path, expectedPath);
+    assert.equal(found.candidates[0].matchType, "exact");
+    assert(found.nextActions.some((action) => action.includes("easyar_import_miniprogram_sample_from_local_package")));
+
+    const missing = await findMiniProgramOfficialPackage({
+      sample: findMiniProgramSample("wechat-crs"),
+      searchRoots: [downloads],
+      maxDepth: 3
+    });
+    assert.equal(missing.found, false);
+    assert(missing.nextActions.some((action) => action.includes("EasyAR-miniprogram-WebAR-Demo-tracking.zip")));
+    assert(!JSON.stringify(missing).includes("fake zip bytes"));
+  });
 });
 
 test("Mini Program workspace scaffold creates a safe project shell", async () => {
