@@ -126,7 +126,7 @@ See [docs/install-from-github-release.md](docs/install-from-github-release.md) f
 See [docs/CLIENT_ACCEPTANCE.md](docs/CLIENT_ACCEPTANCE.md) for the Codex/Claude client acceptance checklist after installing the package.
 See [docs/FRESH_PROJECT_ACCEPTANCE.md](docs/FRESH_PROJECT_ACCEPTANCE.md) for the fresh Unity project acceptance path for Image Tracking, CRS/Cloud Recognition, and Mega.
 
-For WeChat Mini Program sample planning, see [docs/easyar-mega-wechat-miniprogram-mcp.md](docs/easyar-mega-wechat-miniprogram-mcp.md) and resource `easyar://samples/wechat-miniprogram`.
+For WeChat Mini Program sample planning, see [docs/easyar-mega-wechat-miniprogram-mcp.md](docs/easyar-mega-wechat-miniprogram-mcp.md), [docs/wechat-miniprogram-sample-acceptance.md](docs/wechat-miniprogram-sample-acceptance.md), resource `easyar://samples/wechat-miniprogram`, and resource `easyar://acceptance/wechat-miniprogram`.
 
 Mega currently has two documented validation paths:
 

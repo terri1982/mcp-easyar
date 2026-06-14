@@ -24,7 +24,7 @@ easyar-mcp-check
 - Codex、Claude Desktop、通用 JSON MCP client 配置生成可用。
 - 新用户注册/登录/下载/key 创建采用浏览器引导，不收集官网密码或密钥。
 - Unity 项目编程辅助可生成 preflight、scene audit、run sequence、device validation、programming context、code plan、C# review、handoff artifact。
-- 微信小程序方向已新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample 元数据，并提供小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report 和 `easyar://samples/wechat-miniprogram` resource。
+- 微信小程序方向已新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample 元数据，并提供小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report、`easyar://samples/wechat-miniprogram` resource 和 `easyar://acceptance/wechat-miniprogram` 验收 resource。
 
 ## 未完成
 

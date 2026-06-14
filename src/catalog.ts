@@ -242,6 +242,7 @@ export const resourceCatalog = [
   "easyar://official/openapi",
   "easyar://client/acceptance",
   "easyar://acceptance/fresh-project",
+  "easyar://acceptance/wechat-miniprogram",
   "easyar://status/current",
   "easyar://status/remaining-work",
   "easyar://install/github-release",

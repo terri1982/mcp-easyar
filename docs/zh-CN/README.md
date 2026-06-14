@@ -12,6 +12,7 @@
 - [从 GitHub Release 安装](install-from-github-release.md)
 - [客户端配置](client-setup.md)
 - [新 Unity 项目验收](FRESH_PROJECT_ACCEPTANCE.md)
+- [微信小程序 Sample 验收](wechat-miniprogram-sample-acceptance.md)
 - [完整目标计划](FULL_GOAL_PLAN.md)
 - [剩余工作](REMAINING_WORK.md)
 - [路线图](ROADMAP.md)

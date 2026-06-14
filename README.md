@@ -66,6 +66,7 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 
 ```text
 easyar://acceptance/fresh-project
+easyar://acceptance/wechat-miniprogram
 easyar://samples/wechat-miniprogram
 easyar://roadmap/full-goal
 easyar://workflow/programming
@@ -144,6 +145,7 @@ PICO 4 Ultra Enterprise sample 已验证的基线：
 - [从 GitHub Release 安装](docs/zh-CN/install-from-github-release.md)
 - [客户端配置](docs/zh-CN/client-setup.md)
 - [新 Unity 项目验收](docs/zh-CN/FRESH_PROJECT_ACCEPTANCE.md)
+- [微信小程序 Sample 验收](docs/zh-CN/wechat-miniprogram-sample-acceptance.md)
 - [当前状态](docs/zh-CN/STATUS.md)
 - [剩余工作](docs/zh-CN/REMAINING_WORK.md)
 - [完整目标计划](docs/zh-CN/FULL_GOAL_PLAN.md)
@@ -155,10 +157,12 @@ PICO 4 Ultra Enterprise sample 已验证的基线：
 - [官方 API 合同](docs/zh-CN/OFFICIAL_API_CONTRACT.md)
 - [官方 API 接入交接](docs/zh-CN/OFFICIAL_API_HANDOFF.md)
 - [EasyAR Mega 微信小程序 MCP 设计](docs/zh-CN/easyar-mega-wechat-miniprogram-mcp.md)
+- [微信小程序 Sample 验收](docs/zh-CN/wechat-miniprogram-sample-acceptance.md)
 
 ## 英文文档
 
 - [新项目验收](docs/FRESH_PROJECT_ACCEPTANCE.md)
+- [WeChat Mini Program sample acceptance](docs/wechat-miniprogram-sample-acceptance.md)
 - [当前状态](docs/STATUS.md)
 - [剩余工作](docs/REMAINING_WORK.md)
 - [完整目标计划](docs/FULL_GOAL_PLAN.md)

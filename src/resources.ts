@@ -112,6 +112,20 @@ export function registerResources(server: any, context: ResourceContext) {
       ]
     })
   );
+
+  server.resource(
+    "easyar-wechat-miniprogram-acceptance",
+    "easyar://acceptance/wechat-miniprogram",
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/markdown",
+          text: await readFile(path.join(packageRoot, "docs", "wechat-miniprogram-sample-acceptance.md"), "utf8")
+        }
+      ]
+    })
+  );
   
   server.resource(
     "easyar-current-status",
