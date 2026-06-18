@@ -6,6 +6,7 @@ import path from "node:path";
 import { createEasyARApiClient } from "./easyar-api.js";
 import { focusedHandoffSampleIds } from "./focused-scope.js";
 import { jsonText, markdownText } from "./mcp-response.js";
+import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import { officialOpenApiPath, packageRoot } from "./paths.js";
 import { createToolRegistrar, type ToolRegistrar } from "./tool-handler.js";
 import {
@@ -525,21 +526,26 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
       platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown"),
       preferredMode: z.enum(authorizationModeValues).default("auto"),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/AUTHORIZATION_STRATEGY.md for Unity projects or EasyARGenerated/AUTHORIZATION_STRATEGY.md for outputRoot."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing authorization strategy artifact.")
     },
-    async ({ projectPath, outputRoot, sampleId, platform, accountStage, preferredMode, relativePath, overwrite }) => {
+    async ({ projectPath, outputRoot, sampleId, platform, accountStage, preferredMode, output, relativePath, overwrite }) => {
       const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
       await ensureDirectory(root);
       const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
       const report = await buildAuthorizationStrategyReport(projectPath ? root : null, sample, platform, accountStage, preferredMode);
+      const markdown = buildAuthorizationStrategyMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = projectPath
         ? path.join("Assets", "EasyARGenerated", "AUTHORIZATION_STRATEGY.md")
         : path.join("EasyARGenerated", "AUTHORIZATION_STRATEGY.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildAuthorizationStrategyMarkdown(report), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
       return jsonText({
         written: written.includes(target) ? target : null,
         skipped: written.includes(target) ? null : target,
@@ -581,21 +587,26 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
       sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs account cloud credentials."),
       platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown"),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/ACCOUNT_ONBOARDING.md for Unity projects or EasyARGenerated/ACCOUNT_ONBOARDING.md for outputRoot."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing account onboarding artifact.")
     },
-    async ({ projectPath, outputRoot, sampleId, platform, accountStage, relativePath, overwrite }) => {
+    async ({ projectPath, outputRoot, sampleId, platform, accountStage, output, relativePath, overwrite }) => {
       const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
       await ensureDirectory(root);
       const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
       const report = await buildAccountOnboardingReport(projectPath ? root : null, sample, platform, accountStage);
+      const markdown = buildAccountOnboardingMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = projectPath
         ? path.join("Assets", "EasyARGenerated", "ACCOUNT_ONBOARDING.md")
         : path.join("EasyARGenerated", "ACCOUNT_ONBOARDING.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildAccountOnboardingMarkdown(report), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,
@@ -634,21 +645,26 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
       outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
       sampleId: z.string().optional().describe("Focused sample id. Defaults to cloud-recognition because it needs the full account material set."),
       platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/ACCOUNT_MATERIALS.md for Unity projects or EasyARGenerated/ACCOUNT_MATERIALS.md for outputRoot."),
       overwrite: z.boolean().default(true)
     },
-    async ({ projectPath, outputRoot, sampleId, platform, relativePath, overwrite }) => {
+    async ({ projectPath, outputRoot, sampleId, platform, output, relativePath, overwrite }) => {
       const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
       await ensureDirectory(root);
       const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
       const report = await buildAccountMaterialsReport(projectPath ? root : null, sample, platform);
+      const markdown = buildAccountMaterialsMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = projectPath
         ? path.join("Assets", "EasyARGenerated", "ACCOUNT_MATERIALS.md")
         : path.join("EasyARGenerated", "ACCOUNT_MATERIALS.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildAccountMaterialsMarkdown(report), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,

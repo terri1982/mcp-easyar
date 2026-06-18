@@ -6,11 +6,12 @@ import { serverVersion } from "./catalog.js";
 
 const requiredTools = [
   "easyar_server_status",
-  "easyar_generate_client_config",
-  "easyar_first_run_guide",
-  "easyar_account_onboarding",
+  "easyar_write_client_setup",
+  "easyar_write_authorization_strategy",
+  "easyar_write_account_onboarding",
   "easyar_write_first_run_guide",
   "easyar_write_project_handoff",
+  "easyar_write_remaining_work_report",
   "easyar_write_local_config_handoff",
   "easyar_write_local_config_form",
   "easyar_write_config_integration_audit",
@@ -19,7 +20,6 @@ const requiredTools = [
   "easyar_write_device_run_result_form",
   "easyar_write_completion_report",
   "easyar_write_focused_scope_status",
-  "easyar_generate_sample_expansion_plan",
   "easyar_list_miniprogram_samples",
   "easyar_inspect_miniprogram_project",
   "easyar_create_miniprogram_sample_workspace",
@@ -137,7 +137,7 @@ try {
     check("server-name", statusText.includes('"name": "mcp-easyar"'), "easyar_server_status returns mcp-easyar."),
     check("focused-scope", statusText.includes("image-tracking") && statusText.includes("cloud-recognition"), "Focused samples are discoverable."),
     check("tools", missingTools.length === 0, missingTools.length === 0 ? "Required tools are listed." : `Missing tools: ${missingTools.join(", ")}.`),
-    check("core-tool-count", toolNames.length <= 79, `Core profile exposes ${toolNames.length} tools; keep it below the common 80-tool client warning line.`),
+    check("core-tool-count", toolNames.length <= 70, `Core profile exposes ${toolNames.length} tools; keep it at or below the slim core profile budget of 70.`),
     check("prompts", missingPrompts.length === 0, missingPrompts.length === 0 ? "Required prompts are listed." : `Missing prompts: ${missingPrompts.join(", ")}.`),
     check("resources", missingResources.length === 0, missingResources.length === 0 ? "Required resources are readable." : `Missing resources: ${missingResources.join(", ")}.`),
     check(

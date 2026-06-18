@@ -6,6 +6,7 @@ import path from "node:path";
 import { createEasyARApiClient } from "./easyar-api.js";
 import { focusedHandoffSampleIds } from "./focused-scope.js";
 import { jsonText, markdownText } from "./mcp-response.js";
+import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import { officialOpenApiPath, packageRoot } from "./paths.js";
 import { createToolRegistrar, type ToolRegistrar } from "./tool-handler.js";
 import {
@@ -407,20 +408,25 @@ export function registerClientReleaseTools(registerTool: RegisterTool) {
       entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
       serverPath: z.string().optional().describe("Absolute path to dist/index.js. Used only when entrypointMode=local-dist. Defaults to this process entrypoint or dist/index.js."),
       includeTokenPlaceholder: z.boolean().default(false).describe("Advanced official-API deployment only: whether the generated config should include EASYAR_API_TOKEN placeholder text. Keep false for local-key MVP users."),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional report path inside outputRoot. Defaults to EasyARGenerated/CLIENT_SETUP.md."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing client setup report.")
     },
-    async ({ outputRoot, client, entrypointMode, serverPath, includeTokenPlaceholder, relativePath, overwrite }) => {
+    async ({ outputRoot, client, entrypointMode, serverPath, includeTokenPlaceholder, output, relativePath, overwrite }) => {
       const root = resolveProjectPath(outputRoot);
       await ensureDirectory(root);
       const report = await buildClientSetupReport(client, entrypointMode, serverPath, includeTokenPlaceholder);
+      const markdown = buildClientSetupMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = await exists(path.join(root, "Assets"))
         ? path.join("Assets", "EasyARGenerated", "CLIENT_SETUP.md")
         : path.join("EasyARGenerated", "CLIENT_SETUP.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildClientSetupMarkdown(report), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,
@@ -549,23 +555,28 @@ export function registerClientReleaseTools(registerTool: RegisterTool) {
       platform: z.enum(["android", "ios"]).default("android").describe("Target mobile platform for focused sample completion evidence."),
       unityPath: z.string().optional().describe("Optional Unity executable path. Defaults to EASYAR_UNITY_PATH or Unity command lookup."),
       verificationEvidence: z.enum(["not-provided", "passed"]).default("not-provided").describe("Whether npm/CI verification commands have been run and passed outside this report."),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional report path inside projectPath. Defaults to Assets/EasyARGenerated/PRODUCTION_VALIDATION.md when Assets exists, otherwise EasyARGenerated/PRODUCTION_VALIDATION.md."),
       maxScriptIssues: z.number().int().min(1).max(200).default(40),
       maxLogBytes: z.number().int().min(1024).max(1024 * 1024).default(200000),
       maxLogIssues: z.number().int().min(1).max(200).default(30),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing production validation report.")
     },
-    async ({ projectPath, platform, unityPath, verificationEvidence, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    async ({ projectPath, platform, unityPath, verificationEvidence, output, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const report = await buildProductionValidationReport(root, undefined, platform, unityPath, verificationEvidence, maxScriptIssues, maxLogBytes, maxLogIssues);
+      const markdown = buildProductionValidationMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = await exists(path.join(root, "Assets"))
         ? path.join("Assets", "EasyARGenerated", "PRODUCTION_VALIDATION.md")
         : path.join("EasyARGenerated", "PRODUCTION_VALIDATION.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildProductionValidationMarkdown(report), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,
