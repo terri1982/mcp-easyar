@@ -5,6 +5,7 @@ import os from "node:os";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { jsonText } from "./mcp-response.js";
+import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import {
   analyzeMiniProgramDevtoolsLog,
   buildMiniProgramCompletionReport,
@@ -238,14 +239,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated form.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const form = buildMiniProgramLocalConfigForm(sample);
-      const result = await writeMiniProgramArtifact(root, sample, "LOCAL_CONFIG_FORM.md", buildMiniProgramLocalConfigFormMarkdown(form), overwrite);
+      const markdown = buildMiniProgramLocalConfigFormMarkdown(form);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "LOCAL_CONFIG_FORM.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -277,14 +283,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated preflight.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const report = await inspectMiniProgramProject(root, sample);
-      const result = await writeMiniProgramArtifact(root, sample, "PREFLIGHT.md", buildMiniProgramPreflightMarkdown(report), overwrite);
+      const markdown = buildMiniProgramPreflightMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "PREFLIGHT.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -309,14 +320,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated run sequence.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const sequence = buildMiniProgramRunSequence(sample);
-      const result = await writeMiniProgramArtifact(root, sample, "RUN_SEQUENCE.md", buildMiniProgramRunSequenceMarkdown(sequence), overwrite);
+      const markdown = buildMiniProgramRunSequenceMarkdown(sequence);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "RUN_SEQUENCE.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -498,14 +514,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated checklist.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const checklist = buildMiniProgramDeviceValidationChecklist(sample);
-      const result = await writeMiniProgramArtifact(root, sample, "DEVICE_VALIDATION.md", buildMiniProgramDeviceValidationChecklistMarkdown(checklist), overwrite);
+      const markdown = buildMiniProgramDeviceValidationChecklistMarkdown(checklist);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "DEVICE_VALIDATION.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -530,14 +551,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing generated form.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const form = buildMiniProgramRunResultForm(sample);
-      const result = await writeMiniProgramArtifact(root, sample, "RUN_RESULT_FORM.md", buildMiniProgramRunResultFormMarkdown(form), overwrite);
+      const markdown = buildMiniProgramRunResultFormMarkdown(form);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "RUN_RESULT_FORM.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -626,14 +652,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing completion report.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const report = await buildMiniProgramCompletionReport(root, sample);
-      const result = await writeMiniProgramArtifact(root, sample, "COMPLETION_REPORT.md", buildMiniProgramCompletionReportMarkdown(report), overwrite);
+      const markdown = buildMiniProgramCompletionReportMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "COMPLETION_REPORT.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -664,14 +695,19 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
       sampleId: z.enum(["wechat-mega", "wechat-crs"]).describe("Mini Program sample id."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing status report.")
     },
-    async ({ projectPath, sampleId, overwrite }) => {
+    async ({ projectPath, sampleId, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findMiniProgramSample(sampleId);
       const status = await buildMiniProgramRunThroughStatus(root, sample);
-      const result = await writeMiniProgramArtifact(root, sample, "RUN_THROUGH_STATUS.md", buildMiniProgramRunThroughStatusMarkdown(status), overwrite);
+      const markdown = buildMiniProgramRunThroughStatusMarkdown(status);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
+      const result = await writeMiniProgramArtifact(root, sample, "RUN_THROUGH_STATUS.md", markdown, overwrite);
       return jsonText({
         ...result,
         relativePath: path.relative(root, result.path),
@@ -700,12 +736,17 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     "Write a scope status across wechat-mega and wechat-crs into easyar-generated/MINIPROGRAM_SCOPE_STATUS.md.",
     {
       projectPath: z.string().describe("WeChat Mini Program project path."),
+      output: outputModeSchema,
       overwrite: z.boolean().default(true).describe("Whether to overwrite an existing Mini Program scope status report.")
     },
-    async ({ projectPath, overwrite }) => {
+    async ({ projectPath, output, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const status = await buildMiniProgramScopeStatus(root);
+      const markdown = buildMiniProgramScopeStatusMarkdown(status);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const target = path.join(root, "easyar-generated", "MINIPROGRAM_SCOPE_STATUS.md");
       const relative = path.relative(root, target);
       if (relative.startsWith("..") || path.isAbsolute(relative)) {
@@ -727,7 +768,7 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
         }
       }
       await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, buildMiniProgramScopeStatusMarkdown(status), "utf8");
+      await writeFile(target, markdown, "utf8");
       return jsonText({
         written: true,
         path: target,

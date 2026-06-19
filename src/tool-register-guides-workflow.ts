@@ -6,6 +6,7 @@ import path from "node:path";
 import { createEasyARApiClient } from "./easyar-api.js";
 import { focusedHandoffSampleIds } from "./focused-scope.js";
 import { jsonText, markdownText } from "./mcp-response.js";
+import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import { officialOpenApiPath, packageRoot } from "./paths.js";
 import { createToolRegistrar, type ToolRegistrar } from "./tool-handler.js";
 import {
@@ -387,10 +388,11 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
       platform: z.enum(["android", "ios"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown"),
       client: z.enum(clientKinds).default("claude-desktop"),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/FIRST_RUN.md for Unity projects or EasyARGenerated/FIRST_RUN.md for outputRoot."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing first-run guide.")
     },
-    async ({ projectPath, outputRoot, sampleId, platform, accountStage, client, relativePath, overwrite }) => {
+    async ({ projectPath, outputRoot, sampleId, platform, accountStage, client, output, relativePath, overwrite }) => {
       const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
       await ensureDirectory(root);
       const sample = sampleId ? findSample(sampleId) : findSample("cloud-recognition");
@@ -401,13 +403,17 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
         accountStage,
         client
       });
+      const markdown = buildFirstRunGuideMarkdown(guide);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = projectPath
         ? path.join("Assets", "EasyARGenerated", "FIRST_RUN.md")
         : path.join("EasyARGenerated", "FIRST_RUN.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildFirstRunGuideMarkdown(guide), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,
@@ -622,13 +628,14 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
       outputRoot: z.string().optional().describe("Output directory when projectPath is not provided."),
       platform: z.enum(["android", "ios"]).default("android"),
       verificationEvidence: z.enum(["not-provided", "passed"]).default("not-provided").describe("Set to passed only after local verification commands or CI evidence has passed for the current commit."),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional output path. Defaults to Assets/EasyARGenerated/REMAINING_WORK.md for Unity projects or EasyARGenerated/REMAINING_WORK.md for outputRoot."),
       maxScriptIssues: z.number().int().positive().max(100).default(25),
       maxLogBytes: z.number().int().positive().max(1024 * 1024).default(200000),
       maxLogIssues: z.number().int().positive().max(50).default(20),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing remaining-work report.")
     },
-    async ({ projectPath, outputRoot, platform, verificationEvidence, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
+    async ({ projectPath, outputRoot, platform, verificationEvidence, output, relativePath, maxScriptIssues, maxLogBytes, maxLogIssues, overwrite }) => {
       const root = projectPath ? resolveProjectPath(projectPath) : resolveProjectPath(outputRoot ?? process.cwd());
       await ensureDirectory(root);
       const report = await buildRemainingWorkReport({
@@ -639,13 +646,17 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
         maxLogBytes,
         maxLogIssues
       });
+      const markdown = buildRemainingWorkMarkdown(report);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const defaultRelativePath = projectPath
         ? path.join("Assets", "EasyARGenerated", "REMAINING_WORK.md")
         : path.join("EasyARGenerated", "REMAINING_WORK.md");
       const target = path.resolve(root, relativePath ?? defaultRelativePath);
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildRemainingWorkMarkdown(report), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,
@@ -765,11 +776,12 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
       sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
+      output: outputModeSchema,
       relativePath: z.string().optional().describe("Optional preflight path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/PREFLIGHT.md."),
       maxScriptIssues: z.number().int().positive().max(100).default(25),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing preflight artifact.")
     },
-    async ({ projectPath, sampleId, platform, outputPath, relativePath, maxScriptIssues, overwrite }) => {
+    async ({ projectPath, sampleId, platform, outputPath, output, relativePath, maxScriptIssues, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
@@ -777,12 +789,16 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
         ? `Builds/${sample.id}.apk`
         : `Builds/iOS/${sample.id}`;
       const preflight = await buildFocusedPreflight(root, sample, platform, outputPath ?? defaultOutput, maxScriptIssues);
+      const markdown = buildFocusedPreflightMarkdown(preflight);
+      if (isInlineOutput(output)) {
+        return inlineMarkdownResult(markdown);
+      }
       const target = relativePath
         ? path.resolve(root, relativePath)
         : path.join(focusedSampleGeneratedDir(root, sample), "PREFLIGHT.md");
       assertInside(root, target);
       const written: string[] = [];
-      await writeGeneratedFile(target, buildFocusedPreflightMarkdown(preflight), overwrite, written);
+      await writeGeneratedFile(target, markdown, overwrite, written);
   
       return jsonText({
         written: written.includes(target) ? target : null,

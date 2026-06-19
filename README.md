@@ -42,7 +42,7 @@ easyar-mcp-check
 
 ## 工具数量
 
-`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 78 个，低于常见 MCP 客户端 80 个工具的警告线。
+`mcp-easyar` 默认使用 `core` 工具集，启用工具数约 70 个，低于常见 MCP 客户端 80 个工具的警告线。
 
 如果维护仓库、调试官方 API 合同或需要全部工具，可以用 full profile：
 

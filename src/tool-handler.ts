@@ -67,10 +67,13 @@ export function createToolRegistrar(
       return undefined;
     }
 
-    const lastArg = args.at(-1);
-    const wrappedArgs = typeof lastArg === "function"
-      ? [...args.slice(0, -1), wrapToolHandler(name, lastArg as ToolHandler)]
+    const describedArgs = typeof args[0] === "string" && name.startsWith("easyar_generate_")
+      ? [`Deprecated: use the matching easyar_write_* tool with output=\"inline\" when available. ${args[0]}`, ...args.slice(1)]
       : args;
+    const lastArg = describedArgs.at(-1);
+    const wrappedArgs = typeof lastArg === "function"
+      ? [...describedArgs.slice(0, -1), wrapToolHandler(name, lastArg as ToolHandler)]
+      : describedArgs;
 
     return serverTool(name, ...wrappedArgs);
   };

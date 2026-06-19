@@ -35,7 +35,7 @@ easyar_check_client_setup client=codex entrypointMode=package-bin includeTokenPl
 
 ## 工具数量
 
-默认 core profile 约 78 个工具；需要全量维护工具时：
+默认 core profile 约 70 个工具；需要全量维护工具时：
 
 ```bash
 MCP_EASYAR_TOOL_PROFILE=full easyar-mcp

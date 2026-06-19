@@ -16,6 +16,7 @@ await chmod(fakeHubUnityPath, 0o755);
 const child = spawn(command, args, {
   env: {
     ...process.env,
+    MCP_EASYAR_TOOL_PROFILE: process.env.MCP_EASYAR_TOOL_PROFILE ?? "full",
     EASYAR_API_BASE_URL: "https://www.easyar.cn",
     EASYAR_API_TOKEN: "",
     EASYAR_ACCOUNT_TOKEN: "env-test-account-token",
@@ -73,7 +74,8 @@ try {
 
   const tools = await request("tools/list", {});
   const listedToolNames = tools.result.tools.map((tool) => tool.name).sort();
-  const expectedToolNames = (process.env.MCP_EASYAR_TOOL_PROFILE === "full" ? [...toolCatalog] : [...coreToolCatalog]).sort();
+  const activeToolProfile = process.env.MCP_EASYAR_TOOL_PROFILE ?? "full";
+  const expectedToolNames = (activeToolProfile === "full" ? [...toolCatalog] : [...coreToolCatalog]).sort();
   assert(
     JSON.stringify(listedToolNames) === JSON.stringify(expectedToolNames),
     "Registered MCP tool names should match the active catalog exactly"
