@@ -20,7 +20,7 @@ easyar-mcp-check
 ## Evidence-Weighted Progress
 
 - Published scoped objective: 100% for the approved Image Tracking, CRS/Cloud Recognition, and Mega target.
-- Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12. A separate fresh Unity project pass now proves official package import, APK build, install/startup, EasyAR initialization, `Onsite` readiness, and real-device localization/tracking log signals in the selected mapped environment. A PICO 4 Ultra Enterprise headset pass now proves APK build/install/startup, EasyAR Pico frame source, PICO VST camera startup, headset-visible passthrough, and Mega `Found` localization against the selected office block.
+- Mega Android evidence: device install, launch, EasyAR initialization, Mega Block load, and Mega localization/tracking log evidence were captured on 2026-06-12. A separate fresh Unity project pass now proves official package import, APK build, install/startup, EasyAR initialization, `Onsite` readiness, and real-device localization/tracking log signals in the selected mapped environment. A PICO 4 Ultra Enterprise headset pass now proves APK build/install/startup, EasyAR Pico frame source, PICO VST camera startup, headset-visible passthrough, and Mega `Found` localization against the selected office block. An Android Motion Tracking pass now proves a clean camera-only sample build with UI/diagnostics hidden, ARCore camera input, EasyAR MotionTracker, and automatic Panda placement on horizontal plane hit.
 - Local-key MVP public usability: about 98%
 
 These percentages are evidence-weighted estimates. The published prerelease covers the three-sample local-key target: Image Tracking, CRS/Cloud Recognition, and Mega. The broader production official API goal remains incomplete.
@@ -59,7 +59,7 @@ Additional Mini Program samples beyond `wechat-mega` and `wechat-crs` are out of
 
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence, fresh project acceptance docs, and release smoke tests aligned with the latest GitHub Release.
 - Decide npm publishing policy for prerelease versus production release.
-- Keep Image Tracking, CRS/Cloud Recognition, and Mega evidence current when supported Unity versions or target platforms expand.
+- Keep Image Tracking, CRS/Cloud Recognition, Mega, and Motion Tracking evidence current when supported Unity versions or target platforms expand.
 - Continue hardening Unity programming workflows with more real project cases.
 - Capture WeChat Developer Tools preview/upload and real-device evidence for `wechat-mega` and `wechat-crs` after official local sample packages, logged-in DevTools, and test Mini Program projects are available.
 
