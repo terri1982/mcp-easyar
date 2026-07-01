@@ -243,6 +243,7 @@ export function activeToolCatalog() {
 export const resourceCatalog = [
   "easyar://samples/catalog",
   "easyar://official/info",
+  "easyar://official/docs-2026-07-01",
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://client/acceptance",

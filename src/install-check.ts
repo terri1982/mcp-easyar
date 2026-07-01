@@ -40,6 +40,7 @@ const requiredPrompts = [
 ];
 
 const requiredResources = [
+  "easyar://official/docs-2026-07-01",
   "easyar://official/api-contract",
   "easyar://official/openapi",
   "easyar://client/acceptance",
@@ -144,6 +145,12 @@ try {
       "official-api-contract",
       resourceTexts.get("easyar://official/api-contract")?.includes("mcp-easyar Official API Contract") ?? false,
       "Official API contract resource is readable."
+    ),
+    check(
+      "official-docs-2026-07-01",
+      (resourceTexts.get("easyar://official/docs-2026-07-01")?.includes("EasyAR Official Docs Refresh - 2026-07-01") ?? false)
+        && (resourceTexts.get("easyar://official/docs-2026-07-01")?.includes("4003.0.0") ?? false),
+      "Official docs refresh resource is readable."
     ),
     check(
       "official-openapi-contract",

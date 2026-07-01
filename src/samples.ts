@@ -67,11 +67,13 @@ export const samples: SampleInfo[] = [
     name: "Mega",
     description: "Run an EasyAR Mega Unity sample with a configured cloud localization library and Mega Block on a real device, including Android phone and PICO 4 Ultra Enterprise validation paths.",
     implementationStatus: "focused",
-    unityScenes: ["Mega", "MegaBlock", "MegaLocalization", "TiantanSkyPalace", "Pico"],
-    requiredCapabilities: ["Camera permission", "Location/network access", "EasyAR Mega license key", "Mega Block cloud localization library", "PICO Unity Integration SDK 3.1.0+ for PICO headsets"],
+    unityScenes: ["Mega", "MegaBlock", "MegaLocalization", "MegaBlockController", "TiantanSkyPalace", "Pico", "Xreal", "AppleVisionPro"],
+    requiredCapabilities: ["Camera permission", "Location/network access", "EasyAR Mega license key", "Mega Block cloud localization library", "MegaBlockController workflow", "PICO Unity Integration SDK 3.1.0+ for PICO headsets", "XREAL SDK 3.1+ or visionOS 2.0+ when targeting those built-in headset paths"],
     setupNotes: [
       "Install the official EasyAR Sense Unity Plugin for Mega from the EasyAR download page.",
+      "For EasyAR Sense Unity Plugin 4003.0.0 and newer, use the MegaBlockController-based workflow. The old Mega Studio generated node group, multi-block configuration option, and BlockRoot workflow are no longer the primary Unity development path.",
       "For PICO 4 Ultra Enterprise, also install the official EasyAR Unity XR device extension package and PICO Unity Integration SDK 3.1.0 or newer.",
+      "Apple Vision Pro and XREAL Air2 Ultra are built-in headset paths in the 4000+ Unity Plugin line; Pico and Rokid continue through EasyAR Unity XR device extension packages.",
       "Use the user's logged-in EasyAR website or Mega Studio session to find non-secret library and block identifiers.",
       "Keep license keys and service credentials in local EasyAR settings or local config files; do not paste secrets into chat.",
       "Use Onsite location input for Android phone, PICO, and XREAL real-device validation. Simulator mode is only for editor or non-acceptance debugging.",
@@ -81,20 +83,31 @@ export const samples: SampleInfo[] = [
 ];
 
 export const officialInfo = {
-  capturedAt: "2026-06-10",
+  capturedAt: "2026-07-01",
   docs: {
-    samples: "https://www.easyar.cn/doc/en/develop/samples.html",
+    zhCnIndex: "https://www.easyar.cn/doc/zh-cn/",
+    unityReleaseNotes: "https://www.easyar.cn/doc/zh-cn/develop/unity/release-notes/release-notes.html",
+    nativeReleaseNotes: "https://www.easyar.cn/doc/zh-cn/develop/native/release-notes/release-notes.html",
+    megaStudioReleaseNotes: "https://www.easyar.cn/doc/zh-cn/mega/reference/studio-unity/release-notes.html",
+    wechatMegaReleaseNotes: "https://www.easyar.cn/doc/zh-cn/develop/wechat/mega/release-notes.html",
+    samples: "https://www.easyar.cn/doc/zh-cn/develop/unity/getting-started/quickstart.html",
     downloads: "https://www.easyar.com/view/download.html",
     downloadHistory: "https://www.easyar.com/view/downloadHistory.html"
   },
   packageVersions: {
-    easyarSenseUnityPlugin: "4002.0.0",
-    easyarSenseUnityPluginForMega: "4002.0.0",
-    easyarXrExtensionPackage: "4000.0.0",
-    easyarSenseNative: "4.9.0"
+    easyarSenseUnityPlugin: "4003.0.0",
+    easyarSenseUnityPluginForMega: "4003.0.0",
+    easyarMegaSupportPackage: "2.13.0",
+    easyarMegaStudioUnity: "2.13.0",
+    easyarXrExtensionPackage: "4000.0.1",
+    easyarSenseNative: "4.9.0",
+    easyarMegaWechatMiniProgramPlugin: "2.0.3"
   },
   notes: [
-    "The official sample apps page says Unity samples are obtained from the Unity plugin download page and then imported according to the quickstart.",
+    "Official Chinese docs were refreshed on 2026-07-01. The crawl covered 819 zh-CN documentation pages across Unity, Native, WeChat, Web, Cloud APIs, Mega, and headset sections.",
+    "EasyAR Sense Unity Plugin 4003.0.0 adds the newer MegaBlockController workflow, updates EasyAR Mega to 2.13.0, splits Mega Studio into com.easyar.mega.studio, and removes several legacy Mega/BlockRoot development assumptions.",
+    "EasyAR Sense Native remains 4.9.0 in the current official release notes.",
+    "EasyAR Mega WeChat Mini Program Plugin remains 2.0.3 in the current official release notes.",
     "This MCP server does not bypass account or enterprise download gates; connect it to official EasyAR account APIs before enabling private downloads."
   ]
 };

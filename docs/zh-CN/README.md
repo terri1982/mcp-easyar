@@ -9,6 +9,7 @@
 ## 快速入口
 
 - [当前状态](STATUS.md)
+- [2026-07-01 官方中文文档刷新摘要](OFFICIAL_DOCS_2026-07-01.md)
 - [从 GitHub Release 安装](install-from-github-release.md)
 - [客户端配置](client-setup.md)
 - [新 Unity 项目验收](FRESH_PROJECT_ACCEPTANCE.md)

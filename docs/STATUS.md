@@ -10,6 +10,8 @@ An additional WeChat Mini Program sample track is now being added for EasyAR Meg
 
 Current GitHub prerelease: `v0.1.0-local-key.38`
 
+Official EasyAR Chinese docs refresh: 2026-07-01. MCP metadata now tracks EasyAR Sense Unity Plugin / for Mega `4003.0.0`, EasyAR Mega support package and Mega Studio `2.13.0`, XR device extension package `4000.0.1`, EasyAR Sense Native `4.9.0`, and EasyAR Mega WeChat Mini Program Plugin `2.0.3`. See `docs/OFFICIAL_DOCS_2026-07-01.md`.
+
 Install:
 
 ```bash
@@ -62,6 +64,7 @@ Additional Mini Program samples beyond `wechat-mega` and `wechat-crs` are out of
 - Keep Image Tracking, CRS/Cloud Recognition, Mega, and Motion Tracking evidence current when supported Unity versions or target platforms expand.
 - Continue hardening Unity programming workflows with more real project cases.
 - Capture WeChat Developer Tools preview/upload and real-device evidence for `wechat-mega` and `wechat-crs` after official local sample packages, logged-in DevTools, and test Mini Program projects are available.
+- Re-run Mega Android/headset validation on the 4003.0.0 / MegaBlockController workflow before claiming those newer official packages as device-verified; existing committed device evidence remains a 4002.0.0 / 2.12.6 baseline.
 
 ## Safety Boundary
 

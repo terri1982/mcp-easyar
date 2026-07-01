@@ -1808,7 +1808,7 @@ export function analyzeMiniProgramDevtoolsLog(logText: string, sample: MiniProgr
       id: "wechat-plugin-unauthorized",
       pattern: /((plugin|插件|provider).*(unauthorized|not authorized|未授权|can not visit app)|user uin can not visit app|插件未授权使用)/i,
       severity: "blocker",
-      action: "Authorize the EasyAR WeChat Mini Program plugin provider wx27fa3b52b5462e8f version 2.0.3 for this Mini Program app id in the WeChat Mini Program admin console, or use an app id that already has this plugin authorization."
+      action: "Authorize the EasyAR WeChat Mini Program plugin provider wx27fa3b52b5462e8f version 2.0.3 for this Mini Program app id in the WeChat Mini Program admin console, or use an app id that already has this plugin authorization. The 2026-07-01 official EasyAR Chinese docs still list 2.0.3 as the latest Mega Mini Program plugin."
     },
     {
       id: "domain-not-configured",

@@ -15,6 +15,7 @@
 ## 当前状态
 
 - 当前 GitHub 预发布版：`v0.1.0-local-key.38`
+- 官方中文文档快照：`2026-07-01`，当前官方版本见 [docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md](docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md)
 - 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
@@ -67,6 +68,7 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 ```text
 easyar://acceptance/fresh-project
 easyar://acceptance/wechat-miniprogram
+easyar://official/docs-2026-07-01
 easyar://samples/wechat-miniprogram
 easyar://roadmap/full-goal
 easyar://workflow/programming
@@ -136,6 +138,8 @@ MCP 不应绕过 EasyAR 登录、license 检查、下载授权、企业权限或
 
 ## Mega PICO 4 Ultra Enterprise
 
+最新官方文档快照：2026-07-01，EasyAR Sense Unity Plugin / for Mega `4003.0.0`，EasyAR Mega 支持包与 Mega Studio `2.13.0`，XR 设备扩展包 `4000.0.1`。详见 [docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md](docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md)。
+
 PICO 4 Ultra Enterprise sample 已验证的基线：
 
 - Unity `2022.3.62f3`
@@ -147,6 +151,8 @@ PICO 4 Ultra Enterprise sample 已验证的基线：
 - 官网 license 类型：`4.x XR正式版`
 
 注意：PICO 和 XREAL 的 Mega 头显验收包也应使用 `LocationInputMode=Onsite`。如果眼镜中出现 EasyAR Simulator diagnostics caution，说明场景仍处于 Simulator/非现场输入模式，需要先切到 Onsite 后重新打包。验收以眼镜内 VST 实景可见、Mega 返回 `Found`、并定位到对应办公室 block 为准。`adb screencap` 可能抓不到 PICO 的透视合成层。
+
+使用 `4003.0.0` 或更新版本新建 Mega 工程时，优先按官方 `MegaBlockController` 流程处理；旧 Mega Studio 生成节点组、多 block 配置选项和 BlockRoot 中心化流程不应作为新的默认路径。
 
 ## 中文文档目录
 

@@ -44,6 +44,20 @@ export function registerResources(server: any, context: ResourceContext) {
   );
 
   server.resource(
+    "easyar-official-docs-2026-07-01",
+    "easyar://official/docs-2026-07-01",
+    async (uri: any) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/markdown",
+          text: await readFile(path.join(packageRoot, "docs", "OFFICIAL_DOCS_2026-07-01.md"), "utf8")
+        }
+      ]
+    })
+  );
+
+  server.resource(
     "easyar-wechat-miniprogram-samples",
     "easyar://samples/wechat-miniprogram",
     async (uri: any) => ({
@@ -263,6 +277,7 @@ export function registerResources(server: any, context: ResourceContext) {
             "",
             "- image-tracking",
             "- cloud-recognition",
+            "- mega",
             "",
             "Deferred samples stay out of the run-through scope until the user explicitly asks to continue.",
             "",

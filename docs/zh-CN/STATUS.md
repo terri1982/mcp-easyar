@@ -2,6 +2,8 @@
 
 当前 GitHub 预发布版：`v0.1.0-local-key.38`
 
+官方中文文档快照：2026-07-01。MCP 元数据已更新到 EasyAR Sense Unity Plugin / for Mega `4003.0.0`、EasyAR Mega 支持包与 Mega Studio `2.13.0`、XR 设备扩展包 `4000.0.1`、EasyAR Sense Native `4.9.0`、EasyAR Mega 微信小程序插件 `2.0.3`。详见 `docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md`。
+
 安装：
 
 ```bash
@@ -31,6 +33,7 @@ easyar-mcp-check
 
 - Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 尚未纳入当前目标。
 - 微信小程序 Mega / CRS 目前已覆盖本地检查、本地官方包导入、DevTools 检查、日志分析、真机验证清单、run result、completion report 和小程序 scope status；尚未声明完成微信预览、上传或真机识别/定位验收。
+- 4003.0.0 / MegaBlockController 新流程尚未重新跑 Android 或头显真机验收；当前已提交真机证据仍是 4002.0.0 / 2.12.6 基线。
 - 生产官方 API 自动化仍需 EasyAR-owned account/license/download/CRS endpoint。
 - npm production publish 仍应等待生产 gate 或明确 prerelease 策略。
 

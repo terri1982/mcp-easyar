@@ -127,6 +127,7 @@ async function callMcpTool(name, args) {
     env: {
       ...process.env,
       ...officialEndpointEnv,
+      MCP_EASYAR_TOOL_PROFILE: "full",
       EASYAR_API_BASE_URL: process.env.EASYAR_API_BASE_URL ?? "https://www.easyar.cn"
     },
     stdio: ["pipe", "pipe", "pipe"]
