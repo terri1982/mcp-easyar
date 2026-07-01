@@ -46,13 +46,9 @@ child.stderr.on("data", (chunk) => {
 child.stdout.setEncoding("utf8");
 child.stdout.on("data", (chunk) => {
   stdoutBuffer += chunk;
-  const lines = stdoutBuffer.split(/\r?\n/);
-  stdoutBuffer = lines.pop() ?? "";
-  for (const line of lines) {
-    if (!line.trim()) {
-      continue;
-    }
-    const message = JSON.parse(line);
+  const parsed = takeJsonMessages(stdoutBuffer);
+  stdoutBuffer = parsed.rest;
+  for (const message of parsed.messages) {
     const resolver = pending.get(message.id);
     if (resolver) {
       pending.delete(message.id);
@@ -3206,6 +3202,62 @@ function request(method, params) {
 
 function notify(method, params) {
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method, params })}\n`);
+}
+
+function takeJsonMessages(buffer) {
+  const messages = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let consumedUntil = 0;
+
+  for (let index = 0; index < buffer.length; index += 1) {
+    const char = buffer[index];
+    if (start === -1) {
+      if (char === "{") {
+        start = index;
+        depth = 1;
+      } else {
+        consumedUntil = index + 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        const raw = buffer.slice(start, index + 1);
+        messages.push(JSON.parse(raw));
+        consumedUntil = index + 1;
+        start = -1;
+      }
+    }
+  }
+
+  return {
+    messages,
+    rest: buffer.slice(start === -1 ? consumedUntil : start)
+  };
 }
 
 function callTool(name, args) {

@@ -13,7 +13,7 @@ easyar-mcp-check
 - server name 为 `mcp-easyar`
 - tools listed 约 70
 - prompts listed 6
-- resources checked 15
+- resources checked 16
 - 无 secret 要求
 
 ## MCP 客户端检查

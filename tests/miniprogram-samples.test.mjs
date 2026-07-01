@@ -29,6 +29,7 @@ import {
 } from "../dist/miniprogram-samples.js";
 import { resourceCatalog } from "../dist/catalog.js";
 import { registerResources } from "../dist/resources.js";
+import { officialInfo } from "../dist/samples.js";
 
 function execFilePromise(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -698,4 +699,41 @@ test("WeChat Mini Program acceptance resource is registered and readable", async
   assert(result.contents[0].text.includes("wechat-mega"));
   assert(result.contents[0].text.includes("wechat-crs"));
   assert(result.contents[0].text.includes("COMPLETION_REPORT.md"));
+});
+
+test("official docs refresh metadata is exposed as resource and official info", async () => {
+  assert.equal(officialInfo.capturedAt, "2026-07-01");
+  assert.equal(officialInfo.packageVersions.easyarSenseUnityPlugin, "4003.0.0");
+  assert.equal(officialInfo.packageVersions.easyarMegaSupportPackage, "2.13.0");
+  assert.equal(officialInfo.packageVersions.easyarXrExtensionPackage, "4000.0.1");
+  assert.equal(officialInfo.packageVersions.easyarSenseNative, "4.9.0");
+  assert.equal(officialInfo.packageVersions.easyarMegaWechatMiniProgramPlugin, "2.0.3");
+  assert(resourceCatalog.includes("easyar://official/docs-2026-07-01"));
+
+  const registered = new Map();
+  const fakeServer = {
+    resource(name, uri, handler) {
+      registered.set(uri, { name, handler });
+    }
+  };
+
+  registerResources(fakeServer, {
+    samples: [],
+    officialInfo,
+    officialOpenApiPath: path.join(process.cwd(), "docs", "openapi", "easyar-mcp-account-api.openapi.json"),
+    packageRoot: process.cwd(),
+    quickstartWorkflow: "quickstart",
+    buildOfficialApiContract: () => ({}),
+    buildOfficialApiContractMarkdown: () => "# contract\n"
+  });
+
+  const resource = registered.get("easyar://official/docs-2026-07-01");
+  assert(resource, "official docs refresh resource should be registered");
+  assert.equal(resource.name, "easyar-official-docs-2026-07-01");
+
+  const result = await resource.handler({ href: "easyar://official/docs-2026-07-01" });
+  assert.equal(result.contents[0].mimeType, "text/markdown");
+  assert(result.contents[0].text.includes("EasyAR Official Docs Refresh - 2026-07-01"));
+  assert(result.contents[0].text.includes("819 pages"));
+  assert(result.contents[0].text.includes("MegaBlockController"));
 });
