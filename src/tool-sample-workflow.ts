@@ -3,7 +3,7 @@ import path from "node:path";
 import type { SampleInfo } from "./samples.js";
 import { officialInfo } from "./samples.js";
 import { buildLocalConfigValidationReport, readCloudRecognitionConfig, cloudRecognitionCredentialMode, hasCompleteCloudRecognitionConfig, isNonPlaceholderString, isRecord } from "./tool-local-config.js";
-import { assertInside } from "./tool-file-utils.js";
+import { assertInside, walk } from "./tool-file-utils.js";
 import { exists, findFiles, readUnityVersion } from "./tool-project.js";
 import { readAuthConfig } from "./tool-services.js";
 
@@ -431,8 +431,9 @@ export async function importSampleFromPackageCache(root: string, sample: SampleI
   const sampleFolderName = path.basename(sourcePath);
   const targetPath = path.join(root, "Assets", "Samples", packageInfo.displayName, packageInfo.version, sampleFolderName);
   const targetExists = await exists(targetPath);
+  const sourceMetaFileCount = await countUnityMetaFiles(sourcePath);
   const plannedActions = [
-    `Copy ${sourceRelativePath} to ${path.relative(root, targetPath)}.`,
+    `Copy ${sourceRelativePath} to ${path.relative(root, targetPath)} with Unity .meta files preserved.`,
     `Rerun easyar_write_import_checklist projectPath=${root} sampleId=${sample.id}.`,
     `Rerun easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=android.`
   ];
@@ -479,6 +480,7 @@ export async function importSampleFromPackageCache(root: string, sample: SampleI
     }
   }
 
+  const targetMetaFileCount = dryRun ? null : await countUnityMetaFiles(targetPath);
   const postImportChecklist = dryRun ? null : await buildImportChecklist(root, sample);
 
   return {
@@ -497,18 +499,35 @@ export async function importSampleFromPackageCache(root: string, sample: SampleI
     targetExistsBefore: targetExists,
     package: packageInfo,
     packageCacheSamples,
+    unityMetaFiles: {
+      sourceCount: sourceMetaFileCount,
+      targetCount: targetMetaFileCount,
+      preserved: dryRun ? null : targetMetaFileCount === sourceMetaFileCount,
+      risk: dryRun || targetMetaFileCount === sourceMetaFileCount
+        ? null
+        : "Unity .meta file count differs after import. Scene script, prefab, material, or texture GUID references may be broken; retry with overwrite=true or import through Unity Package Manager."
+    },
     postImportReadyForFocusedPreparation: postImportChecklist?.readyForFocusedPreparation ?? null,
     postImportMatchingScenes: postImportChecklist?.matchingScenes ?? null,
     nextActions: dryRun
       ? plannedActions
       : [
-          `Imported ${sample.name} into ${path.relative(root, targetPath)}.`,
+          `Imported ${sample.name} into ${path.relative(root, targetPath)} with ${targetMetaFileCount ?? 0}/${sourceMetaFileCount} Unity .meta files present.`,
           `Run easyar_write_import_checklist projectPath=${root} sampleId=${sample.id}.`,
           `Run easyar_check_sample_readiness projectPath=${root} sampleId=${sample.id}.`,
+          ...(targetMetaFileCount === sourceMetaFileCount
+            ? []
+            : ["Fix missing Unity .meta files before building; missing .meta breaks scene GUID references and causes missing scripts or null sample assets."]),
           `Run easyar_write_focused_preflight projectPath=${root} sampleId=${sample.id} platform=android.`
         ],
     security: "This tool copies only from local Unity PackageCache Samples~ into Assets/Samples. It does not download packages, bypass EasyAR account access, or include secret values."
   };
+}
+
+export async function countUnityMetaFiles(dirPath: string): Promise<number> {
+  const found: string[] = [];
+  await walk(dirPath, dirPath, /\.meta$/i, found, 20000);
+  return found.length;
 }
 
 export async function readPackageCacheInfo(samplePath: string): Promise<{ displayName: string; version: string; packageRoot: string | null }> {

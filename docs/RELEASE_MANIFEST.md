@@ -9,7 +9,7 @@ Ready for install docs: yes
 
 ## Readiness Model
 
-- Local-key MVP: ready for focused Image Tracking, Cloud Recognition, and Mega assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided through `docs/release-evidence/focused-scope.android.json`. The published two-sample prerelease has Image Tracking and Cloud Recognition evidence; the current worktree includes safe Mega Android real-device install/localization evidence, fresh-project APK startup/localization evidence, a PICO 4 Ultra Enterprise headset validation summary, and a clean Android Motion Tracking camera/Panda APK validation summary.
+- Local-key MVP: ready for focused Image Tracking, Cloud Recognition, and Mega assistance when package/install docs pass, verification commands pass, and safe Android focused-scope evidence is provided through `docs/release-evidence/focused-scope.android.json`. The published two-sample prerelease has Image Tracking and Cloud Recognition evidence; the current worktree includes safe Mega Android real-device install/localization evidence, fresh-project APK startup/localization evidence, EasyAR Sense `4003.0.0` Android sample startup evidence, a PICO 4 Ultra Enterprise headset validation summary, and a clean Android Motion Tracking camera/Panda APK validation summary.
 - Production official API: not ready until EasyAR account, license, downloads, and Cloud Recognition endpoint variables are connected to authorized EasyAR services and focused official access checks pass.
 - Unity runtime note: after the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses local license/API key configuration and does not require website login at runtime.
 
@@ -158,6 +158,7 @@ These variables are only for a future EasyAR-owned production API integration an
 - OK docs/openapi/easyar-mcp-account-api.openapi.json
 - OK docs/release-evidence/focused-scope.android.json
 - OK docs/release-evidence/motion-tracking-camera-panda-android.md
+- OK docs/release-evidence/easyar-sense-4003-android-samples.md
 - OK docs/release-evidence/mega-pico4-ultra-enterprise-summary.md
 - OK docs/zh-CN/release-evidence/motion-tracking-camera-panda-android.md
 - OK docs/zh-CN/release-evidence/mega-pico4-ultra-enterprise-summary.md

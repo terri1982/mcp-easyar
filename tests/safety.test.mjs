@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { analyzeUnityLog } from "../dist/tool-diagnostics.js";
 import { parseAdbDevices, redactSecretText } from "../dist/runtime.js";
 import { sanitizeToolErrorText, toolErrorResult } from "../dist/tool-handler.js";
 
@@ -51,4 +52,15 @@ test("tool error results are structured and do not expose the home path", () => 
   assert.equal(result.isError, true);
   assert.equal(result.content[0].type, "text");
   assert(result.content[0].text.includes("easyar_android_install_apk"));
+});
+
+test("Unity log analysis reports broken sample GUID references", () => {
+  const issues = analyzeUnityLog([
+    "W Unity   : The referenced script on this Behaviour (Game Object 'Sample') is missing!",
+    "E Unity   : fail to load target data from easyar.ImageTargetController+Texture2DSourceData: Texture is null"
+  ].join("\n"));
+
+  assert(issues.some((issue) => issue.id === "unity-missing-script-guid"));
+  assert(issues.some((issue) => issue.id === "unity-broken-asset-guid"));
+  assert(issues.some((issue) => issue.actions.some((action) => action.includes(".meta"))));
 });

@@ -91,6 +91,28 @@ export function analyzeUnityLog(logText: string, sample: SampleInfo | null = nul
         "Run easyar_run_unity_method with EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings.",
         "Run easyar_check_sample_readiness and confirm matchingScenes is not empty."
       ]
+    },
+    {
+      id: "unity-missing-script-guid",
+      severity: "high",
+      pattern: /The referenced script on this Behaviour.*is missing|m_Script:\s*\{fileID:\s*0\}|Missing \(Mono Script\)/i,
+      title: "Unity scene has missing MonoBehaviour script references",
+      actions: [
+        "Re-import the official EasyAR sample with Unity .meta files preserved from PackageCache/Samples~.",
+        "If the sample was copied manually, sync the corresponding .meta files from PackageCache before rebuilding.",
+        "Rerun easyar_import_sample_from_package_cache with overwrite=true, then rerun Unity build/device validation."
+      ]
+    },
+    {
+      id: "unity-broken-asset-guid",
+      severity: "high",
+      pattern: /Texture is null|Material is null|Prefab.*missing|Missing \(.*\)|PPtr.*missing|The referenced script.*missing/i,
+      title: "Unity sample asset reference is broken",
+      actions: [
+        "Check that official sample .meta files were copied together with scripts, scenes, prefabs, textures, and materials.",
+        "Do not recreate sample files outside Unity unless their .meta GUIDs are preserved.",
+        "Import through Unity Package Manager or rerun the MCP sample import tool and verify unityMetaFiles.preserved=true."
+      ]
     }
   ];
   rules.push(...sampleSpecificLogRules(sample));
