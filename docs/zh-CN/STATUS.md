@@ -23,6 +23,7 @@ easyar-mcp-check
   - Mega：已有一轮 Android 真机定位跟踪日志证据，包含 `[MLOC]`、`kMapTracking` / `NCam_Verified results` 等信号。
   - Mega fresh project：已按用户要求新建 Unity 工程，使用官方 4002 Mega 包完成 APK 打包、真机安装启动、EasyAR Sense 初始化、`Onsite` 模式就绪，并在对应办公室映射场景中抓到真机定位/跟踪日志信号。
   - Mega PICO 4 Ultra Enterprise：已按用户要求新建 Unity 工程，使用 PICO Unity Integration SDK `3.4.0`、EasyAR Unity XR 设备扩展包 `4000.0.0` 和 `PicoFrameSource` 完成 APK 打包、PICO 安装启动、PICO VST 相机启动、眼镜内实景透视可见，并定位到办公室 Mega Block。该头显路径现统一使用 `LocationInputMode=Onsite`；如果出现 EasyAR Simulator diagnostics caution，说明场景仍需切到 Onsite 后重新打包。
+  - Mega 4003 Android：已使用 EasyAR Sense `4003.0.0+5171.3948ae721`、Mega `2.13.0+5171.3948ae721` 和 ARMall `涂意工位测试专用` 云定位库，在 Samsung `SM-S9010` 上完成 APK 打包、安装、EasyAR 初始化、ARCore 相机启动、`CodexTest01` Block 配置，并由用户确认最终真机定位跑通。
   - Motion Tracking Android：已完成只显示摄像头画面的正式 APK，隐藏 sample UI、EasyAR 黄色诊断 dump 和 Unity Development Build 水印，使用 ARCore 摄像头输入与 EasyAR MotionTracker，水平面命中后自动放置 `EasyARPanda`。
 - Codex、Claude Desktop、通用 JSON MCP client 配置生成可用。
 - 新用户注册/登录/下载/key 创建采用浏览器引导，不收集官网密码或密钥。
@@ -33,7 +34,7 @@ easyar-mcp-check
 
 - Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 尚未纳入当前目标。
 - 微信小程序 Mega / CRS 目前已覆盖本地检查、本地官方包导入、DevTools 检查、日志分析、真机验证清单、run result、completion report 和小程序 scope status；尚未声明完成微信预览、上传或真机识别/定位验收。
-- 4003.0.0 / MegaBlockController 新流程尚未重新跑 Android 或头显真机验收；当前已提交真机证据仍是 4002.0.0 / 2.12.6 基线。
+- 4003.0.0 / MegaBlockController Android 手机路径已完成真机验收；头显路径后续仍需按新版 Mega package 单独复测。
 - 生产官方 API 自动化仍需 EasyAR-owned account/license/download/CRS endpoint。
 - npm production publish 仍应等待生产 gate 或明确 prerelease 策略。
 

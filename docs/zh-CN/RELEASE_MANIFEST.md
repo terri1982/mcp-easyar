@@ -24,7 +24,7 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 
 ## 发布模型
 
-- `local-key-mvp`：当前 GitHub prerelease gate。已发布的两样本证据覆盖 Image Tracking 和 CRS / Cloud Recognition；当前工作树已补 Mega Android 真机安装、启动、定位跟踪、fresh project Mega APK 启动与定位/跟踪证据，并新增 PICO 4 Ultra Enterprise 眼镜 sample 的 APK 打包、安装、PICO VST、眼镜内实景透视、Mega `Found` 和办公室 block 定位证据，以及 Android Motion Tracking 相机/Panda 干净正式包验证记录。
+- `local-key-mvp`：当前 GitHub prerelease gate。已发布的两样本证据覆盖 Image Tracking 和 CRS / Cloud Recognition；当前工作树已补 Mega Android 真机安装、启动、定位跟踪、fresh project Mega APK 启动与定位/跟踪证据，新增 EasyAR Sense `4003.0.0` / Mega `2.13.0` 针对 ARMall `涂意工位测试专用` 云定位库的 Samsung S22 实机跑通证据，并新增 PICO 4 Ultra Enterprise 眼镜 sample 的 APK 打包、安装、PICO VST、眼镜内实景透视、Mega `Found` 和办公室 block 定位证据，以及 Android Motion Tracking 相机/Panda 干净正式包验证记录。
 - `production`：未来官方 API 接入后使用。
 
 ## 包内容
@@ -49,3 +49,5 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 - 中文：`docs/zh-CN/release-evidence/mega-pico4-ultra-enterprise-summary.md`
 - 英文：`docs/release-evidence/motion-tracking-camera-panda-android.md`
 - 中文：`docs/zh-CN/release-evidence/motion-tracking-camera-panda-android.md`
+- 英文：`docs/release-evidence/mega-tuyi-workstation-android.md`
+- 中文：`docs/zh-CN/release-evidence/mega-tuyi-workstation-android.md`
