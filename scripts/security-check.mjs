@@ -112,6 +112,7 @@ function findSuspiciousSecretValues(text) {
 function isPlaceholderValue(value) {
   return /^(your_|paste-|placeholder|local-only-placeholder|test-|env-test-|fixture-|should-not-leak|secret-|redacted|<redacted>)/i.test(value)
     || /^<[^>]+>$/.test(value)
+    || /^\$\{[A-Z][A-Z0-9_]*\}$/.test(value)
     || /paste locally|never send|example|sample|tests?ample|fake|dummy/i.test(value);
 }
 
