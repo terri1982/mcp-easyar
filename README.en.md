@@ -4,7 +4,7 @@
 
 # mcp-easyar
 
-[简体中文](README.md) | English
+[简体中文](README.md) | English | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md)
 
 [![CI](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml/badge.svg)](https://github.com/terri1982/mcp-easyar/actions/workflows/ci.yml)
 
@@ -19,7 +19,7 @@ Current readiness is split into two tracks:
 
 Current delivery path: use local-key MVP first. Users register/log in/download/create keys on the official EasyAR website in their own browser, then MCP guides local Unity configuration, validates redacted presence, and runs the focused Unity workflow without handling website passwords.
 
-The current worktree also starts the WeChat Mini Program sample track. It covers `wechat-mega` and `wechat-crs` first with local project inspection, WeChat Developer Tools CLI detection, local config forms, local official package import, DevTools checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, completion reports, and Mini Program scope status. Mini Program support remains an official browser/tool handoff path: no automated login, no download-gate bypass, and no secret collection in chat.
+The `v0.1.0-local-key.40` prerelease also includes the WeChat Mini Program sample track and first-class Japanese and Vietnamese documentation. The Mini Program track covers `wechat-mega` and `wechat-crs` first with local project inspection, WeChat Developer Tools CLI detection, local config forms, local official package import, DevTools checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, completion reports, and Mini Program scope status. Mini Program support remains an official browser/tool handoff path: no automated login, no download-gate bypass, and no secret collection in chat.
 
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls

@@ -4,17 +4,17 @@
 
 # mcp-easyar
 
-[English](README.en.md) | 简体中文
+[English](README.en.md) | [日本語](README.ja.md) | [Tiếng Việt](README.vi.md) | 简体中文
 
 `mcp-easyar` 帮助 EasyAR 注册用户通过 Codex、Claude 等 AI 工具，安全地完成 EasyAR Unity Sample 的配置、构建、真机验证和项目编程辅助。
 
 当前公开版本是 local-key MVP：用户在 EasyAR 官网注册、登录、下载官方插件并创建本地 license / CRS key；MCP 只做引导、检查和 Unity 自动化，不接触官网密码、验证码、license key、API Secret 或 appSecret。
 
-`v0.1.0-local-key.39` 同时提供微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report 和小程序 scope status。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
+`v0.1.0-local-key.40` 同时提供微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report 和小程序 scope status。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.39`
+- 当前 GitHub 预发布版：`v0.1.0-local-key.40`
 - 官方中文文档快照：`2026-07-01`，当前官方版本见 [docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md](docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md)
 - 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
@@ -35,7 +35,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

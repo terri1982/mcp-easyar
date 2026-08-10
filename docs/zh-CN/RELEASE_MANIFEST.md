@@ -1,11 +1,11 @@
 # mcp-easyar 发布清单
 
-当前发布：`v0.1.0-local-key.39`
+当前发布：`v0.1.0-local-key.40`
 
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -24,12 +24,12 @@ EASYAR_RELEASE_REQUIRE_LOCAL_KEY_MVP=1 EASYAR_RELEASE_EVIDENCE_PATH=docs/release
 
 ## 发布模型
 
-- `local-key-mvp`：当前 GitHub prerelease gate。`v0.1.0-local-key.39` 的三样本证据覆盖 Image Tracking、CRS / Cloud Recognition 和 Mega；包含 Samsung S22、fresh project、PICO 4 Ultra Enterprise、XREAL Air 2 Ultra、Mega `Found` 定位及 Android Motion Tracking 相机/Panda 正式包验证记录。
+- `local-key-mvp`：当前 GitHub prerelease gate。`v0.1.0-local-key.40` 的三样本证据覆盖 Image Tracking、CRS / Cloud Recognition 和 Mega；包含 Samsung S22、fresh project、PICO 4 Ultra Enterprise、XREAL Air 2 Ultra、Mega `Found` 定位及 Android Motion Tracking 相机/Panda 正式包验证记录。
 - `production`：未来官方 API 接入后使用。
 
 ## 包内容
 
-包内包含默认中文 README、英文 README、核心 docs、中文 docs、release evidence、official API contract、安装 smoke 脚本和 MCP binary。
+包内包含默认中文 README、英文 README、日文 README、越南语 README、核心 docs、中文/日文/越南语本地化 docs、release evidence、official API contract、安装 smoke 脚本和 MCP binary。
 
 ## 当前 focused scope
 

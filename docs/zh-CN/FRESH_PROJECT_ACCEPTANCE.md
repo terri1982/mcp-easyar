@@ -7,14 +7,14 @@
 
 当前开发扩展目标：
 
-- Mega（`v0.1.0-local-key.39` 已有 Android 手机、fresh project、PICO 4 Ultra Enterprise 与 XREAL Air 2 Ultra 真机定位证据；新项目仍需按自身 license / package name / Mega Block 做同样的现场验证）
+- Mega（`v0.1.0-local-key.40` 已有 Android 手机、fresh project、PICO 4 Ultra Enterprise 与 XREAL Air 2 Ultra 真机定位证据；新项目仍需按自身 license / package name / Mega Block 做同样的现场验证）
 
 Hello AR、Surface Tracking 和其他 Sample 需要用户明确要求继续后，再按扩展计划纳入。
 
 ## 安装 MCP
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

@@ -19,6 +19,8 @@
     ".env.example",
     "README.md",
     "README.en.md",
+    "README.ja.md",
+    "README.vi.md",
     "README.zh-CN.md",
     "CHANGELOG.md",
     "LICENSE",

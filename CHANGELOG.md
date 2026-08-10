@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.0-local-key.40 - 2026-08-10
+
+- Added Japanese and Vietnamese top-level README files plus localized documentation indexes, quickstarts, GitHub Release install guides, status pages, and release notes.
+- Added package and published-asset smoke coverage so both language editions must be present, linked, version-aligned, and installable from the release tarball.
+
 ## 0.1.0-local-key.39 - 2026-08-10
 
 - Added bounded Unity CLI `1.0.0-beta.3` workflows for official EasyAR sample import, configuration, validation, and Android builds, including Image Tracking variants and XREAL device setup.

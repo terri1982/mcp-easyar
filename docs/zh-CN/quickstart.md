@@ -3,7 +3,7 @@
 ## 1. 安装正版包
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -76,7 +76,7 @@ easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform
 easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega platform=android
 ```
 
-Mega 只有 APK 打包成功还不算完成；必须有真机安装、启动和定位成功证据。`v0.1.0-local-key.39` 已有 Android 手机与 XREAL 真机 Mega 定位证据，新 Unity 项目仍需按自己的官网 package name、license 和 Mega Block 重新验证。
+Mega 只有 APK 打包成功还不算完成；必须有真机安装、启动和定位成功证据。`v0.1.0-local-key.40` 已有 Android 手机与 XREAL 真机 Mega 定位证据，新 Unity 项目仍需按自己的官网 package name、license 和 Mega Block 重新验证。
 
 微信小程序 Sample 使用 `easyar-run-wechat-miniprogram`，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会引导读取 `easyar://acceptance/wechat-miniprogram` 和 `easyar://samples/wechat-miniprogram`，必要时用 `easyar_create_miniprogram_sample_workspace` 创建最小小程序工程壳，用 `easyar_find_miniprogram_official_package` 和 `easyar_write_miniprogram_official_package_search` 查找并记录官方包搜索证据，走 EasyAR 官网和微信开发者工具的官方 handoff，不在聊天里收集密钥，并要求真机预览证据后才生成完成报告。
 

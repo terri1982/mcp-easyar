@@ -2,7 +2,7 @@
 
 本目录提供 `mcp-easyar` 公开文档的中文版入口。GitHub 默认 README 已切换为中文；英文文档仍保留用于命令、API contract、自动化测试和海外用户阅读。
 
-当前目标只覆盖图像跟踪（Image Tracking）、CRS / Cloud Recognition 和 Mega Sample。`v0.1.0-local-key.39` 已纳入 Mega Android 手机、PICO 与 XREAL 眼镜的相应真机证据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
+当前目标只覆盖图像跟踪（Image Tracking）、CRS / Cloud Recognition 和 Mega Sample。`v0.1.0-local-key.40` 已纳入 Mega Android 手机、PICO 与 XREAL 眼镜的相应真机证据。Hello AR、Surface Tracking 和其他 EasyAR 官方 Sample 仍从当前目标剔除，后续按需继续扩展。
 
 新增小程序方向先覆盖 EasyAR Mega 微信小程序和 CRS / Cloud Recognition 微信小程序。当前提供 MCP 工具做本地小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result 和 completion report；官方下载、登录、license / CRS key 创建和微信真机预览仍由用户在官方网页或官方工具中完成。
 

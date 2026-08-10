@@ -5,11 +5,12 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.39";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.40";
 const threeSampleReleaseTags = new Set([
   "v0.1.0-local-key.38",
-  "v0.1.0-local-key.39"
+  "v0.1.0-local-key.39",
+  "v0.1.0-local-key.40"
 ]);
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
@@ -87,6 +88,22 @@ try {
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
   const chineseReadme = expectChineseDocs ? await readFile(path.join(packageRoot, "README.zh-CN.md"), "utf8") : "";
   const chineseDocsIndex = expectChineseDocs ? await readFile(path.join(packageRoot, "docs", "zh-CN", "README.md"), "utf8") : "";
+  const japaneseReadme = await readFile(path.join(packageRoot, "README.ja.md"), "utf8");
+  const japaneseDocs = await Promise.all([
+    readFile(path.join(packageRoot, "docs", "ja", "README.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "ja", "quickstart.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "ja", "install-from-github-release.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "ja", "STATUS.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "ja", "release-notes", "local-key-mvp.md"), "utf8")
+  ]);
+  const vietnameseReadme = await readFile(path.join(packageRoot, "README.vi.md"), "utf8");
+  const vietnameseDocs = await Promise.all([
+    readFile(path.join(packageRoot, "docs", "vi", "README.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "vi", "quickstart.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "vi", "install-from-github-release.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "vi", "STATUS.md"), "utf8"),
+    readFile(path.join(packageRoot, "docs", "vi", "release-notes", "local-key-mvp.md"), "utf8")
+  ]);
   const codexClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_write_client_setup", {
     outputRoot: consumerDir,
     client: "codex",
@@ -135,6 +152,14 @@ try {
     assert(chineseDocsIndex.includes("Image Tracking"), "Chinese docs should include Image Tracking scope.");
     assert(chineseDocsIndex.includes("CRS"), "Chinese docs should include CRS scope.");
   }
+  assert(japaneseReadme.includes("docs/ja/quickstart.md"), "Package should include the Japanese documentation entrypoint.");
+  assert(japaneseReadme.includes(expectedReleaseTag), "Japanese README should point to the expected release tag.");
+  assert(japaneseDocs.every((document) => document.includes(expectedReleaseTag)), "Every Japanese release document should point to the expected release tag.");
+  assert(japaneseReadme.includes("セキュリティ境界"), "Japanese documentation should preserve the security boundary.");
+  assert(vietnameseReadme.includes("docs/vi/quickstart.md"), "Package should include the Vietnamese documentation entrypoint.");
+  assert(vietnameseReadme.includes(expectedReleaseTag), "Vietnamese README should point to the expected release tag.");
+  assert(vietnameseDocs.every((document) => document.includes(expectedReleaseTag)), "Every Vietnamese release document should point to the expected release tag.");
+  assert(vietnameseReadme.includes("Ranh giới bảo mật"), "Vietnamese documentation should preserve the security boundary.");
   assert(codexClientSetup.includes("Ready for client connection: yes"), "Installed MCP should validate Codex package-bin setup.");
   assert(codexClientSetup.includes("Client: codex"), "Installed MCP should identify Codex setup.");
   assert(codexClientSetup.includes("Entrypoint mode: package-bin"), "Installed MCP should validate Codex package-bin mode.");

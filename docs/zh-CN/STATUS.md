@@ -1,13 +1,13 @@
 # mcp-easyar 当前状态
 
-当前 GitHub 预发布版：`v0.1.0-local-key.39`
+当前 GitHub 预发布版：`v0.1.0-local-key.40`
 
 官方中文文档快照：2026-07-01。MCP 元数据已更新到 EasyAR Sense Unity Plugin / for Mega `4003.0.0`、EasyAR Mega 支持包与 Mega Studio `2.13.0`、XR 设备扩展包 `4000.0.1`、EasyAR Sense Native `4.9.0`、EasyAR Mega 微信小程序插件 `2.0.3`。详见 `docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md`。
 
 安装：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -19,7 +19,7 @@ easyar-mcp-check
 - 已跑通并具备 safe release evidence：
   - Image Tracking
   - CRS / Cloud Recognition
-- `v0.1.0-local-key.39` 新增并验证：
+- `v0.1.0-local-key.40` 新增并验证：
   - Mega：已有一轮 Android 真机定位跟踪日志证据，包含 `[MLOC]`、`kMapTracking` / `NCam_Verified results` 等信号。
   - Mega fresh project：已按用户要求新建 Unity 工程，使用官方 4002 Mega 包完成 APK 打包、真机安装启动、EasyAR Sense 初始化、`Onsite` 模式就绪，并在对应办公室映射场景中抓到真机定位/跟踪日志信号。
   - Mega PICO 4 Ultra Enterprise：已按用户要求新建 Unity 工程，使用 PICO Unity Integration SDK `3.4.0`、EasyAR Unity XR 设备扩展包 `4000.0.0` 和 `PicoFrameSource` 完成 APK 打包、PICO 安装启动、PICO VST 相机启动、眼镜内实景透视可见，并定位到办公室 Mega Block。该头显路径现统一使用 `LocationInputMode=Onsite`；如果出现 EasyAR Simulator diagnostics caution，说明场景仍需切到 Onsite 后重新打包。
@@ -30,6 +30,7 @@ easyar-mcp-check
 - 新用户注册/登录/下载/key 创建采用浏览器引导，不收集官网密码或密钥。
 - Unity 项目编程辅助可生成 preflight、scene audit、run sequence、device validation、programming context、code plan、C# review、handoff artifact。
 - 微信小程序方向已新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample 元数据，并提供小程序工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report、小程序 scope status、`easyar://samples/wechat-miniprogram` resource 和 `easyar://acceptance/wechat-miniprogram` 验收 resource。
+- 新增日文和越南语顶层 README、文档索引、快速开始、GitHub Release 安装、状态页和发布说明；发布包 smoke 会校验两种语言版本都存在且版本号一致。
 
 ## 未完成
 

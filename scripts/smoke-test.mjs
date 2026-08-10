@@ -1077,7 +1077,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.39"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.40"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -1087,6 +1087,22 @@ try {
 
   const committedChineseReadme = await readFile(
     path.join(process.cwd(), "README.zh-CN.md"),
+    "utf8"
+  );
+  const committedJapaneseReadme = await readFile(
+    path.join(process.cwd(), "README.ja.md"),
+    "utf8"
+  );
+  const committedVietnameseReadme = await readFile(
+    path.join(process.cwd(), "README.vi.md"),
+    "utf8"
+  );
+  const committedJapaneseDocsIndex = await readFile(
+    path.join(process.cwd(), "docs", "ja", "README.md"),
+    "utf8"
+  );
+  const committedVietnameseDocsIndex = await readFile(
+    path.join(process.cwd(), "docs", "vi", "README.md"),
     "utf8"
   );
   const committedChineseDocsIndex = await readFile(
@@ -1115,6 +1131,16 @@ try {
   );
   assert(committedChineseReadme.includes("中文文档目录"), "Chinese README should include the Chinese docs directory");
   assert(committedChineseReadme.includes("docs/zh-CN/quickstart.md"), "Chinese README should directly link to Chinese quickstart");
+  assert(committedJapaneseReadme.includes("日本語ドキュメント"), "Japanese README should include its documentation section");
+  assert(committedJapaneseReadme.includes("docs/ja/quickstart.md"), "Japanese README should link to Japanese quickstart");
+  assert(committedJapaneseReadme.includes("v0.1.0-local-key.40"), "Japanese README should include current release tag");
+  assert(committedJapaneseReadme.includes("セキュリティ境界"), "Japanese README should include its security boundary");
+  assert(committedVietnameseReadme.includes("Tài liệu tiếng Việt"), "Vietnamese README should include its documentation section");
+  assert(committedVietnameseReadme.includes("docs/vi/quickstart.md"), "Vietnamese README should link to Vietnamese quickstart");
+  assert(committedVietnameseReadme.includes("v0.1.0-local-key.40"), "Vietnamese README should include current release tag");
+  assert(committedVietnameseReadme.includes("Ranh giới bảo mật"), "Vietnamese README should include its security boundary");
+  assert(committedJapaneseDocsIndex.includes("mcp-easyar 日本語ドキュメント"), "Japanese docs index should include its title");
+  assert(committedVietnameseDocsIndex.includes("Tài liệu mcp-easyar bằng tiếng Việt"), "Vietnamese docs index should include its title");
   assert(committedChineseDocsIndex.includes("mcp-easyar 中文文档"), "Chinese docs index should include title");
   assert(committedChineseDocsIndex.includes("Image Tracking"), "Chinese docs index should include focused Image Tracking scope");
   assert(committedChineseDocsIndex.includes("CRS"), "Chinese docs index should include focused CRS scope");
