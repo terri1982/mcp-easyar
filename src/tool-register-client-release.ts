@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 import { createEasyARApiClient } from "./easyar-api.js";
 import { focusedHandoffSampleIds } from "./focused-scope.js";
-import { jsonText, markdownText } from "./mcp-response.js";
+import { jsonText, markdownText, structuredJsonText } from "./mcp-response.js";
 import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import { officialOpenApiPath, packageRoot } from "./paths.js";
 import { createToolRegistrar, type ToolRegistrar } from "./tool-handler.js";
@@ -594,7 +594,7 @@ export function registerClientReleaseTools(registerTool: RegisterTool) {
     "easyar_release_manifest",
     "Generate a consumer-facing install and release manifest for mcp-easyar.",
     {},
-    async () => jsonText(await buildReleaseManifest())
+    async () => structuredJsonText(await buildReleaseManifest())
   );
 
   registerTool(

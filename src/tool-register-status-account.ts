@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 import { createEasyARApiClient } from "./easyar-api.js";
 import { focusedHandoffSampleIds } from "./focused-scope.js";
-import { jsonText, markdownText } from "./mcp-response.js";
+import { jsonText, markdownText, structuredJsonText } from "./mcp-response.js";
 import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import { officialOpenApiPath, packageRoot } from "./paths.js";
 import { createToolRegistrar, type ToolRegistrar } from "./tool-handler.js";
@@ -358,7 +358,7 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
     {},
     async () => {
       const auth = readAuthConfig();
-      return jsonText({
+      return structuredJsonText({
         name: serverName,
         version: serverVersion,
         repository: "https://github.com/terri1982/mcp-easyar",
@@ -458,14 +458,14 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
     "easyar_list_samples",
     "List known EasyAR Unity sample categories and setup requirements.",
     {},
-    async () => jsonText(samples)
+    async () => structuredJsonText(samples)
   );
 
   registerTool(
     "easyar_official_info",
     "Return official EasyAR links and package versions captured by this MCP server.",
     {},
-    async () => jsonText(officialInfo)
+    async () => structuredJsonText(officialInfo)
   );
 
   registerTool(
@@ -474,7 +474,7 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
     {},
     async () => {
       const auth = readAuthConfig();
-      return jsonText({
+      return structuredJsonText({
         apiBaseUrl: auth.apiBaseUrl,
         hasToken: auth.hasToken,
         tokenPreview: auth.tokenPreview,

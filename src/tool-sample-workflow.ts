@@ -402,7 +402,10 @@ export async function buildSampleImportGuide(root: string, sample: SampleInfo) {
 
 export async function importSampleFromPackageCache(root: string, sample: SampleInfo, overwrite: boolean, dryRun: boolean) {
   const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
-  const sourceRelativePath = packageCacheSamples[0] ?? null;
+  const sourceRelativePath = packageCacheSamples.find((candidate) => {
+    const normalized = candidate.replace(/\\/g, "/").toLowerCase();
+    return sample.unityScenes.some((hint) => normalized.includes(hint.toLowerCase()));
+  }) ?? packageCacheSamples[0] ?? null;
   const sourcePath = sourceRelativePath ? path.join(root, sourceRelativePath) : null;
   if (!sourcePath || !sourceRelativePath) {
     return {
@@ -687,7 +690,7 @@ export async function findPackageCacheSamplePaths(root: string, sample: SampleIn
   }
   const found: string[] = [];
   await walkPackageCacheSamples(root, packageCacheRoot, sample, found, limit, 5);
-  return found;
+  return found.sort((left, right) => packageCacheSamplePathRank(sample, left) - packageCacheSamplePathRank(sample, right) || left.localeCompare(right));
 }
 
 export async function walkPackageCacheSamples(
@@ -716,12 +719,44 @@ export async function walkPackageCacheSamples(
       continue;
     }
     const relativePath = path.relative(root, fullPath);
-    if (relativePath.includes(`Samples~${path.sep}`) && packageCacheSamplePathMatches(sample, relativePath)) {
+    const normalized = relativePath.replace(/\\/g, "/").toLowerCase();
+    const imageTrackingGroup = normalized.endsWith("/samples~/imagetracking");
+    if (relativePath.includes(`Samples~${path.sep}`) && packageCacheSamplePathMatches(sample, relativePath) && !(sample.id === "image-tracking" && imageTrackingGroup)) {
       found.push(relativePath);
       continue;
     }
     await walkPackageCacheSamples(root, fullPath, sample, found, limit, depth - 1);
   }
+}
+
+export function packageCacheSamplePathRank(sample: SampleInfo, relativePath: string): number {
+  const normalized = relativePath.replace(/\\/g, "/").toLowerCase();
+  if (sample.id === "image-tracking") {
+    if (normalized.includes("/samples~/imagetracking/imagetracking_targets")) {
+      return 0;
+    }
+    if (normalized.includes("/samples~/imagetracking/")) {
+      return 1;
+    }
+    if (normalized.includes("/combination/")) {
+      return 10;
+    }
+  }
+  if (sample.id === "mega") {
+    if (normalized.includes("com.easyar.sense@") && normalized.endsWith("/samples~/mega")) {
+      return 0;
+    }
+    if (normalized.endsWith("/samples~/mega")) {
+      return 1;
+    }
+    if (normalized.includes("com.easyar.mega.studio@")) {
+      return 10;
+    }
+    if (normalized.includes("/headmounteddisplay/")) {
+      return 20;
+    }
+  }
+  return 5;
 }
 
 export function packageCacheSamplePathMatches(sample: SampleInfo, relativePath: string): boolean {

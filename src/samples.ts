@@ -67,7 +67,7 @@ export const samples: SampleInfo[] = [
     name: "Mega",
     description: "Run an EasyAR Mega Unity sample with a configured cloud localization library and Mega Block on a real device, including Android phone and PICO 4 Ultra Enterprise validation paths.",
     implementationStatus: "focused",
-    unityScenes: ["Mega", "MegaBlock", "MegaLocalization", "MegaBlockController", "TiantanSkyPalace", "Pico", "Xreal", "AppleVisionPro"],
+    unityScenes: ["MegaBlock_Basic", "MegaBlock", "MegaLandmark", "Mega", "MegaLocalization", "MegaBlockController", "TiantanSkyPalace", "Pico", "Xreal", "AppleVisionPro"],
     requiredCapabilities: ["Camera permission", "Location/network access", "EasyAR Mega license key", "Mega Block cloud localization library", "MegaBlockController workflow", "PICO Unity Integration SDK 3.1.0+ for PICO headsets", "XREAL SDK 3.1+ or visionOS 2.0+ when targeting those built-in headset paths"],
     setupNotes: [
       "Install the official EasyAR Sense Unity Plugin for Mega from the EasyAR download page.",

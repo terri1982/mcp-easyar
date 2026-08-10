@@ -13,6 +13,31 @@ const fakeHubUnityPath = path.join(unityCandidateRoot, "2022.3.62f1", "Unity.app
 await mkdir(path.dirname(fakeHubUnityPath), { recursive: true });
 await writeFile(fakeHubUnityPath, "#!/bin/sh\nexit 0\n", "utf8");
 await chmod(fakeHubUnityPath, 0o755);
+const fakeUnityCliPath = path.join(unityCandidateRoot, "unity-cli");
+await writeFile(
+  fakeUnityCliPath,
+  `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  printf "1.0.0-beta.3\\n"
+  exit 0
+fi
+if [ "$1" = "--non-interactive" ] && [ "$2" = "--format" ] && [ "$3" = "json" ] && [ "$4" = "status" ]; then
+  printf '{"success":true,"command":"status","data":{"connected":false}}\\n'
+  exit 0
+fi
+if [ "$1" = "--non-interactive" ] && [ "$2" = "--format" ] && [ "$3" = "json" ] && [ "$4" = "upgrade" ] && [ "$5" = "--check" ]; then
+  printf '{"success":true,"command":"upgrade","data":{"currentVersion":"1.0.0-beta.3","latestVersion":"1.0.0-beta.3","platform":"darwin-arm64"}}\\n'
+  exit 0
+fi
+if [ "$1" = "--non-interactive" ] && [ "$2" = "build" ]; then
+  exit 0
+fi
+printf "Unexpected Unity CLI arguments: %s\\n" "$*" >&2
+exit 2
+`,
+  "utf8"
+);
+await chmod(fakeUnityCliPath, 0o755);
 const child = spawn(command, args, {
   env: {
     ...process.env,
@@ -27,6 +52,7 @@ const child = spawn(command, args, {
     EASYAR_DOWNLOADS_ENDPOINT: "",
     EASYAR_CLOUD_CREDENTIALS_ENDPOINT: "",
     EASYAR_UNITY_PATH: "",
+    EASYAR_UNITY_CLI_PATH: fakeUnityCliPath,
     EASYAR_UNITY_CANDIDATE_DIRS: unityCandidateRoot,
     EASYAR_RELEASE_PROJECT_PATH: "",
     EASYAR_RELEASE_PLATFORM: ""
@@ -76,6 +102,26 @@ try {
     JSON.stringify(listedToolNames) === JSON.stringify(expectedToolNames),
     "Registered MCP tool names should match the active catalog exactly"
   );
+  if (activeToolProfile === "core") {
+    assert(listedToolNames.length <= 70, "Core profile should remain within the 70-tool client budget");
+    for (const coreTool of [
+      "easyar_server_status",
+      "easyar_unity_cli_status",
+      "easyar_unity_cli",
+      "easyar_android_device_status",
+      "easyar_android_install_apk",
+      "easyar_android_start_app"
+    ]) {
+      assert(listedToolNames.includes(coreTool), `${coreTool} should be listed in the core profile`);
+    }
+    for (const fullOnlyTool of [
+      "easyar_create_mobile_settings_helper",
+      "easyar_run_unity_compile_check",
+      "easyar_write_unity_environment_report"
+    ]) {
+      assert(!listedToolNames.includes(fullOnlyTool), `${fullOnlyTool} should remain full-profile only`);
+    }
+  } else {
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_create_mono_behaviour"),
     "easyar_create_mono_behaviour should be listed"
@@ -123,6 +169,14 @@ try {
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_write_unity_environment_report"),
     "easyar_write_unity_environment_report should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_unity_cli_status"),
+    "easyar_unity_cli_status should be listed"
+  );
+  assert(
+    tools.result.tools.some((tool) => tool.name === "easyar_unity_cli"),
+    "easyar_unity_cli should be listed"
   );
   assert(
     tools.result.tools.some((tool) => tool.name === "easyar_generate_sample_expansion_plan"),
@@ -537,6 +591,8 @@ try {
   assertPromptIncludes(miniProgramPrompt, "Do not ask the user for EasyAR passwords");
 
   const status = await callTool("easyar_server_status", {});
+  assertStructuredPath(status, ["name"], "mcp-easyar");
+  assertStructuredPath(status, ["capabilities", "toolProfile"], process.env.MCP_EASYAR_TOOL_PROFILE ?? "full");
   assertTextIncludes(status, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(status, "\"preflightFirst\": true");
   assertTextIncludes(status, "easyar://acceptance/fresh-project");
@@ -551,6 +607,7 @@ try {
   assertTextIncludes(status, "account-scoped SDK download discovery");
 
   const officialInfo = await callTool("easyar_official_info", {});
+  assertStructuredPath(officialInfo, ["capturedAt"], "2026-07-01");
   assertTextIncludes(officialInfo, "easyarSenseUnityPlugin");
 
   const quickstart = await request("resources/read", {
@@ -603,6 +660,10 @@ try {
   assertResourceIncludes(currentStatusResource, "Local-key MVP public usability: about 98%");
 
   const sampleCatalog = await callTool("easyar_list_samples", {});
+  assert(
+    sampleCatalog.result.structuredContent.items.some((sample) => sample.id === "mega"),
+    "Expected structuredContent.items to include the Mega sample"
+  );
   assertTextIncludes(sampleCatalog, "\"id\": \"mega\"");
   assertTextIncludes(sampleCatalog, "\"name\": \"Mega\"");
   assertTextIncludes(sampleCatalog, "\"implementationStatus\": \"focused\"");
@@ -669,6 +730,7 @@ try {
   assertResourceIncludes(programmingWorkflowResource, "Never hardcode EasyAR license keys");
 
   const authStatus = await callTool("easyar_auth_status", {});
+  assertStructuredPath(authStatus, ["hasToken"], false);
   assertTextIncludes(authStatus, "\"hasToken\": false");
   assertTextIncludes(authStatus, "\"accountStatusEndpointConfigured\": false");
   assertTextIncludes(authStatus, "Secret values are never returned");
@@ -1101,6 +1163,8 @@ try {
   await rm(productionValidationRoot, { recursive: true, force: true });
 
   const releaseManifest = await callTool("easyar_release_manifest", {});
+  assertStructuredPath(releaseManifest, ["package", "name"], "mcp-easyar");
+  assertStructuredPath(releaseManifest, ["package", "binName"], "easyar-mcp");
   assertTextIncludes(releaseManifest, "\"name\": \"mcp-easyar\"");
   assertTextIncludes(releaseManifest, "\"binName\": \"easyar-mcp\"");
   assertTextIncludes(releaseManifest, "\"installProfiles\"");
@@ -1227,6 +1291,81 @@ try {
   assertTextIncludes(unityEnvironment, "\"recommendedUnityPath\"");
 
   const projectPath = await createUnityProject();
+  const unityCliProjectPath = await createUnityProject();
+  const unityCliStatus = await callTool("easyar_unity_cli_status", {});
+  assertStructuredPath(unityCliStatus, ["version"], "1.0.0-beta.3");
+  assertStructuredPath(unityCliStatus, ["latestVersion"], "1.0.0-beta.3");
+  assertStructuredPath(unityCliStatus, ["updateAvailable"], false);
+  assertStructuredPath(unityCliStatus, ["pipelineAvailable"], true);
+  assertStructuredPath(unityCliStatus, ["pipelineStatus", "command"], "status");
+
+  const megaCliPlan = await callTool("easyar_unity_cli", {
+    projectPath: unityCliProjectPath,
+    action: "build-android",
+    sampleId: "mega"
+  });
+  assertStructuredPath(megaCliPlan, ["sample", "id"], "mega");
+  assertStructuredPath(megaCliPlan, ["outputPath"], path.join(unityCliProjectPath, "Builds", "mega.apk"));
+  const xrealCliPlan = await callTool("easyar_unity_cli", {
+    projectPath: unityCliProjectPath,
+    action: "build-android",
+    sampleId: "mega",
+    deviceProfile: "xreal"
+  });
+  assertStructuredPath(xrealCliPlan, ["deviceProfile"], "xreal");
+  assertStructuredPath(xrealCliPlan, ["xrealPackages", "sdk", "installed"], false);
+  assertStructuredPath(xrealCliPlan, ["xrealEnterpriseLicense", "required"], true);
+  assertTextIncludes(xrealCliPlan, "EasyARXrealSettingsHelper.ValidateXreal");
+  assertTextIncludes(xrealCliPlan, "EasyARDeviceBuildHelper.Build");
+
+  const fakeXrealSdkPath = path.join(unityCliProjectPath, "fake-packages", "com.xreal.xr");
+  const fakeXrealLicensePath = path.join(unityCliProjectPath, "fake-packages", "nrsdk_license.bin");
+  await mkdir(fakeXrealSdkPath, { recursive: true });
+  await writeFile(path.join(fakeXrealSdkPath, "package.json"), '{"name":"com.xreal.xr","version":"3.1.0"}\n', "utf8");
+  await writeFile(fakeXrealLicensePath, "fixture-license", "utf8");
+  const xrealCliPrepare = await callTool("easyar_unity_cli", {
+    projectPath: unityCliProjectPath,
+    action: "prepare",
+    sampleId: "mega",
+    deviceProfile: "xreal",
+    xrealSdkPackagePath: fakeXrealSdkPath,
+    xrealLicensePath: fakeXrealLicensePath,
+    mode: "execute",
+    overwrite: true
+  });
+  assertStructuredPath(xrealCliPrepare, ["xrealPackages", "sdk", "installed"], true);
+  assertStructuredPath(xrealCliPrepare, ["xrealLocalPackages", 0, "packageName"], "com.xreal.xr");
+  assertStructuredPath(xrealCliPrepare, ["androidMinSdkVersion"], 29);
+
+  const megaCliPrepare = await callTool("easyar_unity_cli", {
+    projectPath: unityCliProjectPath,
+    action: "prepare",
+    sampleId: "mega",
+    mode: "execute",
+    overwrite: true
+  });
+  assertStructuredPath(megaCliPrepare, ["bundleIdentifier"], "cn.easyar.mcp.mega");
+
+  const imageCliPrepare = await callTool("easyar_unity_cli", {
+    projectPath: unityCliProjectPath,
+    action: "prepare",
+    sampleId: "image-tracking",
+    imageTrackingVariant: "targets",
+    mode: "execute",
+    overwrite: true
+  });
+  assertStructuredPath(imageCliPrepare, ["action"], "prepare");
+  assertStructuredPath(imageCliPrepare, ["bundleIdentifier"], "cn.easyar.mcp.imagetracking");
+  assertStructuredPath(imageCliPrepare, ["androidMinSdkVersion"], 29);
+  const imageCliConfigure = await callTool("easyar_unity_cli", {
+    projectPath: unityCliProjectPath,
+    action: "configure",
+    sampleId: "image-tracking",
+    imageTrackingVariant: "targets",
+    mode: "execute"
+  });
+  assertStructuredPath(imageCliConfigure, ["succeeded"], true);
+  await rm(unityCliProjectPath, { recursive: true, force: true });
   const writtenUnityEnvironment = await callTool("easyar_write_unity_environment_report", {
     projectPath,
     sampleId: "image-tracking"
@@ -2180,6 +2319,10 @@ exit 0
   assert(megaValidationHelper.includes("ValidateMegaBlockRoot"), "Mega validation helper should check BlockHolder root configuration");
   assert(megaValidationHelper.includes("LocationInputMode must be Onsite"), "Mega validation helper should reject Simulator mode for real-device validation");
   assert(megaValidationHelper.includes("External BlockRootSource with an empty blockRoot"), "Mega validation helper should reject External empty BlockRoot");
+  assert(
+    megaValidationHelper.includes("Sense 4003+ Mega samples use MegaBlockController"),
+    "Mega validation helper should accept the current MegaBlockController sample structure"
+  );
 
   const megaMobileSettings = await callTool("easyar_create_mobile_settings_helper", {
     projectPath,
@@ -3170,9 +3313,10 @@ exit 0
   );
 
   await rm(projectPath, { recursive: true, force: true });
+  }
   await rm(unityCandidateRoot, { recursive: true, force: true });
   child.kill();
-  console.log("MCP smoke test passed.");
+  console.log(`MCP ${activeToolProfile} profile smoke test passed.`);
 } catch (error) {
   await rm(unityCandidateRoot, { recursive: true, force: true });
   child.kill();
@@ -3270,6 +3414,17 @@ function callTool(name, args) {
 function assertTextIncludes(response, expected) {
   const text = extractText(response);
   assert(text.includes(expected), `Expected response text to include ${expected}`);
+}
+
+function assertStructuredPath(response, path, expected) {
+  let value = response.result.structuredContent;
+  for (const part of path) {
+    value = value?.[part];
+  }
+  assert(
+    JSON.stringify(value) === JSON.stringify(expected),
+    `Expected structuredContent.${path.join(".")} to equal ${JSON.stringify(expected)}`
+  );
 }
 
 function assertTextExcludes(response, unexpected) {

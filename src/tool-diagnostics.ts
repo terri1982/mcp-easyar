@@ -118,7 +118,10 @@ export function analyzeUnityLog(logText: string, sample: SampleInfo | null = nul
   rules.push(...sampleSpecificLogRules(sample));
 
   const lines = logText.split(/\r?\n/);
+  const megaLocalizationSucceeded = sample?.id === "mega"
+    && /\[EasyAR MCP\]\s*Mega localization status:\s*Found\b/i.test(logText);
   return rules
+    .filter((rule) => !(megaLocalizationSucceeded && ["mega-block-config", "mega-localization-runtime"].includes(rule.id)))
     .filter((rule) => rule.pattern.test(logText))
     .map((rule) => ({
       id: rule.id,

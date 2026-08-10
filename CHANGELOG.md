@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added bounded Unity CLI `1.0.0-beta.3` workflows for official EasyAR sample import, configuration, validation, and Android builds, including Image Tracking variants and XREAL device setup.
+- Added beta-channel update reporting to Unity CLI status and preflight results so installed and latest versions are compared directly.
+- Added XREAL SDK `3.1.0+`, Native Session Manager, and Enterprise license validation so Mega builds cannot be reported ready while silently falling back to a phone/inertial frame source.
+- Added bounded local XREAL SDK installation to `easyar_unity_cli prepare`, with package-name and minimum-version validation before updating the Unity manifest.
+- Isolated Unity CLI builds to the selected sample scene and removed generated AppleDouble/XR Simulation residue immediately before Android builds.
+- Made the Android-phone profile remove a stale XREAL XR loader before building, while the XREAL profile reassigns it during configuration.
+- Raised Android minimum SDK to 29 automatically when an installed XREAL package contributes Android libraries that require API 29.
 - Added focused Mega sample support to the MCP catalog, runbooks, readiness checks, device-validation checklist, MonoBehaviour template generation, and Unity log diagnostics.
 - Updated active local-key MVP scope text to Image Tracking, Cloud Recognition, and Mega with committed safe Mega real-device install/localization evidence for the next GitHub release.
 - Added fresh Unity project Mega startup and localization evidence using the official 4002 Mega package, Android APK install/startup, EasyAR initialization, Onsite-mode readiness, and real-device localization/tracking log signals without committing secrets or APKs.

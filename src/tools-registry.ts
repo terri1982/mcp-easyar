@@ -9,6 +9,7 @@ import { registerMiniProgramSampleTools } from "./tool-register-miniprogram-samp
 import { registerSampleArtifactTools } from "./tool-register-sample-artifacts.js";
 import { registerStatusAccountTools } from "./tool-register-status-account.js";
 import { registerUnityProgrammingTools } from "./tool-register-unity-programming.js";
+import { registerUnityCliTools } from "./tool-register-unity-cli.js";
 
 export function registerTools(server: McpServer, options: { shouldRegisterTool?: (name: string) => boolean } = {}) {
   const guardedRegisterTool = createToolRegistrar((server.tool as ToolRegistrar).bind(server), options);
@@ -22,5 +23,6 @@ export function registerTools(server: McpServer, options: { shouldRegisterTool?:
   registerDeviceEvidenceTools(registerTool);
   registerLocalDiagnosticsTools(registerTool);
   registerUnityProgrammingTools(registerTool);
+  registerUnityCliTools(registerTool);
   registerAndroidDeviceTools(registerTool);
 }

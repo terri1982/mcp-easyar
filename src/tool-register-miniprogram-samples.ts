@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
-import { jsonText } from "./mcp-response.js";
+import { jsonText, structuredJsonText } from "./mcp-response.js";
 import { inlineMarkdownResult, isInlineOutput, outputModeSchema } from "./tool-output.js";
 import {
   analyzeMiniProgramDevtoolsLog,
@@ -89,7 +89,7 @@ export function registerMiniProgramSampleTools(registerTool: RegisterTool) {
     "easyar_list_miniprogram_samples",
     "List focused EasyAR WeChat Mini Program samples supported by mcp-easyar.",
     {},
-    async () => jsonText({
+    async () => structuredJsonText({
       samples: miniProgramSamples,
       focusedSampleIds: miniProgramSamples.map((sample) => sample.id),
       security: "MCP does not collect EasyAR or WeChat passwords, verification codes, raw license keys, API secrets, or upload credentials."

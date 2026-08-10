@@ -122,6 +122,14 @@ CRS 小程序把 `sampleId` 改成 `wechat-crs`。用户仍需自己在 EasyAR �
 
 支持 prompts 的 MCP 客户端可以直接从 `easyar-run-wechat-miniprogram` 开始，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会先读取小程序验收资源，禁止在聊天里收集密钥，并要求有真机预览证据后才允许声明完成。
 
+## Unity CLI 工作流
+
+`easyar_unity_cli_status` 用于检查本机 Unity CLI、beta 通道最新版本和 Pipeline 状态；`easyar_unity_cli` 提供受限的 `preflight`、`import-sample`、`prepare`、`configure`、`validate` 和 `build-android` 流程，不接受任意命令或任意 C# 方法名。当前真机回归使用 Unity CLI `1.0.0-beta.3` 与 Unity `2022.3.62f3`。
+
+Android 手机使用 `deviceProfile=android-phone`。XREAL 使用 `deviceProfile=xreal`，并要求官方 `com.xreal.xr` `3.1.0+` 与 XREAL Enterprise 授权文件；在 `prepare` 时通过 `xrealLicensePath=/local/path/nrsdk_license.bin` 指定授权文件。MCP 只把二进制授权复制为项目内 TextAsset，不读取或返回授权内容。`configure` 会按 EasyAR 官方 XREAL 配置要求开启 `Enable Native Session Manager`；`validate` 和 `build-android` 会在缺少 SDK、授权、Native Session Manager、XR Loader 或 OpenGL ES 3 配置时停止。EasyAR 文档没有要求另行下载 `com.xreal.xr.enterprise` Unity 包。
+
+如果项目尚未安装 XREAL 包，可在 `prepare` 中传入 `xrealSdkPackagePath=/local/path/com.xreal.xr.tar.gz`。MCP 会校验包的 `package.json` 名称和最低版本，再安全写入 `Packages/manifest.json`。
+
 ## 安全边界
 
 不要把以下内容发到聊天、提交到 GitHub 或写进公开日志：

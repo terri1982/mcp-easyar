@@ -20,9 +20,11 @@ ${sceneNames}
         [MenuItem("Tools/EasyAR/Open Sample Scene")]
         public static void OpenSampleScene()
         {
-            var scene = AssetDatabase.FindAssets("t:Scene")
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .FirstOrDefault(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0));
+            var scene = SceneNameHints
+                .Select(hint => AssetDatabase.FindAssets("t:Scene")
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .FirstOrDefault(path => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0))
+                .FirstOrDefault(path => !string.IsNullOrEmpty(path));
 
             if (string.IsNullOrEmpty(scene))
             {
@@ -56,20 +58,18 @@ ${sceneNames}
         [MenuItem("Tools/EasyAR/Configure Build Settings")]
         public static void ConfigureBuildSettings()
         {
-            var scene = AssetDatabase.FindAssets("t:Scene")
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .FirstOrDefault(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0));
+            var scene = SceneNameHints
+                .Select(hint => AssetDatabase.FindAssets("t:Scene")
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .FirstOrDefault(path => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0))
+                .FirstOrDefault(path => !string.IsNullOrEmpty(path));
 
             if (string.IsNullOrEmpty(scene))
             {
                 throw new InvalidOperationException("No matching EasyAR sample scene found. Import the official ${escapeCsharp(sample.name)} sample first.");
             }
 
-            var existingScenes = EditorBuildSettings.scenes
-                .Where(item => item != null && !string.IsNullOrEmpty(item.path) && item.path != scene)
-                .ToList();
-            existingScenes.Insert(0, new EditorBuildSettingsScene(scene, true));
-            EditorBuildSettings.scenes = existingScenes.ToArray();
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scene, true) };
 
 ${switchTarget}
             UnityEngine.Debug.Log("Configured EasyAR Build Settings with sample scene: " + scene);
@@ -153,9 +153,11 @@ ${sceneNames}
                 throw new InvalidOperationException("No official EasyAR asset signals found. Import the official EasyAR Unity Plugin package first. Generated MCP helper files do not count.");
             }
 
-            var scene = AssetDatabase.FindAssets("t:Scene")
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .FirstOrDefault(IsMatchingSampleScene);
+            var scene = SceneNameHints
+                .Select(hint => AssetDatabase.FindAssets("t:Scene")
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .FirstOrDefault(path => IsMatchingSampleScene(path) && path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0))
+                .FirstOrDefault(path => !string.IsNullOrEmpty(path));
             if (string.IsNullOrEmpty(scene))
             {
                 throw new InvalidOperationException("No matching ${escapeCsharp(sample.name)} scene found. Import the official focused sample scene first.");
@@ -291,11 +293,16 @@ ${sampleValidation}
                              path.IndexOf("PXR_", StringComparison.OrdinalIgnoreCase) >= 0 ||
                              path.IndexOf("picoxr", StringComparison.OrdinalIgnoreCase) >= 0);
         }
-        }
 
         private static void ValidateMegaBlockRoot(string scenePath)
         {
             var scene = File.ReadAllText(scenePath);
+            if (scenePath.IndexOf("MegaBlock_", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                scene.IndexOf("MegaBlockController", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                // Sense 4003+ Mega samples use MegaBlockController instead of legacy BlockHolder BlockRootSource fields.
+                return;
+            }
             var matches = Regex.Matches(scene, @"BlockRootSource:\\s*(\\d+)[\\s\\S]*?blockRoot:\\s*\\{fileID:\\s*([^}\\s]+)[^}]*\\}");
             if (matches.Count == 0)
             {
@@ -658,6 +665,8 @@ namespace EasyAR.EditorTools
         public static void Build()
         {
             ${target.switchTarget}
+            CleanupGeneratedAppleDoubleFiles();
+            CleanupXrSimulationTempResidue();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(scene => scene != null && scene.enabled && !string.IsNullOrEmpty(scene.path))
@@ -683,6 +692,39 @@ namespace EasyAR.EditorTools
 
             UnityEngine.Debug.Log("EasyAR player build succeeded: " + OutputPath);
         }
+
+        private static void CleanupGeneratedAppleDoubleFiles()
+        {
+            var beeRoot = Path.Combine(Directory.GetCurrentDirectory(), "Library", "Bee");
+            if (!Directory.Exists(beeRoot)) { return; }
+            foreach (var file in Directory.GetFiles(beeRoot, "._*", SearchOption.AllDirectories))
+            {
+                File.Delete(file);
+            }
+        }
+
+        private static void CleanupXrSimulationTempResidue()
+        {
+            var pairs = new[]
+            {
+                new[] { "Assets/XR/UserSimulationSettings/Resources/XRSimulationPreferences.asset", "Assets/XR/Temp/XRSimulationPreferences.asset" },
+                new[] { "Assets/XR/Resources/XRSimulationRuntimeSettings.asset", "Assets/XR/Temp/XRSimulationRuntimeSettings.asset" }
+            };
+            foreach (var pair in pairs)
+            {
+                if (File.Exists(pair[0]) && File.Exists(pair[1]))
+                {
+                    AssetDatabase.DeleteAsset(pair[1]);
+                }
+            }
+            var tempRoot = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "XR", "Temp");
+            if (!Directory.Exists(tempRoot)) { return; }
+            foreach (var file in Directory.GetFiles(tempRoot, "._*", SearchOption.AllDirectories))
+            {
+                File.Delete(file);
+            }
+            AssetDatabase.Refresh();
+        }
     }
 }
 `;
@@ -692,16 +734,45 @@ export function buildMobileSettingsHelper(
   platform: typeof mobilePlatforms[number],
   bundleIdentifier: string,
   cameraUsageDescription: string | null,
-  minSdkVersion: number | null
+  minSdkVersion: number | null,
+  removeXrealLoader = false
 ): string {
   const iosCameraText = cameraUsageDescription ?? "EasyAR uses the camera to provide augmented reality tracking.";
   const androidMinSdk = minSdkVersion ?? 23;
+  const xrealReset = removeXrealLoader
+    ? `            var perBuildTarget = AssetDatabase.LoadAssetAtPath<XRGeneralSettingsPerBuildTarget>("Assets/XR/XRGeneralSettingsPerBuildTarget.asset");
+            if (perBuildTarget && perBuildTarget.HasManagerSettingsForBuildTarget(BuildTargetGroup.Android))
+            {
+                var manager = perBuildTarget.ManagerSettingsForBuildTarget(BuildTargetGroup.Android);
+                XRPackageMetadataStore.RemoveLoader(manager, "Unity.XR.XREAL.XREALXRLoader", BuildTargetGroup.Android);
+                if (manager.activeLoaders.Count == 0)
+                {
+                    manager.automaticLoading = false;
+                    manager.automaticRunning = false;
+                }
+                EditorUtility.SetDirty(manager);
+            }
+            foreach (var guid in AssetDatabase.FindAssets("t:XREALSettings"))
+            {
+                var settings = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GUIDToAssetPath(guid));
+                if (!settings) { continue; }
+                var serialized = new SerializedObject(settings);
+                var multiResume = serialized.FindProperty("SupportMultiResume");
+                if (multiResume != null)
+                {
+                    multiResume.boolValue = false;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+`
+    : "";
   const body = platform === "android"
     ? `            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, BundleIdentifier);
             PlayerSettings.Android.minSdkVersion = (AndroidSdkVersions)${androidMinSdk};
             PlayerSettings.Android.forceInternetPermission = true;
             PlayerSettings.Android.forceSDCardPermission = false;
             EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+${xrealReset}
 `
     : `            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, BundleIdentifier);
             PlayerSettings.iOS.cameraUsageDescription = CameraUsageDescription;
@@ -709,6 +780,8 @@ export function buildMobileSettingsHelper(
 `;
 
   return `using UnityEditor;
+using UnityEditor.XR.Management;
+using UnityEditor.XR.Management.Metadata;
 
 namespace EasyAR.EditorTools
 {
@@ -723,6 +796,167 @@ namespace EasyAR.EditorTools
 ${body}
             PlayerSettings.use32BitDisplayBuffer = false;
             UnityEngine.Debug.Log("Configured EasyAR mobile player settings for ${escapeCsharp(platform)} with bundle identifier: " + BundleIdentifier);
+        }
+    }
+}
+`;
+}
+
+export function buildXrealSettingsHelper(licenseAssetPath = "Assets/EasyARGenerated/XREAL/nrsdk_license.bytes"): string {
+  return `using System;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.XR.Management;
+using UnityEditor.XR.Management.Metadata;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.XR.Management;
+
+namespace EasyAR.EditorTools
+{
+    public static class EasyARXrealSettingsHelper
+    {
+        private const string LoaderTypeName = "Unity.XR.XREAL.XREALXRLoader";
+        private const string SettingsTypeName = "Unity.XR.XREAL.XREALSettings";
+        private const string SettingsKey = "com.unity.xr.management.xrealsettings";
+        private const string GeneralSettingsPath = "Assets/XR/XRGeneralSettingsPerBuildTarget.asset";
+        private const string XrealSettingsPath = "Assets/XR/Settings/XREALSettings.asset";
+        private const string LicenseAssetPath = "${escapeCsharp(licenseAssetPath)}";
+
+        [MenuItem("Tools/EasyAR/Configure XREAL Settings")]
+        public static void ConfigureXreal()
+        {
+            EnsureXrealPackage();
+            Directory.CreateDirectory(Path.GetDirectoryName(XrealSettingsPath));
+
+            var perBuildTarget = AssetDatabase.LoadAssetAtPath<XRGeneralSettingsPerBuildTarget>(GeneralSettingsPath);
+            if (!perBuildTarget)
+            {
+                perBuildTarget = ScriptableObject.CreateInstance<XRGeneralSettingsPerBuildTarget>();
+                AssetDatabase.CreateAsset(perBuildTarget, GeneralSettingsPath);
+                EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, perBuildTarget, true);
+            }
+            if (!perBuildTarget.HasManagerSettingsForBuildTarget(BuildTargetGroup.Android))
+            {
+                perBuildTarget.CreateDefaultManagerSettingsForBuildTarget(BuildTargetGroup.Android);
+            }
+
+            var manager = perBuildTarget.ManagerSettingsForBuildTarget(BuildTargetGroup.Android);
+            if (!XRPackageMetadataStore.AssignLoader(manager, LoaderTypeName, BuildTargetGroup.Android))
+            {
+                throw new InvalidOperationException("Unable to assign the XREAL XR loader. Confirm com.xreal.xr 3.1+ is imported.");
+            }
+            manager.automaticLoading = true;
+            manager.automaticRunning = true;
+            EditorUtility.SetDirty(manager);
+
+            var settingsType = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetType(SettingsTypeName, false))
+                .FirstOrDefault(type => type != null);
+            if (settingsType == null)
+            {
+                throw new InvalidOperationException("XREALSettings type is unavailable. Confirm com.xreal.xr 3.1+ finished compiling.");
+            }
+            var settings = AssetDatabase.FindAssets("t:XREALSettings")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(path => AssetDatabase.LoadAssetAtPath(path, settingsType) as ScriptableObject)
+                .FirstOrDefault(item => item != null);
+            if (!settings)
+            {
+                settings = ScriptableObject.CreateInstance(settingsType);
+                settings.name = "XREALSettings";
+                AssetDatabase.CreateAsset(settings, XrealSettingsPath);
+            }
+            var serialized = new SerializedObject(settings);
+            SetEnum(serialized, "StereoRendering", 2);
+            SetEnum(serialized, "InitialTrackingType", 0);
+            SetEnum(serialized, "InitialInputSource", 1);
+            SetBool(serialized, "SupportMultiResume", false);
+            SetRequiredBool(serialized, "EnableNativeSessionManager", true);
+            var licenseAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(LicenseAssetPath);
+            if (!licenseAsset)
+            {
+                throw new FileNotFoundException("XREAL Enterprise license asset is missing. Run easyar_unity_cli prepare with xrealLicensePath.", LicenseAssetPath);
+            }
+            var licenseProperty = serialized.FindProperty("LicenseAsset");
+            if (licenseProperty == null)
+            {
+                throw new InvalidOperationException("Installed XREAL SDK does not expose the expected LicenseAsset setting.");
+            }
+            licenseProperty.objectReferenceValue = licenseAsset;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorBuildSettings.AddConfigObject(SettingsKey, settings, true);
+
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.OpenGLES3 });
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel29;
+            AssetDatabase.SaveAssets();
+            UnityEngine.Debug.Log("Configured XREAL SDK 3.1+ for EasyAR using Native Session Manager, the XREAL XR loader, and OpenGL ES 3.");
+        }
+
+        [MenuItem("Tools/EasyAR/Validate XREAL Settings")]
+        public static void ValidateXreal()
+        {
+            EnsureXrealPackage();
+            if (!XRPackageMetadataStore.IsLoaderAssigned(LoaderTypeName, BuildTargetGroup.Android))
+            {
+                throw new InvalidOperationException("XREAL XR loader is not assigned for Android. Run ConfigureXreal first.");
+            }
+            if (!EditorBuildSettings.TryGetConfigObject(SettingsKey, out ScriptableObject settings) || !settings)
+            {
+                throw new InvalidOperationException("XREALSettings is not registered in EditorBuildSettings.");
+            }
+            var serialized = new SerializedObject(settings);
+            var nativeSessionProperty = serialized.FindProperty("EnableNativeSessionManager");
+            if (nativeSessionProperty == null || !nativeSessionProperty.boolValue)
+            {
+                throw new InvalidOperationException("XREAL Enable Native Session Manager must be enabled for EasyAR frame access. Run ConfigureXreal first.");
+            }
+            var licenseProperty = serialized.FindProperty("LicenseAsset");
+            if (licenseProperty == null || !licenseProperty.objectReferenceValue)
+            {
+                throw new InvalidOperationException("XREAL Enterprise camera license is not assigned. Run easyar_unity_cli prepare with xrealLicensePath, then configure again.");
+            }
+            var graphics = PlayerSettings.GetGraphicsAPIs(BuildTarget.Android);
+            if (graphics.Length == 0 || graphics[0] != GraphicsDeviceType.OpenGLES3)
+            {
+                throw new InvalidOperationException("XREAL Android graphics API must start with OpenGL ES 3.");
+            }
+            UnityEngine.Debug.Log("Validated XREAL SDK package, Native Session Manager, Enterprise camera license, Android XR loader, settings asset, and OpenGL ES 3 configuration.");
+        }
+
+        private static void EnsureXrealPackage()
+        {
+            var manifestPath = Path.Combine(Directory.GetCurrentDirectory(), "Packages", "manifest.json");
+            var manifest = File.Exists(manifestPath) ? File.ReadAllText(manifestPath) : string.Empty;
+            if (manifest.IndexOf("\\\"com.xreal.xr\\\"", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                throw new InvalidOperationException("XREAL device profile requires com.xreal.xr 3.1 or newer in Packages/manifest.json.");
+            }
+        }
+
+        private static void SetEnum(SerializedObject serialized, string name, int value)
+        {
+            var property = serialized.FindProperty(name);
+            if (property != null) { property.intValue = value; }
+        }
+
+        private static void SetBool(SerializedObject serialized, string name, bool value)
+        {
+            var property = serialized.FindProperty(name);
+            if (property != null) { property.boolValue = value; }
+        }
+
+        private static void SetRequiredBool(SerializedObject serialized, string name, bool value)
+        {
+            var property = serialized.FindProperty(name);
+            if (property == null)
+            {
+                throw new InvalidOperationException("Installed XREAL SDK does not expose the required " + name + " setting.");
+            }
+            property.boolValue = value;
         }
     }
 }
@@ -1124,6 +1358,111 @@ ${footer}`;
             }
         }
 ${footer}`;
+}
+
+export function buildMegaRuntimeProbe(): string {
+  return `using System.Collections;
+using easyar;
+using UnityEngine;
+
+namespace EasyAR.Generated
+{
+    public sealed class EasyARMegaRuntimeProbe : MonoBehaviour
+    {
+        private MegaTrackerFrameFilter tracker;
+        private string lastStatus;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void Install()
+        {
+            if (FindObjectOfType<EasyARMegaRuntimeProbe>()) { return; }
+            var probe = new GameObject("EasyAR MCP Mega Runtime Probe");
+            DontDestroyOnLoad(probe);
+            probe.AddComponent<EasyARMegaRuntimeProbe>();
+        }
+
+#if UNITY_EDITOR
+        [UnityEditor.Callbacks.PostProcessScene(0)]
+        private static void AddToBuiltScene()
+        {
+            if (FindObjectOfType<EasyARMegaRuntimeProbe>()) { return; }
+            new GameObject("EasyAR MCP Mega Runtime Probe").AddComponent<EasyARMegaRuntimeProbe>();
+        }
+#endif
+
+        private void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+        }
+
+        private IEnumerator Start()
+        {
+            while (!tracker)
+            {
+                tracker = FindObjectOfType<MegaTrackerFrameFilter>();
+                if (tracker)
+                {
+                    tracker.LocalizationRespond += OnLocalizationRespond;
+                    Debug.Log("[EasyAR MCP] Mega tracker attached.");
+                    yield break;
+                }
+                yield return new WaitForSeconds(0.5f);
+            }
+        }
+
+        private void OnLocalizationRespond(MegaLocalizationResponse response)
+        {
+            var status = response.Status.ToString();
+            if (status == lastStatus) { return; }
+            lastStatus = status;
+            Debug.Log("[EasyAR MCP] Mega localization status: " + status);
+        }
+
+        private void OnDestroy()
+        {
+            if (tracker)
+            {
+                tracker.LocalizationRespond -= OnLocalizationRespond;
+            }
+        }
+    }
+}
+`;
+}
+
+export function buildMegaRuntimeProbeSceneProcessor(): string {
+  return `using EasyAR.Generated;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+namespace EasyAR.EditorTools
+{
+    public sealed class EasyARMegaRuntimeProbeSceneProcessor : IProcessSceneWithReport
+    {
+        public int callbackOrder => 0;
+
+        public void OnProcessScene(Scene scene, BuildReport report)
+        {
+            if (Object.FindObjectOfType<EasyARMegaRuntimeProbe>()) { return; }
+            new GameObject("EasyAR MCP Mega Runtime Probe").AddComponent<EasyARMegaRuntimeProbe>();
+        }
+    }
+}
+`;
+}
+
+export function instrumentMegaSampleSource(source: string): string {
+  const marker = 'Debug.Log("[EasyAR MCP] Mega localization status: " + status);';
+  if (source.includes(marker)) {
+    return source;
+  }
+  const anchor = /(^\s*var status = response\.Status;\r?\n)/m;
+  if (!anchor.test(source)) {
+    throw new Error("Official Mega sample localization callback was not found.");
+  }
+  return source.replace(anchor, `$1            ${marker}\n`);
 }
 
 export function escapeCsharp(value: string): string {

@@ -128,6 +128,14 @@ See [docs/FRESH_PROJECT_ACCEPTANCE.md](docs/FRESH_PROJECT_ACCEPTANCE.md) for the
 
 For WeChat Mini Program sample planning, see [docs/easyar-mega-wechat-miniprogram-mcp.md](docs/easyar-mega-wechat-miniprogram-mcp.md), [docs/wechat-miniprogram-sample-acceptance.md](docs/wechat-miniprogram-sample-acceptance.md), resource `easyar://samples/wechat-miniprogram`, and resource `easyar://acceptance/wechat-miniprogram`.
 
+## Unity CLI workflow
+
+Use `easyar_unity_cli_status` to inspect the installed Unity CLI, the latest beta-channel version, and Pipeline availability. `easyar_unity_cli` exposes bounded `preflight`, `import-sample`, `prepare`, `configure`, `validate`, and `build-android` actions; it does not accept arbitrary shell commands or C# method names. The current device regression uses Unity CLI `1.0.0-beta.3` with Unity `2022.3.62f3`.
+
+Use `deviceProfile=android-phone` for Android phones. XREAL builds use `deviceProfile=xreal` and require the official `com.xreal.xr` `3.1.0+` package plus an XREAL Enterprise license file. Pass the local license file during `prepare` as `xrealLicensePath=/local/path/nrsdk_license.bin`. MCP copies the binary into the project as a TextAsset without reading or returning its contents. `configure` enables `Enable Native Session Manager` as required by the official EasyAR XREAL setup guide. XREAL `validate` and `build-android` stop when the SDK, license, Native Session Manager, XR loader, or OpenGL ES 3 setup is missing. EasyAR's documentation does not require a separate `com.xreal.xr.enterprise` Unity package.
+
+When the XREAL package is not installed yet, pass `xrealSdkPackagePath=/local/path/com.xreal.xr.tar.gz` during `prepare`. MCP validates its `package.json` name and minimum version before updating `Packages/manifest.json`.
+
 Mega currently has two documented validation paths:
 
 - Android phone/tablet: use `LocationInputMode=Onsite` with camera, location, and network permissions.
