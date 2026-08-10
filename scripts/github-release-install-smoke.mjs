@@ -87,25 +87,19 @@ try {
   const releaseNotes = await readFile(path.join(packageRoot, "docs", "release-notes", "local-key-mvp.md"), "utf8");
   const chineseReadme = expectChineseDocs ? await readFile(path.join(packageRoot, "README.zh-CN.md"), "utf8") : "";
   const chineseDocsIndex = expectChineseDocs ? await readFile(path.join(packageRoot, "docs", "zh-CN", "README.md"), "utf8") : "";
-  const codexConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
+  const codexClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_write_client_setup", {
+    outputRoot: consumerDir,
     client: "codex",
     entrypointMode: "package-bin",
-    includeTokenPlaceholder: false
+    includeTokenPlaceholder: false,
+    output: "inline"
   });
-  const claudeConfig = await callInstalledTool(serverBin, consumerDir, "easyar_generate_client_config", {
+  const claudeClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_write_client_setup", {
+    outputRoot: consumerDir,
     client: "claude-desktop",
     entrypointMode: "package-bin",
-    includeTokenPlaceholder: false
-  });
-  const codexClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_check_client_setup", {
-    client: "codex",
-    entrypointMode: "package-bin",
-    includeTokenPlaceholder: false
-  });
-  const claudeClientSetup = await callInstalledTool(serverBin, consumerDir, "easyar_check_client_setup", {
-    client: "claude-desktop",
-    entrypointMode: "package-bin",
-    includeTokenPlaceholder: false
+    includeTokenPlaceholder: false,
+    output: "inline"
   });
   assert(installGuide.includes(expectedReleaseTag), "Install guide should point to the expected GitHub Release tag.");
   assert(installGuide.includes("For Codex:"), "Install guide should include a Codex package-bin config section.");
@@ -141,18 +135,14 @@ try {
     assert(chineseDocsIndex.includes("Image Tracking"), "Chinese docs should include Image Tracking scope.");
     assert(chineseDocsIndex.includes("CRS"), "Chinese docs should include CRS scope.");
   }
-  assert(codexConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Codex package-bin config.");
-  assert(codexConfig.includes("\"client\": \"codex\""), "Installed MCP should identify Codex config.");
-  assert(claudeConfig.includes("\"command\": \"easyar-mcp\""), "Installed MCP should generate Claude package-bin config.");
-  assert(claudeConfig.includes("\"client\": \"claude-desktop\""), "Installed MCP should identify Claude config.");
-  assert(codexClientSetup.includes("\"readyForClientConnection\": true"), "Installed MCP should validate Codex package-bin setup.");
-  assert(codexClientSetup.includes("\"client\": \"codex\""), "Installed MCP should identify Codex setup.");
-  assert(codexClientSetup.includes("\"entrypointMode\": \"package-bin\""), "Installed MCP should validate Codex package-bin mode.");
-  assert(codexClientSetup.includes("\"command\": \"easyar-mcp\""), "Installed MCP should validate Codex easyar-mcp command.");
-  assert(claudeClientSetup.includes("\"readyForClientConnection\": true"), "Installed MCP should validate Claude package-bin setup.");
-  assert(claudeClientSetup.includes("\"client\": \"claude-desktop\""), "Installed MCP should identify Claude setup.");
-  assert(claudeClientSetup.includes("\"entrypointMode\": \"package-bin\""), "Installed MCP should validate Claude package-bin mode.");
-  assert(claudeClientSetup.includes("\"command\": \"easyar-mcp\""), "Installed MCP should validate Claude easyar-mcp command.");
+  assert(codexClientSetup.includes("Ready for client connection: yes"), "Installed MCP should validate Codex package-bin setup.");
+  assert(codexClientSetup.includes("Client: codex"), "Installed MCP should identify Codex setup.");
+  assert(codexClientSetup.includes("Entrypoint mode: package-bin"), "Installed MCP should validate Codex package-bin mode.");
+  assert(codexClientSetup.includes("Command: easyar-mcp"), "Installed MCP should validate Codex easyar-mcp command.");
+  assert(claudeClientSetup.includes("Ready for client connection: yes"), "Installed MCP should validate Claude package-bin setup.");
+  assert(claudeClientSetup.includes("Client: claude-desktop"), "Installed MCP should identify Claude setup.");
+  assert(claudeClientSetup.includes("Entrypoint mode: package-bin"), "Installed MCP should validate Claude package-bin mode.");
+  assert(claudeClientSetup.includes("Command: easyar-mcp"), "Installed MCP should validate Claude easyar-mcp command.");
 
   console.log("GitHub Release install smoke test passed.");
   console.log(`Release tarball: ${releaseTarballUrl}`);
