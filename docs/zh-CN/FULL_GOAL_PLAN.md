@@ -20,7 +20,7 @@ local-key MVP 已完成：
 
 ## 当前扩展阶段
 
-Mega 已在 `v0.1.0-local-key.40` 纳入正式 local-key 预发布范围。MCP catalog、runbook、readiness check、device validation、MonoBehaviour 模板、日志诊断、Android APK、fresh project、Samsung S22、PICO 与 XREAL 路径均已有相应验证证据。当前扩展重点转向更多 Sample、微信小程序真机闭环和 Unity 编程服务。
+Mega 已在 `v0.1.0-local-key.41` 纳入正式 local-key 预发布范围。MCP catalog、runbook、readiness check、device validation、MonoBehaviour 模板、日志诊断、Android APK、fresh project、Samsung S22、PICO 与 XREAL 路径均已有相应验证证据。当前扩展重点转向更多 Sample、微信小程序真机闭环和 Unity 编程服务。
 
 ## 扩展轨道 1：更多 Sample
 

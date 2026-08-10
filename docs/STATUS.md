@@ -8,14 +8,14 @@ An additional WeChat Mini Program sample track is now being added for EasyAR Meg
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.40`
+Current GitHub prerelease: `v0.1.0-local-key.41`
 
 Official EasyAR Chinese docs refresh: 2026-07-01. MCP metadata now tracks EasyAR Sense Unity Plugin / for Mega `4003.0.0`, EasyAR Mega support package and Mega Studio `2.13.0`, XR device extension package `4000.0.1`, EasyAR Sense Native `4.9.0`, and EasyAR Mega WeChat Mini Program Plugin `2.0.3`. See `docs/OFFICIAL_DOCS_2026-07-01.md`.
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -40,7 +40,7 @@ These percentages are evidence-weighted estimates. The published prerelease cove
 - Mega real-device evidence includes APK install/startup, EasyAR Sense initialization, selected Mega Block load, and `[MLOC]` `kMapTracking` / `NCam_Verified results` signals. Fresh-project Mega evidence now also includes localization/tracking signals such as `successfully localized against ADF`. A 4003.0.0 / MegaBlockController Android pass now also covers the `涂意工位测试专用` cloud localization library. PICO 4 Ultra Enterprise evidence uses the documented headset path with `PicoFrameSource` and `LocationInputMode=Onsite`; any EasyAR Simulator diagnostics caution indicates the scene still needs to be switched to Onsite and rebuilt.
 - Unity project programming assistance exists for focused preflight, scene audit, run sequence, device validation, log analysis, C# planning, script writing, review, and handoff artifacts.
 - WeChat Mini Program support now includes focused sample metadata for `wechat-mega` and `wechat-crs`, project inspection, WeChat Developer Tools CLI detection, local config forms, user-downloaded official package import, DevTools smoke checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, completion reports, Mini Program scope status, resource `easyar://samples/wechat-miniprogram`, and acceptance resource `easyar://acceptance/wechat-miniprogram`.
-- Japanese and Vietnamese editions now include a top-level README plus localized documentation index, quickstart, GitHub Release install guide, status page, and release notes; package smoke checks require both editions.
+- Japanese and Vietnamese editions now mirror all 24 public Markdown source documents, including acceptance, API, planning, troubleshooting, WeChat Mini Program, release-note, and release-evidence material. Local and packaged-asset gates reject missing, abbreviated, relinked-to-English, or technically altered translations.
 
 ## Active Scope
 

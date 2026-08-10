@@ -1034,6 +1034,36 @@ export function clientSetupAction(id: string): string {
 
 export async function buildReleaseManifest() {
   const packageJson = await readPackageMetadata();
+  const localizedSourceDocuments = [
+    "CLIENT_ACCEPTANCE.md",
+    "FRESH_PROJECT_ACCEPTANCE.md",
+    "FULL_GOAL_PLAN.md",
+    "OFFICIAL_API_CONTRACT.md",
+    "OFFICIAL_API_HANDOFF.md",
+    "OFFICIAL_DOCS_2026-07-01.md",
+    "RELEASE_MANIFEST.md",
+    "REMAINING_WORK.md",
+    "ROADMAP.md",
+    "STATUS.md",
+    "client-setup.md",
+    "easyar-mega-wechat-miniprogram-mcp.md",
+    "install-from-github-release.md",
+    "quickstart.md",
+    "tencent-cloud-mcp-submission.md",
+    "troubleshooting.md",
+    "wechat-miniprogram-sample-acceptance.md",
+    "release-notes/local-key-mvp.md",
+    "release-evidence/easyar-sense-4003-android-samples.md",
+    "release-evidence/mega-android-device-summary.md",
+    "release-evidence/mega-fresh-project-android-startup.md",
+    "release-evidence/mega-pico4-ultra-enterprise-summary.md",
+    "release-evidence/mega-tuyi-workstation-android.md",
+    "release-evidence/motion-tracking-camera-panda-android.md"
+  ];
+  const localizedDocumentationFiles = ["ja", "vi"].flatMap((locale) => [
+    `docs/${locale}/README.md`,
+    ...localizedSourceDocuments.map((relativePath) => `docs/${locale}/${relativePath}`)
+  ]);
   const requiredFiles = [
     "README.md",
     "README.en.md",
@@ -1060,16 +1090,7 @@ export async function buildReleaseManifest() {
     "docs/STATUS.md",
     "docs/RELEASE_MANIFEST.md",
     "docs/troubleshooting.md",
-    "docs/ja/README.md",
-    "docs/ja/quickstart.md",
-    "docs/ja/install-from-github-release.md",
-    "docs/ja/STATUS.md",
-    "docs/ja/release-notes/local-key-mvp.md",
-    "docs/vi/README.md",
-    "docs/vi/quickstart.md",
-    "docs/vi/install-from-github-release.md",
-    "docs/vi/STATUS.md",
-    "docs/vi/release-notes/local-key-mvp.md",
+    ...localizedDocumentationFiles,
     "assets/easyar-icon.png",
     "dist/index.js",
     "dist/easyar-api.js",

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.0-local-key.41 - 2026-08-10
+
+- Completed Japanese and Vietnamese localization for all 24 public Markdown source documents, including acceptance guides, official API material, roadmaps, troubleshooting, WeChat Mini Program documentation, release notes, and release evidence.
+- Added a strict localization parity gate that rejects missing or abbreviated translations, changed code blocks, broken links, source-language fallbacks, incomplete indexes, and unresolved translation placeholders.
+
 ## 0.1.0-local-key.40 - 2026-08-10
 
 - Added Japanese and Vietnamese top-level README files plus localized documentation indexes, quickstarts, GitHub Release install guides, status pages, and release notes.

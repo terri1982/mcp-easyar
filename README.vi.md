@@ -12,7 +12,7 @@ Phiên bản công khai hiện tại đi theo mô hình local-key MVP. Người 
 
 ## Bản phát hành hiện tại
 
-- GitHub prerelease: `v0.1.0-local-key.40`
+- GitHub prerelease: `v0.1.0-local-key.41`
 - Sample đã được xác minh:
   - Image Tracking
   - CRS / Cloud Recognition
@@ -30,7 +30,7 @@ Phiên bản công khai hiện tại đi theo mô hình local-key MVP. Người 
 Yêu cầu Node.js 20 trở lên.
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

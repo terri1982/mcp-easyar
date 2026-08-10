@@ -2,11 +2,12 @@
 
 This prerelease is the current GitHub distribution path for `mcp-easyar`.
 
-Release: `v0.1.0-local-key.40`
+Release: `v0.1.0-local-key.41`
 
 ## Release Highlights
 
-- Adds first-class Japanese and Vietnamese README, quickstart, install, status, and release-note editions to the GitHub tarball.
+- Adds complete Japanese and Vietnamese mirrors for all 24 public Markdown source documents, with localized indexes and top-level README files.
+- Enforces documentation inventory parity, complete-length translations, unchanged fenced code blocks, valid localized links, and package-level locale parity during release checks.
 - Adds bounded Unity CLI `1.0.0-beta.3` preflight, official sample import, preparation, configuration, validation, and Android build workflows.
 - Adds Android phone and XREAL device profiles with focused scene builds and release APK output.
 - Validates XREAL SDK `3.1.0+`, Enterprise camera license presence, Native Session Manager, XREAL XR Loader, OpenGL ES 3, and Android API 29 before build.
@@ -39,7 +40,7 @@ Release: `v0.1.0-local-key.40`
 Use Node.js 20 or newer:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

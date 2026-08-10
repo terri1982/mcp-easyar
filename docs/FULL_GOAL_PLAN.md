@@ -2,7 +2,7 @@
 
 This plan keeps the original long-term goal visible while preserving the current released scope.
 
-Current public release: `v0.1.0-local-key.40`
+Current public release: `v0.1.0-local-key.41`
 
 ## Goal
 
@@ -31,7 +31,7 @@ Evidence:
 
 ## Completed Mega Expansion
 
-The `v0.1.0-local-key.40` prerelease includes Mega. Evidence includes:
+The `v0.1.0-local-key.41` prerelease includes Mega. Evidence includes:
 
 - MCP catalog, runbooks, readiness checks, device-validation forms, MonoBehaviour template generation, and log diagnostics include Mega.
 - Unity 2022.3.62f3 Android APK build, real-device install/startup, EasyAR initialization, Mega Block load, and Mega localization/tracking evidence exist from the earlier completed pass.

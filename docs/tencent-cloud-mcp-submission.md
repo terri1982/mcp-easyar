@@ -14,8 +14,8 @@ This document collects public, non-secret material for submitting `mcp-easyar` t
 - Homepage: https://github.com/terri1982/mcp-easyar#readme
 - Chinese README: https://github.com/terri1982/mcp-easyar/blob/main/README.md
 - English README: https://github.com/terri1982/mcp-easyar/blob/main/README.en.md
-- Release: https://github.com/terri1982/mcp-easyar/releases/tag/v0.1.0-local-key.40
-- Release tarball: https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
+- Release: https://github.com/terri1982/mcp-easyar/releases/tag/v0.1.0-local-key.41
+- Release tarball: https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz
 - Logo: `assets/easyar-icon.png`
 
 ## Short Description
@@ -41,7 +41,7 @@ The server does not ask users for EasyAR website passwords, verification codes, 
 ## Install
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -82,6 +82,6 @@ easyar_account_onboarding accountStage=not-registered sampleId=cloud-recognition
 
 - Ready: Image Tracking local-key workflow.
 - Ready: CRS / Cloud Recognition local-key workflow.
-- Ready in `v0.1.0-local-key.40`: Mega local-key workflow with Android APK install/startup, fresh-project evidence, and physical-environment localization evidence.
+- Ready in `v0.1.0-local-key.41`: Mega local-key workflow with Android APK install/startup, fresh-project evidence, and physical-environment localization evidence.
 - Deferred: Hello AR, Surface Tracking, and other EasyAR official samples.
 - Unity baseline: 2022.3.62f3.

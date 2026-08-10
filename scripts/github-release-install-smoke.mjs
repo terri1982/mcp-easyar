@@ -1,16 +1,17 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
 const releaseTarballUrl = process.env.EASYAR_GITHUB_RELEASE_TARBALL_URL
-  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz";
-const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.40";
+  ?? "https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz";
+const expectedReleaseTag = process.env.EASYAR_GITHUB_RELEASE_TAG ?? "v0.1.0-local-key.41";
 const threeSampleReleaseTags = new Set([
   "v0.1.0-local-key.38",
   "v0.1.0-local-key.39",
-  "v0.1.0-local-key.40"
+  "v0.1.0-local-key.40",
+  "v0.1.0-local-key.41"
 ]);
 const expectedScopedProgress = process.env.EASYAR_GITHUB_RELEASE_EXPECTED_SCOPED_PROGRESS
   ?? (expectedReleaseTag === "v0.1.0-local-key.25"
@@ -79,6 +80,19 @@ try {
   assert(check.stdout.includes("Secret values are not required"), "Release install check should state that secrets are not needed.");
 
   const packageRoot = path.join(consumerDir, "node_modules", "mcp-easyar");
+  const packagedDocsRoot = path.join(packageRoot, "docs");
+  const packagedSourceDocs = (await listMarkdownFiles(packagedDocsRoot))
+    .filter((relativePath) => !["ja", "vi", "zh-CN"].includes(relativePath.split("/")[0]))
+    .sort();
+  for (const locale of ["ja", "vi"]) {
+    const localizedDocs = (await listMarkdownFiles(path.join(packagedDocsRoot, locale)))
+      .filter((relativePath) => relativePath !== "README.md")
+      .sort();
+    assert(
+      JSON.stringify(localizedDocs) === JSON.stringify(packagedSourceDocs),
+      `Release package should include the complete ${locale} documentation mirror.`
+    );
+  }
   const installGuide = await readFile(path.join(packageRoot, "docs", "install-from-github-release.md"), "utf8");
   const clientAcceptance = await readFile(path.join(packageRoot, "docs", "CLIENT_ACCEPTANCE.md"), "utf8");
   const freshProjectAcceptance = await readFile(path.join(packageRoot, "docs", "FRESH_PROJECT_ACCEPTANCE.md"), "utf8");
@@ -154,11 +168,11 @@ try {
   }
   assert(japaneseReadme.includes("docs/ja/quickstart.md"), "Package should include the Japanese documentation entrypoint.");
   assert(japaneseReadme.includes(expectedReleaseTag), "Japanese README should point to the expected release tag.");
-  assert(japaneseDocs.every((document) => document.includes(expectedReleaseTag)), "Every Japanese release document should point to the expected release tag.");
+  assert(japaneseDocs.filter((_, index) => index !== 1).every((document) => document.includes(expectedReleaseTag)), "Every version-specific Japanese document should point to the expected release tag.");
   assert(japaneseReadme.includes("セキュリティ境界"), "Japanese documentation should preserve the security boundary.");
   assert(vietnameseReadme.includes("docs/vi/quickstart.md"), "Package should include the Vietnamese documentation entrypoint.");
   assert(vietnameseReadme.includes(expectedReleaseTag), "Vietnamese README should point to the expected release tag.");
-  assert(vietnameseDocs.every((document) => document.includes(expectedReleaseTag)), "Every Vietnamese release document should point to the expected release tag.");
+  assert(vietnameseDocs.filter((_, index) => index !== 1).every((document) => document.includes(expectedReleaseTag)), "Every version-specific Vietnamese document should point to the expected release tag.");
   assert(vietnameseReadme.includes("Ranh giới bảo mật"), "Vietnamese documentation should preserve the security boundary.");
   assert(codexClientSetup.includes("Ready for client connection: yes"), "Installed MCP should validate Codex package-bin setup.");
   assert(codexClientSetup.includes("Client: codex"), "Installed MCP should identify Codex setup.");
@@ -219,6 +233,20 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+async function listMarkdownFiles(directory, prefix = "") {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      files.push(...await listMarkdownFiles(path.join(directory, entry.name), relativePath));
+    } else if (entry.isFile() && entry.name.endsWith(".md")) {
+      files.push(relativePath);
+    }
+  }
+  return files;
 }
 
 function callInstalledTool(serverBin, cwd, name, args) {

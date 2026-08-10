@@ -40,7 +40,7 @@ Availability: development checkout
 Entrypoint mode: `package-bin`
 Availability: current public prerelease path
 
-- `npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz`
+- `npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz`
 - `easyar-mcp-check`
 - Client config: `easyar_generate_client_config client=claude-desktop entrypointMode=package-bin`
 
@@ -176,8 +176,8 @@ These variables are only for a future EasyAR-owned production API integration an
 - OK docs/RELEASE_MANIFEST.md
 - OK docs/troubleshooting.md
 - OK docs/zh-CN/README.md
-- OK docs/ja/README.md and localized release documents
-- OK docs/vi/README.md and localized release documents
+- OK docs/ja/README.md and all 24 localized source documents
+- OK docs/vi/README.md and all 24 localized source documents
 - OK assets/easyar-icon.png
 - OK dist/index.js
 - OK dist/easyar-api.js

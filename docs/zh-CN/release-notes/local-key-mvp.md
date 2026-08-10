@@ -1,11 +1,11 @@
 # mcp-easyar local-key MVP 发布说明
 
-当前版本：`v0.1.0-local-key.40`
+当前版本：`v0.1.0-local-key.41`
 
 ## 重点
 
 - GitHub Release 正版 tarball 发布。
-- 新增日文和越南语顶层 README、文档索引、快速开始、安装、状态页和发布说明，并纳入发布包 smoke 验证。
+- 日文和越南语已完整对应 24 篇公开 Markdown 源文档，覆盖验收、官方 API、计划、排错、微信小程序、发布说明和 release evidence，并纳入本地与发布包双重完整性校验。
 - 默认 core profile 工具数约 70。
 - full profile 保留全部维护工具。
 - 新增中文 README 和中文文档目录。
@@ -22,7 +22,7 @@
 ## 安装
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.40/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.41/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
