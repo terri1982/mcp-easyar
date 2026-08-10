@@ -2,6 +2,16 @@
 
 This prerelease is the current GitHub distribution path for `mcp-easyar`.
 
+Release: `v0.1.0-local-key.39`
+
+## Release Highlights
+
+- Adds bounded Unity CLI `1.0.0-beta.3` preflight, official sample import, preparation, configuration, validation, and Android build workflows.
+- Adds Android phone and XREAL device profiles with focused scene builds and release APK output.
+- Validates XREAL SDK `3.1.0+`, Enterprise camera license presence, Native Session Manager, XREAL XR Loader, OpenGL ES 3, and Android API 29 before build.
+- Records a Samsung S22 Image Tracking pass against the company name card and an XREAL Air 2 Ultra Mega localization pass with repeated `Found` callbacks.
+- Keeps secret license files, APKs, private map identifiers, and raw private logs outside the published package.
+
 ## What Works Now
 
 - Installs from the GitHub Release tarball with `npm install -g`.
@@ -28,7 +38,7 @@ This prerelease is the current GitHub distribution path for `mcp-easyar`.
 Use Node.js 20 or newer:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

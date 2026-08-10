@@ -2,7 +2,7 @@
 
 This plan keeps the original long-term goal visible while preserving the current released scope.
 
-Current public release: `v0.1.0-local-key.38`
+Current public release: `v0.1.0-local-key.39`
 
 ## Goal
 
@@ -19,6 +19,7 @@ The current local-key MVP is complete for the approved focused target:
 
 - Image Tracking
 - CRS/Cloud Recognition
+- Mega
 
 Evidence:
 
@@ -28,13 +29,9 @@ Evidence:
 - `easyar://workflow/programming` defines the safe Unity programming workflow.
 - The production gate still reports `Production ready: no` until real official EasyAR account APIs are connected.
 
-## Active Expansion Slice
+## Completed Mega Expansion
 
-The current in-progress expansion target adds:
-
-- Mega
-
-Evidence so far:
+The `v0.1.0-local-key.39` prerelease includes Mega. Evidence includes:
 
 - MCP catalog, runbooks, readiness checks, device-validation forms, MonoBehaviour template generation, and log diagnostics include Mega.
 - Unity 2022.3.62f3 Android APK build, real-device install/startup, EasyAR initialization, Mega Block load, and Mega localization/tracking evidence exist from the earlier completed pass.

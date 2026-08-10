@@ -8,14 +8,14 @@ An additional WeChat Mini Program sample track is now being added for EasyAR Meg
 
 ## Current Release
 
-Current GitHub prerelease: `v0.1.0-local-key.38`
+Current GitHub prerelease: `v0.1.0-local-key.39`
 
 Official EasyAR Chinese docs refresh: 2026-07-01. MCP metadata now tracks EasyAR Sense Unity Plugin / for Mega `4003.0.0`, EasyAR Mega support package and Mega Studio `2.13.0`, XR device extension package `4000.0.1`, EasyAR Sense Native `4.9.0`, and EasyAR Mega WeChat Mini Program Plugin `2.0.3`. See `docs/OFFICIAL_DOCS_2026-07-01.md`.
 
 Install:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

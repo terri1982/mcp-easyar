@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0-local-key.39 - 2026-08-10
+
 - Added bounded Unity CLI `1.0.0-beta.3` workflows for official EasyAR sample import, configuration, validation, and Android builds, including Image Tracking variants and XREAL device setup.
 - Added beta-channel update reporting to Unity CLI status and preflight results so installed and latest versions are compared directly.
 - Added XREAL SDK `3.1.0+`, Native Session Manager, and Enterprise license validation so Mega builds cannot be reported ready while silently falling back to a phone/inertial frame source.

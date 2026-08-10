@@ -2,7 +2,7 @@
 
 ## 当前已完成
 
-- 当前公开版本：`v0.1.0-local-key.38`
+- 当前公开版本：`v0.1.0-local-key.39`
 - Image Tracking 已真机跑通。
 - CRS / Cloud Recognition 已真机跑通。
 - Mega MCP 工作流、Android APK 打包、真机安装启动和一轮 Mega 定位跟踪证据已完成。
@@ -14,7 +14,7 @@
 ## 当前范围内剩余
 
 - 每次新发布保持 release link、安装文档、smoke test 同步。
-- 跑严格三样本 local-key release gate，并在通过后发布新的 GitHub Release。
+- 后续版本继续运行严格三样本 local-key release gate，并保持发布链接、安装文档和 smoke test 同步。
 - Unity、插件版本或目标平台变化时，重新跑 Image Tracking / CRS / Mega 真机证据。
 - 继续用真实项目硬化 Unity 编程工具链。
 

@@ -4,7 +4,7 @@
 
 ## 1. 已发布 local-key MVP
 
-当前版本：`v0.1.0-local-key.38`
+当前版本：`v0.1.0-local-key.39`
 
 已完成：
 
@@ -14,9 +14,9 @@
 - core/full tool profile
 - 中文文档入口
 
-当前工作树已补齐：
+`v0.1.0-local-key.39` 已补齐：
 
-- Mega：MCP 工作流、Android APK 打包、真机安装启动、EasyAR 初始化、Mega Block 加载和一轮定位跟踪日志证据已完成。fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式就绪，并已在对应办公室映射场景抓到定位/跟踪日志信号，可进入下一版 local-key GitHub Release 发布前验证。
+- Mega：MCP 工作流、Android APK 打包、真机安装启动、EasyAR 初始化、Mega Block 加载和定位跟踪日志证据已完成；fresh project、Samsung S22、PICO 4 Ultra Enterprise 与 XREAL Air 2 Ultra 的相应路径均已有真机证据。
 - 微信小程序：新增 `wechat-mega` 和 `wechat-crs` 两个 focused sample。当前已完成 MCP 层的本地工程检查、微信开发者工具 CLI 检测、本地配置表、用户本地已下载官方包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result 和 completion report，不声明已完成小程序预览/上传/真机验收。
 
 ## 2. Sample 扩展
@@ -45,4 +45,4 @@ easyar_generate_sample_expansion_plan sampleId=hello-ar platform=android unityVe
 
 ## 4. Unity 编程服务
 
-继续围绕真实 Unity 项目增强 preflight、programming context、code plan、C# review、compile/device evidence。当前优先收口三样本 local-key 发布。
+继续围绕真实 Unity 项目增强 preflight、programming context、code plan、C# review、compile/device evidence，并在依赖版本变化时保持三样本真机证据更新。

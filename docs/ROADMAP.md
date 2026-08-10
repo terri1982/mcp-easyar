@@ -6,12 +6,12 @@ For the broader service objective across more samples, official API production i
 
 ## Current State
 
-Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.38`.
+Status: local-key MVP published as GitHub prerelease `v0.1.0-local-key.39`.
 
 The current release can be installed from GitHub Releases:
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 
@@ -47,7 +47,6 @@ The new Mini Program focus is limited to:
 
 ### Target Samples
 
-- Publish the next local-key GitHub Release after the strict three-sample release gate passes.
 - Keep Image Tracking, CRS/Cloud Recognition, and Mega release evidence aligned with every public prerelease.
 - Keep install docs, client acceptance docs, and smoke tests aligned with the latest GitHub Release.
 - Continue hardening Unity programming workflows using real Image Tracking and CRS project cases.

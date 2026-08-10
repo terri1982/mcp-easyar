@@ -10,16 +10,16 @@
 
 当前公开版本是 local-key MVP：用户在 EasyAR 官网注册、登录、下载官方插件并创建本地 license / CRS key；MCP 只做引导、检查和 Unity 自动化，不接触官网密码、验证码、license key、API Secret 或 appSecret。
 
-当前工作树开始增加微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report 和小程序 scope status。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
+`v0.1.0-local-key.39` 同时提供微信小程序 Sample 支持：先覆盖 `wechat-mega` 和 `wechat-crs`，提供项目结构检查、微信开发者工具 CLI 检测、本地配置表、官方本地包导入、DevTools 检查、日志分析、preflight、run sequence、真机验证清单、run result、completion report 和小程序 scope status。小程序路径仍走官方网页/官方工具 handoff，不自动登录、不绕过下载授权、不在聊天里收集密钥。
 
 ## 当前状态
 
-- 当前 GitHub 预发布版：`v0.1.0-local-key.38`
+- 当前 GitHub 预发布版：`v0.1.0-local-key.39`
 - 官方中文文档快照：`2026-07-01`，当前官方版本见 [docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md](docs/zh-CN/OFFICIAL_DOCS_2026-07-01.md)
 - 当前已跑通并具备 safe release evidence 的 Sample：
   - Image Tracking
   - CRS / Cloud Recognition
-  - Mega（已有 Unity 2022.3.62f3 Android 手机真机定位跟踪日志证据；fresh project 已完成官方 4002 包导入、APK 打包、真机安装启动、Onsite 模式定位/跟踪信号；另新增 PICO 4 Ultra Enterprise 眼镜 sample，已验证 APK 打包、安装、PICO VST、Mega `Found` 和办公室 block 定位）
+  - Mega（已有 Unity 2022.3.62f3 Android 手机、PICO 4 Ultra Enterprise 和 XREAL Air 2 Ultra 真机证据；XREAL 路径已验证 Native Session Manager、企业相机授权、APK 安装启动与 Mega `Found` 定位）
 - 暂缓目标：
   - Hello AR
   - Surface Tracking
@@ -35,7 +35,7 @@
 请从 GitHub Release 下载正版包：
 
 ```bash
-npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.38/mcp-easyar-0.1.0.tgz
+npm install -g https://github.com/terri1982/mcp-easyar/releases/download/v0.1.0-local-key.39/mcp-easyar-0.1.0.tgz
 easyar-mcp-check
 ```
 

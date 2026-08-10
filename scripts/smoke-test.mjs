@@ -1077,7 +1077,7 @@ try {
   );
   assert(committedClientSetupGuide.includes("mcp-easyar Client Setup"), "Client setup guide should include title");
   assert(committedClientSetupGuide.includes("GitHub Release package"), "Client setup guide should include GitHub Release package profile");
-  assert(committedClientSetupGuide.includes("v0.1.0-local-key.38"), "Client setup guide should include current GitHub Release install URL");
+  assert(committedClientSetupGuide.includes("v0.1.0-local-key.39"), "Client setup guide should include current GitHub Release install URL");
   assert(committedClientSetupGuide.includes("entrypointMode=package-bin"), "Client setup guide should include package-bin profile");
   assert(committedClientSetupGuide.includes("client=codex entrypointMode=package-bin"), "Client setup guide should include Codex package-bin generator call");
   assert(committedClientSetupGuide.includes("entrypointMode=npx"), "Client setup guide should include npx profile");
@@ -1120,14 +1120,14 @@ try {
   assert(committedChineseDocsIndex.includes("CRS"), "Chinese docs index should include focused CRS scope");
   assert(committedChineseDocsIndex.includes("Mega Sample"), "Chinese docs index should mention active Mega expansion");
   assert(committedChineseFreshAcceptance.includes("Mega 验收"), "Chinese fresh acceptance should include Mega acceptance");
-  assert(committedChineseFreshAcceptance.includes("fresh project 已完成官方包导入、APK 打包、真机安装启动、Onsite 模式就绪，并在对应办公室映射场景抓到定位/跟踪日志信号"), "Chinese fresh acceptance should reflect Mega fresh-project localization evidence");
+  assert(committedChineseFreshAcceptance.includes("Android 手机、fresh project、PICO 4 Ultra Enterprise 与 XREAL Air 2 Ultra 真机定位证据"), "Chinese fresh acceptance should reflect current Mega device evidence");
   assert(committedChineseStatus.includes("Mega fresh project"), "Chinese status should include Mega fresh-project evidence state");
   assert(committedChineseStatus.includes("NCam_Verified results"), "Chinese status should include Mega localization evidence signal");
   assert(committedChineseQuickstart.includes("sampleId=mega"), "Chinese quickstart should include Mega calls");
   assert(committedChineseQuickstart.includes("Mega 只有 APK 打包成功还不算完成"), "Chinese quickstart should state Mega build-only is incomplete");
   assert(committedChineseTroubleshooting.includes("Mega APK 或定位失败"), "Chinese troubleshooting should include Mega diagnostics");
   assert(committedChineseTroubleshooting.includes("mega-hybridclr"), "Chinese troubleshooting should include Mega HybridCLR diagnostics");
-  assert(committedChineseReleaseManifest.includes("fresh project Mega APK 启动与定位/跟踪证据"), "Chinese release manifest should mention Mega fresh-project evidence");
+  assert(committedChineseReleaseManifest.includes("Samsung S22、fresh project、PICO 4 Ultra Enterprise、XREAL Air 2 Ultra"), "Chinese release manifest should mention current Mega device evidence");
 
   const deploymentReadiness = await callTool("easyar_deployment_readiness", {});
   assertTextIncludes(deploymentReadiness, "\"packageName\": \"mcp-easyar\"");
