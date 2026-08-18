@@ -30,7 +30,7 @@ import {
 import type { AccountStage, AuthorizationMode } from "./catalog.js";
 import { deferredSamples, findSample, focusedSamples, officialInfo, quickstartWorkflow, samples } from "./samples.js";
 import type { SampleInfo } from "./samples.js";
-import { buildAndroidDeviceStatusActions, buildUnityArgs, defaultAndroidLogcatFilter, parseAdbDevices, redactSecretText, runProcess, runUnity } from "./runtime.js";
+import { buildAndroidDeviceStatusActions, buildUnityArgs, defaultAndroidLogcatFilter, hasMegaLocalizationEvidence, parseAdbDevices, redactSecretText, runProcess, runUnity } from "./runtime.js";
 import { buildBuildSettingsHelper, buildDeviceBuildHelper, buildFocusedSampleRunbook, buildLocalConfigBridgeEditor, buildLocalConfigBridgeRuntime, buildLocalConfigExample, buildMobileSettingsHelper, buildMonoBehaviourTemplate, buildSampleRunner, buildSampleValidationHelper, defaultBundleIdentifier } from "./unity-generators.js";
 import {
   extractMethodBody,
@@ -836,6 +836,7 @@ export async function buildLatestLogDiagnostic(root: string, sample: SampleInfo,
       issueCount: 0,
       issues: [],
       candidates: candidates.slice(0, 8),
+      sampleSuccessEvidence: sample.id !== "mega" ? true : false,
       nextActions: [
         "Run Unity once, then regenerate the support bundle.",
         "If you already have a log file, call easyar_analyze_unity_log with logPath."
@@ -854,6 +855,9 @@ export async function buildLatestLogDiagnostic(root: string, sample: SampleInfo,
     summary: summarizeLog(text),
     issueCount: issues.length,
     issues,
+    sampleSuccessEvidence: sample.id !== "mega"
+      ? true
+      : latest.source.startsWith("project Logs/") && hasMegaLocalizationEvidence(text),
     candidates: candidates.slice(0, 8),
     nextActions: issues.length > 0
       ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))

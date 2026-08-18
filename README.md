@@ -82,9 +82,22 @@ easyar://workflow/programming
 2. 用户下载官方 EasyAR Sense Unity Plugin。
 3. 用户在官网开发中心创建或找到 license。
 4. CRS / Cloud Recognition 用户创建或找到 AppId、识别服务地址、API KEY、API Secret；Mega 用户在已登录的 EasyAR 网页端或 Mega Studio 中找到云定位库、Mega Block storage、Block 名称和 Block ID。
-5. 用户在本机 Unity 工程里填写 `ProjectSettings/EasyAR/easyar.local.json`。
+5. Image Tracking / CRS 用户在本机填写 `ProjectSettings/EasyAR/easyar.local.json`；Mega 用户只在 `Assets/XR/Settings/EasyAR Settings.asset` 填写 package License 和 Global Mega Block 字段，不创建通用 JSON 配置。
 6. MCP 只检查字段是否存在、是否像占位符，不输出 secret。
 7. Unity 构建和真机验证使用本地配置运行，不需要在运行时登录官网。
+
+## Mega 路径必须先区分
+
+项目里有两个名字相近、但不能互相替代的 Mega Sample：
+
+- `mega`：Unity Mega Sample。目标是 Android 手机、PICO、XREAL 或 visionOS，验收必须包含真实设备上的 Mega 定位/跟踪证据。
+- `wechat-mega`：微信小程序 Mega Sample。目标是微信开发者工具预览和真实微信设备，Unity 工程、Android APK、PICO 或 XREAL 证据都不能替代它。
+
+Unity Mega 推荐从 `easyar-run-mega` prompt 开始；微信小程序 Mega 使用 `easyar-run-wechat-miniprogram` 并传入 `sampleId=wechat-mega`。不要用一个路径的产物去声称另一个路径已完成。
+
+Unity Mega 的完成门槛不是“生成了文档”或“APK 打包成功”，而是 `Onsite` 模式下真实设备启动并完成所选 Mega Block 的定位/跟踪，随后由 MCP 写入 `RUN_RESULT.md` 和 `COMPLETION_REPORT.md`，且报告中的 `runThroughComplete=true`。
+
+运行 Unity batch 前，`EASYAR_UNITY_PATH` 必须指向真实 Unity Editor：macOS 为 `Unity.app/Contents/MacOS/Unity`，不能使用 `~/.unity/bin/Unity` 这类 Unity CLI。`easyar_write_unity_environment_report` 会检查可执行类型、软链接目标和工程版本；外置盘上的 Unity Hub 版本软链接失效时，应先挂载或恢复目标盘。
 
 ## 微信小程序 Sample
 
@@ -120,7 +133,7 @@ CRS 小程序把 `sampleId` 改成 `wechat-crs`。用户仍需自己在 EasyAR �
 
 官方包查找工具会按 EasyAR 官方文件名在本机目录里找用户已下载的包，并可把结果写到 `easyar-generated/<sampleId>/OFFICIAL_PACKAGE_SEARCH.json` 和 `.md`。例如 Mega 目标包是 `easyar-mega-wechat-miniprogram-plugin-2.0.3-1077.647aaae_samples.zip`；CRS 目标包是 `EasyAR-miniprogram-WebAR-Demo-tracking.zip`。如果没找到，用户仍需在自己的 EasyAR 官网登录会话里下载，MCP 不代下、不绕过授权。
 
-支持 prompts 的 MCP 客户端可以直接从 `easyar-run-wechat-miniprogram` 开始，并传入 `sampleId=wechat-mega` 或 `sampleId=wechat-crs`。这个 prompt 会先读取小程序验收资源，禁止在聊天里收集密钥，并要求有真机预览证据后才允许声明完成。
+支持 prompts 的 MCP 客户端可以从 `easyar-run-mega` 开始跑 Unity Mega，或从 `easyar-run-wechat-miniprogram` 开始跑微信小程序 Mega/CRS。两个 prompt 会先声明项目类型和完成边界，禁止在聊天里收集密钥，并要求对应的真实设备证据后才允许声明完成。
 
 ## Unity CLI 工作流
 
@@ -170,6 +183,7 @@ PICO 4 Ultra Enterprise sample 已验证的基线：
 - [客户端配置](docs/zh-CN/client-setup.md)
 - [新 Unity 项目验收](docs/zh-CN/FRESH_PROJECT_ACCEPTANCE.md)
 - [微信小程序 Sample 验收](docs/zh-CN/wechat-miniprogram-sample-acceptance.md)
+- [Mega MCP 干净环境验收](docs/zh-CN/MEGA_CLEAN_ACCEPTANCE.md)
 - [当前状态](docs/zh-CN/STATUS.md)
 - [剩余工作](docs/zh-CN/REMAINING_WORK.md)
 - [完整目标计划](docs/zh-CN/FULL_GOAL_PLAN.md)

@@ -99,6 +99,8 @@ Paste `ISSUE_REPORT.md` into a GitHub issue and reference `SUPPORT_BUNDLE.md`, `
 
 Common blockers:
 
+- `mega-settings`: `Assets/XR/Settings/EasyAR Settings.asset` is missing the package License Key or Global Mega Block AppID, ServerAddress, APIKey, or APISecret. Mega does not use `easyar.local.json`.
+- `mega-scene-selection`: more than one Onsite scene exists, the first enabled scene is Simulator, or the selected scene is not an Onsite `MegaBlockController` scene. Read `SCENE_AUDIT.md` and regenerate the helper with the exact recommended `scenePath`.
 - `mega-assets`: no Mega, Mega Block, CloudLocalizer, or project-specific Mega scene asset hints were found under `Assets` or `Packages`.
 - `mega-block-config`: Unity or device logs indicate that the selected Mega Block or cloud localization library cannot be loaded.
 - `mega-hybridclr`: HybridCLR generated files are missing or stale for the current Android build target.
@@ -113,21 +115,26 @@ Recommended flow:
 
 ```text
 easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=mega
-easyar_write_local_config_form projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_validate_local_config projectPath=/path/to/UnityProject sampleId=mega
 easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=mega
-easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android overwrite=true
+easyar_write_scene_audit projectPath=/path/to/UnityProject sampleId=mega
+easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android scenePath=Assets/.../MegaOnsite.unity overwrite=true
 easyar_create_sample_validation_helper projectPath=/path/to/UnityProject sampleId=mega overwrite=true
 easyar_analyze_latest_unity_log projectPath=/path/to/UnityProject sampleId=mega
 ```
+
+Unity batch startup failures should be diagnosed separately from project compilation. `EASYAR_UNITY_PATH` must be the Editor executable (`Unity.app/Contents/MacOS/Unity`, `Editor/Unity.exe`, or `Editor/Unity`), not a Unity CLI shim. If the expected Unity Hub version is a broken symlink to an external volume, mount or restore that volume and rerun `easyar_write_unity_environment_report` before retrying.
 
 After the APK is built and a phone is connected, use the Android device runbook and record the result:
 
 ```text
 easyar_write_android_device_runbook projectPath=/path/to/UnityProject sampleId=mega platform=android
 easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=mega platform=android
-easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=passed
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=blocked
 easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega platform=android
 ```
+
+Keep the Mega run result blocked until the selected Mega Block is loaded and a real device produces redacted localization/tracking success evidence in the mapped physical environment. APK installation, app launch, and clean logcat are intermediate steps only; use `overallStatus=passed` only after the completion report says `runThroughComplete=true`.
 
 ## Security
 

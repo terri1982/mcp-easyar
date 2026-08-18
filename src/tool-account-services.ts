@@ -757,13 +757,18 @@ export async function buildAccountMaterialsReport(
   const auth = readAuthConfig();
   const localConfig = root ? await buildLocalConfigValidationReport(root) : null;
   const cloudConfig = root ? await readCloudRecognitionConfig(root) : {};
+  const megaSettings = root && sample.id === "mega" ? await readMegaSettingsSummary(root) : null;
   const remoteConfig = root ? await readLocalConfigForRemoteValidation(root) : {};
-  const localConfigPath = root
+  const localConfigPath = root && sample.id === "mega"
+    ? path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset")
+    : root
     ? path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")
     : "ProjectSettings/EasyAR/easyar.local.json";
   const bundleIdentifier = remoteConfig.bundleIdentifier ?? defaultBundleIdentifier(sample);
   const needsCloudRecognition = sample.id === "cloud-recognition";
-  const licensePresent = localConfig?.checks.some((check) => check.id === "license-key" && check.ok) ?? false;
+  const licensePresent = sample.id === "mega"
+    ? Boolean(megaSettings?.licensePresent)
+    : localConfig?.checks.some((check) => check.id === "license-key" && check.ok) ?? false;
   const materials = [
     {
       id: "easyar-account",
@@ -880,7 +885,50 @@ export async function buildAccountMaterialsReport(
             mcpCheck: "DEVICE_VALIDATION.md real-device evidence"
           }
         ]
-      : [])
+      : sample.id === "mega"
+        ? [
+            {
+              id: "mega-app-id",
+              label: "GlobalMegaBlockLocalizationServiceConfig.AppID",
+              required: true,
+              present: Boolean(megaSettings?.appIdPresent),
+              source: "EasyAR Mega account or Mega Studio service configuration.",
+              storeIn: localConfigPath,
+              sharePolicy: "Sensitive account-scoped config. MCP reports presence only.",
+              mcpCheck: "easyar_check_sample_readiness"
+            },
+            {
+              id: "mega-server-address",
+              label: "GlobalMegaBlockLocalizationServiceConfig.ServerAddress",
+              required: true,
+              present: Boolean(megaSettings?.serverAddressPresent),
+              source: "The official EasyAR Mega service endpoint for the selected Mega Block service.",
+              storeIn: localConfigPath,
+              sharePolicy: "Keep local with the Mega service configuration.",
+              mcpCheck: "easyar_check_sample_readiness"
+            },
+            {
+              id: "mega-api-key",
+              label: "GlobalMegaBlockLocalizationServiceConfig.APIKey",
+              required: true,
+              present: Boolean(megaSettings?.apiKeyPresent),
+              source: "EasyAR Mega account or Mega Studio service configuration.",
+              storeIn: localConfigPath,
+              sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
+              mcpCheck: "easyar_check_sample_readiness"
+            },
+            {
+              id: "mega-api-secret",
+              label: "GlobalMegaBlockLocalizationServiceConfig.APISecret",
+              required: true,
+              present: Boolean(megaSettings?.apiSecretPresent),
+              source: "EasyAR Mega account or Mega Studio service configuration.",
+              storeIn: localConfigPath,
+              sharePolicy: "Secret. Never paste into chat, logs, GitHub issues, or source code.",
+              mcpCheck: "easyar_check_sample_readiness"
+            }
+          ]
+        : [])
   ];
   const missingRequired = materials.filter((item) => item.required && !item.present);
   const nextActions = missingRequired.length > 0
@@ -935,6 +983,9 @@ export function accountMaterialNextAction(
   }
   if (item.id.startsWith("cloud-")) {
     return `Create or locate the Cloud Recognition/CRS credentials in the official account and fill the required cloud fields in ${localConfigPath}.`;
+  }
+  if (item.id.startsWith("mega-")) {
+    return `Configure the missing Mega service field in the official Assets/XR/Settings/EasyAR Settings.asset file and rerun easyar_check_sample_readiness. Keep its value local.`;
   }
   if (item.id === "bundle-identifier") {
     return `Choose the Unity package/bundle identifier and make it match the EasyAR license configuration in ${localConfigPath}.`;

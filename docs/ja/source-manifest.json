@@ -12,7 +12,7 @@
   "client-setup.md": "6a76d9f880d7bf39622a9dac76edcc95ad4e1ac9a72c9b3de7aa0ad379eb47ea",
   "easyar-mega-wechat-miniprogram-mcp.md": "9344a57a38e2f5c12f8e9dc4342b444edf42f65d2f700e5205f0c0859614028a",
   "install-from-github-release.md": "73b3dff3cd82c2d8d62fe1b9b79893bb4db25d699307a332d8026211e2f3a489",
-  "quickstart.md": "3fc54f9ba37998a025a858c93e4ab9a4a0e75ed299035902ed85c0f4600886d7",
+  "quickstart.md": "9f90918e2fc01593e64cf087bbc1d41a042176a76e1374c3c631cf3a13ff00bc",
   "release-evidence/easyar-sense-4003-android-samples.md": "5d3624f61f65e24235618a838e88e43b498d719c54dc464e20c9c0adf714e281",
   "release-evidence/mega-android-device-summary.md": "df21a7e543ed590dec2af314a796ce77ff1d5fe92a484c6c961e61f42a7d0a18",
   "release-evidence/mega-fresh-project-android-startup.md": "3a44cbf9f537780252855e0eb9ce5d3f012caddc449d43d73669a72e1573f54b",
@@ -21,6 +21,6 @@
   "release-evidence/motion-tracking-camera-panda-android.md": "7e8735576a4d438b78f85392d8cfe6bb9ad4767b48a1cf67923ce01fbc8fb4ff",
   "release-notes/local-key-mvp.md": "cf383777631b74b208cfada4a16cb91c9a39ea4f6e3999a03205d69e34ee465c",
   "tencent-cloud-mcp-submission.md": "18f3c8777cdb3e43011b78cafc9c1a8c4485ddb15e12f08f9accdac2d7e40a48",
-  "troubleshooting.md": "a65eb52382d4eea1d6c0c766c4023c59b7d480dfd85ab62556eab3486256c5f1",
+  "troubleshooting.md": "5c22d4e155ec5319383dd61cada15d4afe862d84f57f1b0d8873e7389985007b",
   "wechat-miniprogram-sample-acceptance.md": "3d0c989581a5b7c8f638faaf7169562d15cfba9541f13ebc01534432a9bb3c0a"
 }

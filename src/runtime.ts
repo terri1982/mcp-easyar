@@ -105,6 +105,23 @@ export function parseAdbDevices(stdout: string): AdbDevice[] {
     .filter((device) => device.serial.length > 0);
 }
 
+export function parseAndroidForegroundPackage(output: string): string | null {
+  const markers = ["topResumedActivity", "mResumedActivity", "mCurrentFocus"];
+  for (const marker of markers) {
+    const line = output
+      .split(/\r?\n/)
+      .find((candidate) => candidate.includes(marker));
+    if (!line) {
+      continue;
+    }
+    const match = line.match(/\b([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)\//);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
 export function buildAndroidDeviceStatusActions(result: ProcessResult, devices: AdbDevice[]): string[] {
   if (result.exitCode === null) {
     return ["Install Android SDK Platform Tools or set EASYAR_ADB_PATH to the adb executable."];
@@ -124,8 +141,14 @@ export function buildAndroidDeviceStatusActions(result: ProcessResult, devices: 
 export function defaultAndroidLogcatFilter(sample: SampleInfo): string {
   const sampleTerms = sample.id === "cloud-recognition"
     ? "Cloud|CloudRecognizer|Recognition|CRS|network|http|ssl|tls"
-    : "ImageTarget|ImageTracker|ImageTracking|target|camera";
+    : sample.id === "mega"
+      ? "Mega|MegaBlock|MegaTracker|MegaBlockController|MLOC|localiz|tracking|Found|ARSession|Camera|camera"
+      : "ImageTarget|ImageTracker|ImageTracking|target|camera";
   return `EasyAR|Unity|AndroidRuntime|${sampleTerms}|permission|denied|exception|error|failed|unauthorized`;
+}
+
+export function hasMegaLocalizationEvidence(logText: string): boolean {
+  return /successfully\s+localized|localized\s+(?:against|to)|kMapTracking|NCam_Verified|MLOC.*(?:found|localized|tracking|verified)|(?:mega|block).{0,120}(?:found|localized|tracking\s+(?:started|success|state))/i.test(logText);
 }
 
 export function redactSecretText(text: string): string {
@@ -172,4 +195,3 @@ export async function runUnity(unity: string, projectPath: string, executeMethod
     });
   });
 }
-

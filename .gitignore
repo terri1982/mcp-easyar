@@ -1,8 +1,11 @@
 node_modules/
 dist/
 .DS_Store
+._*
 *.log
 coverage/
 .env
 .env.*
 !.env.example
+nrsdk_license*
+._nrsdk_license*

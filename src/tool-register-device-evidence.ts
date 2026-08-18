@@ -353,10 +353,10 @@ type RegisterTool = McpServer["tool"];
 export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
   registerTool(
     "easyar_generate_device_validation_checklist",
-    "Generate a focused real-device validation checklist for Image Tracking or Cloud Recognition.",
+    "Generate a focused real-device validation checklist for Image Tracking, Cloud Recognition, or Mega.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       device: z.string().optional().describe("Optional target device model or test device label."),
       buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path.")
@@ -374,7 +374,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Write the focused real-device validation checklist as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       device: z.string().optional().describe("Optional target device model or test device label."),
       buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
@@ -408,10 +408,10 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_generate_device_run_result_form",
-    "Generate a fillable real-device run result form and safe easyar_write_run_result templates for Image Tracking or Cloud Recognition.",
+    "Generate a fillable real-device run result form and safe easyar_write_run_result templates for Image Tracking, Cloud Recognition, or Mega.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       device: z.string().optional().describe("Optional tested device model or test-device label."),
       buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
@@ -430,7 +430,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Write a fillable real-device run result form to Assets/EasyARGenerated/<sampleId>/DEVICE_RUN_RESULT_FORM.md.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       device: z.string().optional().describe("Optional tested device model or test-device label."),
       buildOutputPath: z.string().optional().describe("Optional APK, Xcode project, or build artifact path."),
@@ -468,7 +468,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Generate an Android real-device runbook for installing, launching, logging, and recording focused EasyAR sample evidence.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       apkPath: z.string().optional().describe("APK path. Defaults to Builds/<sampleId>.apk inside the Unity project."),
       bundleIdentifier: z.string().optional().describe("Android package name. Defaults to unity.bundleIdentifier from local config or sample default."),
       adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
@@ -500,7 +500,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Write the Android real-device runbook to Assets/EasyARGenerated/<sampleId>/ANDROID_DEVICE_RUNBOOK.md.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       apkPath: z.string().optional().describe("APK path. Defaults to Builds/<sampleId>.apk inside the Unity project."),
       bundleIdentifier: z.string().optional().describe("Android package name. Defaults to unity.bundleIdentifier from local config or sample default."),
       adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
@@ -558,7 +558,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Generate a focused sample run result summary for handoff after Unity compile, build, or device validation attempts.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       overallStatus: z.enum(runResultStatuses).describe("Overall result status for the latest focused sample attempt."),
       device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
@@ -596,7 +596,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Write a focused sample run result Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       overallStatus: z.enum(runResultStatuses).describe("Overall result status for the latest focused sample attempt."),
       device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
@@ -652,7 +652,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Generate the final focused sample completion report, combining preflight, device validation, latest run result, and Unity log evidence.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
       maxScriptIssues: z.number().int().positive().max(100).default(25),
@@ -675,7 +675,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Write the final focused sample completion report to Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
       relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/COMPLETION_REPORT.md."),
@@ -770,10 +770,10 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_generate_issue_report",
-    "Generate a redacted GitHub issue report for a focused Image Tracking or Cloud Recognition run-through.",
+    "Generate a redacted GitHub issue report for a focused Image Tracking, Cloud Recognition, or Mega run-through.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       overallStatus: z.enum(runResultStatuses).default("blocked").describe("Observed overall status for the latest attempt."),
       device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),
@@ -815,7 +815,7 @@ export function registerDeviceEvidenceTools(registerTool: RegisterTool) {
     "Write a redacted GitHub issue report Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       overallStatus: z.enum(runResultStatuses).default("blocked").describe("Observed overall status for the latest attempt."),
       device: z.string().optional().describe("Optional tested device model or simulator/emulator description."),

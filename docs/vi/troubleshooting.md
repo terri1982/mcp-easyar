@@ -99,6 +99,8 @@ Dán `ISSUE_REPORT.md` vào vấn đề GitHub và tham chiếu `SUPPORT_BUNDLE.
 
 Các trình chặn phổ biến:
 
+- `mega-settings`: `Assets/XR/Settings/EasyAR Settings.asset` thiếu License Key của gói hoặc AppID, ServerAddress, APIKey hay APISecret của Global Mega Block. Mega không sử dụng `easyar.local.json`.
+- `mega-scene-selection`: có nhiều hơn một cảnh Onsite, cảnh được bật đầu tiên là Simulator hoặc cảnh đã chọn không phải là cảnh `MegaBlockController` Onsite. Đọc `SCENE_AUDIT.md` và tạo lại trình trợ giúp bằng `scenePath` chính xác được đề xuất.
 - `mega-assets`: không tìm thấy gợi ý tài sản Mega, Mega Block, CloudLocalizer hoặc Mega dành riêng cho dự án nào trong `Assets` hoặc `Packages`.
 - `mega-block-config`: Unity hoặc nhật ký thiết bị cho biết không thể tải thư viện bản địa hóa đám mây hoặc Mega Block đã chọn.
 - `mega-hybridclr`: Các tệp được tạo bằng HybridCLR bị thiếu hoặc cũ đối với mục tiêu bản dựng Android hiện tại.
@@ -113,21 +115,26 @@ Luồng đề xuất:
 
 ```text
 easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=mega
-easyar_write_local_config_form projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_validate_local_config projectPath=/path/to/UnityProject sampleId=mega
 easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=mega
-easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android overwrite=true
+easyar_write_scene_audit projectPath=/path/to/UnityProject sampleId=mega
+easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android scenePath=Assets/.../MegaOnsite.unity overwrite=true
 easyar_create_sample_validation_helper projectPath=/path/to/UnityProject sampleId=mega overwrite=true
 easyar_analyze_latest_unity_log projectPath=/path/to/UnityProject sampleId=mega
 ```
+
+Lỗi khởi động Unity ở chế độ batch phải được chẩn đoán riêng với quá trình biên dịch dự án. `EASYAR_UNITY_PATH` phải trỏ đến tệp thực thi Editor (`Unity.app/Contents/MacOS/Unity`, `Editor/Unity.exe` hoặc `Editor/Unity`), không phải Unity CLI shim. Nếu phiên bản Unity Hub dự kiến là một liên kết tượng trưng bị hỏng tới ổ đĩa ngoài, hãy gắn hoặc khôi phục ổ đĩa đó rồi chạy lại `easyar_write_unity_environment_report` trước khi thử lại.
 
 Sau khi APK được tạo và điện thoại được kết nối, hãy sử dụng runbook thiết bị Android và ghi lại kết quả:
 
 ```text
 easyar_write_android_device_runbook projectPath=/path/to/UnityProject sampleId=mega platform=android
 easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=mega platform=android
-easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=passed
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=blocked
 easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega platform=android
 ```
+
+Giữ kết quả chạy Mega ở trạng thái `blocked` cho đến khi Mega Block đã chọn được tải và thiết bị thực tạo ra bằng chứng thành công về định vị/theo dõi đã được che thông tin nhạy cảm trong môi trường vật lý đã ánh xạ. Việc cài đặt APK, khởi chạy ứng dụng và logcat sạch chỉ là các bước trung gian; chỉ dùng `overallStatus=passed` sau khi báo cáo hoàn thành cho biết `runThroughComplete=true`.
 
 ## Bảo mật
 

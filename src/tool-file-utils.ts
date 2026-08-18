@@ -52,7 +52,10 @@ export async function walk(root: string, dirPath: string, pattern: RegExp, found
       return;
     }
 
-    if (entry.name === "Library" || entry.name === "Temp" || entry.name === "Obj") {
+    if (isIgnoredFilesystemMetadata(entry.name)
+      || entry.name === "Library"
+      || entry.name === "Temp"
+      || entry.name === "Obj") {
       continue;
     }
 
@@ -63,6 +66,10 @@ export async function walk(root: string, dirPath: string, pattern: RegExp, found
       found.push(fullPath);
     }
   }
+}
+
+export function isIgnoredFilesystemMetadata(name: string): boolean {
+  return name === ".DS_Store" || name === "__MACOSX" || name.startsWith("._");
 }
 
 export function assertInside(root: string, target: string) {

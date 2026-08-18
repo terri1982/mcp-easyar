@@ -365,7 +365,7 @@ export function buildFocusedRunSequence(input: {
         {
           step: "Fill cloud recognition credentials",
           tool: "easyar_validate_local_config",
-          arguments: { projectPath },
+          arguments: { projectPath, sampleId: sample.id },
           expected: "Local config exists and cloudRecognition fields are either intentionally empty or all filled.",
           requiredBeforeDeviceRun: true
         },
@@ -377,7 +377,24 @@ export function buildFocusedRunSequence(input: {
           requiredBeforeDeviceRun: true
         }
       ]
-    : [
+    : sample.id === "mega"
+      ? [
+          {
+            step: "Validate Mega Settings",
+            tool: "easyar_validate_local_config",
+            arguments: { projectPath, sampleId: sample.id },
+            expected: "Assets/XR/Settings/EasyAR Settings.asset contains the package License Key and complete Global Mega Block fields.",
+            requiredBeforeDeviceRun: true
+          },
+          {
+            step: "Audit and select the Onsite Mega scene",
+            tool: "easyar_write_scene_audit",
+            arguments: { projectPath, sampleId: sample.id },
+            expected: "The report names Onsite and Simulator candidates and says whether an explicit scenePath is required.",
+            requiredBeforeDeviceRun: true
+          }
+        ]
+      : [
         {
           step: "Add Image Tracking target assets",
           tool: "easyar_check_sample_readiness",
@@ -440,8 +457,10 @@ export function buildFocusedRunSequence(input: {
           {
             step: "Validate local config without exposing secrets",
             tool: "easyar_validate_local_config",
-            arguments: { projectPath },
-            expected: "License key, account token, target platform, and optional cloud fields are valid."
+            arguments: { projectPath, sampleId: sample.id },
+            expected: sample.id === "mega"
+              ? "Mega package license and Global Mega Block fields are present in EasyAR Settings.asset."
+              : "License key, account token, target platform, and optional cloud fields are valid."
           },
           {
             step: "Generate Unity-side focused sample validation helper",
@@ -488,7 +507,9 @@ export function buildFocusedRunSequence(input: {
             step: "Generate Build Settings helper",
             tool: "easyar_create_build_settings_helper",
             arguments: { projectPath, sampleId: sample.id, platform, overwrite: true },
-            expected: "EasyARBuildSettingsHelper.cs points at the focused official sample scene."
+            expected: sample.id === "mega"
+              ? "EasyARBuildSettingsHelper.cs uses the exact scenePath selected by the scene audit; if candidates are ambiguous, rerun this tool with scenePath before applying it."
+              : "EasyARBuildSettingsHelper.cs points at the focused official sample scene."
           },
           {
             step: "Apply Build Settings in Unity batch mode",
@@ -750,16 +771,23 @@ export function chooseWorkflowNextState(input: {
       {
         tool: "easyar_validate_local_config",
         arguments: {
-          projectPath: input.root
+          projectPath: input.root,
+          sampleId: input.sample.id
         }
       },
-      [
-        "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json.",
-        "Fill official EasyAR license/account values locally without committing secrets.",
-        input.sample.id === "cloud-recognition"
-          ? "Fill Cloud Recognition CRS AppId and API KEY from the official EasyAR account."
-          : "For Image Tracking, keep target assets under Assets and avoid secret values in scripts."
-      ]
+      input.sample.id === "mega"
+        ? [
+            "Open Assets/XR/Settings/EasyAR Settings.asset in Unity.",
+            "Fill the package License Key and Global Mega Block AppID, ServerAddress, APIKey, and APISecret locally.",
+            "Do not create easyar.local.json for Mega."
+          ]
+        : [
+            "Copy ProjectSettings/EasyAR/easyar.local.json.example to easyar.local.json.",
+            "Fill official EasyAR license/account values locally without committing secrets.",
+            input.sample.id === "cloud-recognition"
+              ? "Fill Cloud Recognition CRS AppId and API KEY from the official EasyAR account."
+              : "For Image Tracking, keep target assets under Assets and avoid secret values in scripts."
+          ]
     );
   }
 

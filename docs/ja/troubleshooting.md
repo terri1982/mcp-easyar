@@ -99,6 +99,8 @@ easyar_write_issue_report projectPath=/path/to/UnityProject sampleId=cloud-recog
 
 一般的なブロッカー:
 
+- `mega-settings`: `Assets/XR/Settings/EasyAR Settings.asset` にパッケージの License Key、または Global Mega Block の AppID、ServerAddress、APIKey、APISecret がありません。Mega は `easyar.local.json` を使用しません。
+- `mega-scene-selection`: Onsite シーンが複数存在する、最初の有効シーンが Simulator である、または選択したシーンが Onsite の `MegaBlockController` シーンではありません。`SCENE_AUDIT.md` を読み、推奨された正確な `scenePath` でヘルパーを再生成してください。
 - `mega-assets`: Mega、Mega Block、CloudLocalizer、またはプロジェクト固有の Mega シーン アセットのヒントが `Assets` または `Packages` で見つかりませんでした。
 - `mega-block-config`: Unity またはデバイスログには、選択したメガ ブロックまたはクラウド ローカリゼーション ライブラリを読み込めないことが示されています。
 - `mega-hybridclr`: HybridCLR で生成されたファイルが現在の Android ビルド ターゲットに対して見つからないか、古いです。
@@ -113,21 +115,26 @@ Mega デバイスのパスに関する注意:
 
 ```text
 easyar_prepare_unity_project projectPath=/path/to/UnityProject sampleId=mega
-easyar_write_local_config_form projectPath=/path/to/UnityProject sampleId=mega platform=android
+easyar_validate_local_config projectPath=/path/to/UnityProject sampleId=mega
 easyar_check_sample_readiness projectPath=/path/to/UnityProject sampleId=mega
-easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android overwrite=true
+easyar_write_scene_audit projectPath=/path/to/UnityProject sampleId=mega
+easyar_create_build_settings_helper projectPath=/path/to/UnityProject sampleId=mega platform=android scenePath=Assets/.../MegaOnsite.unity overwrite=true
 easyar_create_sample_validation_helper projectPath=/path/to/UnityProject sampleId=mega overwrite=true
 easyar_analyze_latest_unity_log projectPath=/path/to/UnityProject sampleId=mega
 ```
+
+Unity のバッチ起動エラーは、プロジェクトのコンパイルとは分けて診断してください。`EASYAR_UNITY_PATH` には Unity CLI の shim ではなく、Editor 実行ファイル（`Unity.app/Contents/MacOS/Unity`、`Editor/Unity.exe`、または `Editor/Unity`）を指定する必要があります。想定する Unity Hub バージョンが外部ボリュームへの壊れたシンボリックリンクである場合は、そのボリュームをマウントまたは復元し、再試行前に `easyar_write_unity_environment_report` をもう一度実行してください。
 
 APK が構築され、電話が接続されたら、Android デバイス Runbook を使用して結果を記録します。
 
 ```text
 easyar_write_android_device_runbook projectPath=/path/to/UnityProject sampleId=mega platform=android
 easyar_write_device_run_result_form projectPath=/path/to/UnityProject sampleId=mega platform=android
-easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=passed
+easyar_write_run_result projectPath=/path/to/UnityProject sampleId=mega platform=android overallStatus=blocked
 easyar_write_completion_report projectPath=/path/to/UnityProject sampleId=mega platform=android
 ```
+
+選択した Mega Block が読み込まれ、対応するマッピング済みの実環境で実デバイスが秘匿化された位置特定/トラッキング成功証拠を生成するまで、Mega の実行結果は `blocked` のままにしてください。APK のインストール、アプリの起動、問題のない logcat は中間段階にすぎません。`overallStatus=passed` を使用できるのは、完了レポートに `runThroughComplete=true` と表示された後だけです。
 
 ## セキュリティ
 

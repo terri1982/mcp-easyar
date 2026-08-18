@@ -506,6 +506,10 @@ try {
     "easyar-run-cloud-recognition prompt should be listed"
   );
   assert(
+    prompts.result.prompts.some((prompt) => prompt.name === "easyar-run-mega"),
+    "easyar-run-mega prompt should be listed"
+  );
+  assert(
     prompts.result.prompts.some((prompt) => prompt.name === "easyar-validate-official-endpoints"),
     "easyar-validate-official-endpoints prompt should be listed"
   );
@@ -541,6 +545,20 @@ try {
   assertPromptIncludes(cloudRecognitionPrompt, "easyar://acceptance/fresh-project");
   assertPromptIncludes(cloudRecognitionPrompt, "PREFLIGHT.md");
   assertPromptIncludes(cloudRecognitionPrompt, "sampleId=cloud-recognition");
+
+  const megaPrompt = await request("prompts/get", {
+    name: "easyar-run-mega",
+    arguments: {
+      projectPath: "/tmp/EasyARMegaProject",
+      platform: "android",
+      targetDevice: "android-phone"
+    }
+  });
+  assertPromptIncludes(megaPrompt, "SCOPE BOUNDARY: This is the Unity Mega sample path");
+  assertPromptIncludes(megaPrompt, "sampleId=mega");
+  assertPromptIncludes(megaPrompt, "LocationInputMode to Onsite");
+  assertPromptIncludes(megaPrompt, "real-device startup plus Mega localization/tracking");
+  assertPromptIncludes(megaPrompt, "not complete");
 
   const programmingPrompt = await request("prompts/get", {
     name: "easyar-unity-programming-assistant",
@@ -589,6 +607,8 @@ try {
   assertPromptIncludes(miniProgramPrompt, "easyar_write_miniprogram_preflight");
   assertPromptIncludes(miniProgramPrompt, "easyar_write_miniprogram_run_result");
   assertPromptIncludes(miniProgramPrompt, "Do not ask the user for EasyAR passwords");
+  assertPromptIncludes(miniProgramPrompt, "This is a WeChat Mini Program project");
+  assertPromptIncludes(miniProgramPrompt, "not a Unity project, Android APK, PICO headset build, or XREAL build");
 
   const status = await callTool("easyar_server_status", {});
   assertStructuredPath(status, ["name"], "mcp-easyar");

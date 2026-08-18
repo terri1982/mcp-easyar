@@ -353,10 +353,10 @@ type RegisterTool = McpServer["tool"];
 export function registerSampleArtifactTools(registerTool: RegisterTool) {
   registerTool(
     "easyar_generate_import_checklist",
-    "Generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking or Cloud Recognition.",
+    "Generate an official EasyAR Unity Plugin and focused sample import checklist for Image Tracking, Cloud Recognition, or Mega.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition.")
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega.")
     },
     async ({ projectPath, sampleId }) => {
       const root = resolveProjectPath(projectPath);
@@ -371,7 +371,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write the official EasyAR import checklist as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       relativePath: z.string().optional().describe("Optional checklist path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/IMPORT_CHECKLIST.md."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing import checklist.")
     },
@@ -404,7 +404,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Generate a Unity Package Manager oriented guide for importing the focused official EasyAR sample into Assets/Samples.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition.")
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega.")
     },
     async ({ projectPath, sampleId }) => {
       const root = resolveProjectPath(projectPath);
@@ -419,7 +419,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write the focused official EasyAR sample import guide as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       relativePath: z.string().optional().describe("Optional guide path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/SAMPLE_IMPORT_GUIDE.md."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing sample import guide.")
     },
@@ -452,7 +452,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Copy a focused EasyAR sample that already exists in local Unity PackageCache Samples~ into Assets/Samples without downloading private content.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       overwrite: z.boolean().default(false).describe("Whether to overwrite an existing imported sample directory."),
       dryRun: z.boolean().default(false).describe("Report the copy plan without writing files.")
     },
@@ -466,10 +466,10 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_generate_run_sequence",
-    "Generate an ordered MCP and Unity batch sequence for the focused Image Tracking or Cloud Recognition sample run-through.",
+    "Generate an ordered MCP and Unity batch sequence for the focused Image Tracking, Cloud Recognition, or Mega sample run-through.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
       developmentBuild: z.boolean().default(true).describe("Whether the generated build helper should use a Unity development build.")
@@ -495,7 +495,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write the focused sample MCP and Unity batch run sequence as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
       developmentBuild: z.boolean().default(true).describe("Whether the generated build helper should use a Unity development build."),
@@ -540,7 +540,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Generate an index of focused sample handoff artifacts and recommended reading order.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition.")
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega.")
     },
     async ({ projectPath, sampleId }) => {
       const root = resolveProjectPath(projectPath);
@@ -555,7 +555,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write the focused sample handoff artifact index inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       relativePath: z.string().optional().describe("Optional index path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/ARTIFACT_INDEX.md."),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing artifact index.")
     },
@@ -714,7 +714,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Generate a focused sample run report combining readiness, local config validation, script review, and recommended next steps.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       maxScriptIssues: z.number().int().positive().max(100).default(25)
     },
     async ({ projectPath, sampleId, maxScriptIssues }) => {
@@ -730,7 +730,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write a focused sample run report Markdown artifact into the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/RUN_REPORT.md."),
       maxScriptIssues: z.number().int().positive().max(100).default(25),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing report.")
@@ -763,7 +763,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Audit focused sample scene candidates, EasyAR import signals, Build Settings hints, and sample-specific run blockers.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       maxCandidates: z.number().int().positive().max(100).default(25)
     },
     async ({ projectPath, sampleId, maxCandidates }) => {
@@ -779,7 +779,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write the focused sample scene audit as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       relativePath: z.string().optional().describe("Optional audit path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/SCENE_AUDIT.md."),
       maxCandidates: z.number().int().positive().max(100).default(25),
       overwrite: z.boolean().default(true).describe("Whether to replace an existing scene audit artifact.")
@@ -813,7 +813,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Generate a focused sample support bundle summary across run sequence, run report, scene audit, and latest Unity log diagnostics.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
       developmentBuild: z.boolean().default(true),
@@ -845,7 +845,7 @@ export function registerSampleArtifactTools(registerTool: RegisterTool) {
     "Write a focused sample support bundle Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId> for iOS."),
       developmentBuild: z.boolean().default(true),

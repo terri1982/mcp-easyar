@@ -30,7 +30,7 @@ import {
 import type { AccountStage, AuthorizationMode } from "./catalog.js";
 import { deferredSamples, findSample, focusedSamples, officialInfo, quickstartWorkflow, samples } from "./samples.js";
 import type { SampleInfo } from "./samples.js";
-import { buildAndroidDeviceStatusActions, buildUnityArgs, defaultAndroidLogcatFilter, parseAdbDevices, redactSecretText, runProcess, runUnity } from "./runtime.js";
+import { buildAndroidDeviceStatusActions, buildUnityArgs, defaultAndroidLogcatFilter, hasMegaLocalizationEvidence, parseAdbDevices, parseAndroidForegroundPackage, redactSecretText, runProcess, runUnity } from "./runtime.js";
 import { buildBuildSettingsHelper, buildDeviceBuildHelper, buildFocusedSampleRunbook, buildLocalConfigBridgeEditor, buildLocalConfigBridgeRuntime, buildLocalConfigExample, buildMobileSettingsHelper, buildMonoBehaviourTemplate, buildSampleRunner, buildSampleValidationHelper, defaultBundleIdentifier } from "./unity-generators.js";
 import {
   DeviceValidationStep,
@@ -379,10 +379,10 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_android_install_apk",
-    "Install a focused sample Android APK on a connected device with adb.",
+    "Install a focused sample Android APK on a connected device with adb. The operation success field only describes installation; for Mega, installation never proves the sample is complete.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       apkPath: z.string().optional().describe("APK path. Defaults to Builds/<sampleId>.apk inside the Unity project."),
       adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
       deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
@@ -424,6 +424,7 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
       const result = await runProcess(adb, args, timeoutSeconds);
       const combined = `${result.stdout}\n${result.stderr}`;
       const success = result.exitCode === 0 && /\bSuccess\b/i.test(combined);
+      const suggestedOverallStatus = sample.id === "mega" ? "blocked" : success ? "passed" : "blocked";
       return jsonText({
         sample: sample.name,
         apkPath: resolvedApk,
@@ -431,13 +432,17 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
         command: result.command,
         exitCode: result.exitCode,
         success,
+        sampleRunThroughComplete: false,
+        completionMeaning: sample.id === "mega"
+          ? "blocked: APK installation is only an intermediate device step; Mega requires real-device localization/tracking evidence."
+          : "not established by this installation step; continue the focused sample validation.",
         stdout: redactSecretText(result.stdout).slice(-12000),
         stderr: redactSecretText(result.stderr).slice(-12000),
         suggestedRunResultCall: buildSuggestedRunResultCall({
           root,
           sample,
           platform: "android",
-          overallStatus: success ? "passed" : "blocked",
+          overallStatus: suggestedOverallStatus,
           stepName: "Android APK install",
           status: success ? "passed" : "blocked",
           evidence: success ? `Installed ${path.relative(root, resolvedApk)} on ${deviceSerial ?? "connected Android device"}.` : `adb install exitCode=${result.exitCode ?? "unknown"}.`,
@@ -452,10 +457,10 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_android_start_app",
-    "Start the focused sample Android app on a connected device with adb monkey.",
+    "Start the focused sample Android app with adb monkey, then verify the target package is actually in the Android foreground. The operation success field only describes verified app launch; a successful launch command alone is not app-start evidence and never proves Mega localization.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       bundleIdentifier: z.string().optional().describe("Android package name. Defaults to unity.bundleIdentifier from local config or sample default."),
       adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
       deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
@@ -490,39 +495,85 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
       }
       const result = await runProcess(adb, args, timeoutSeconds);
       const combined = `${result.stdout}\n${result.stderr}`;
-      const success = result.exitCode === 0 && !/Error|No activities found|monkey aborted/i.test(combined);
+      const launchCommandSucceeded = result.exitCode === 0 && !/Error|No activities found|monkey aborted/i.test(combined);
+      const foregroundArgs = [
+        ...(deviceSerial ? ["-s", deviceSerial] : []),
+        "shell",
+        "dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity'"
+      ];
+      let foregroundResult = await runProcess(adb, foregroundArgs, timeoutSeconds);
+      let foregroundPackage = parseAndroidForegroundPackage(`${foregroundResult.stdout}\n${foregroundResult.stderr}`);
+      if (!foregroundPackage) {
+        const windowForegroundArgs = [
+          ...(deviceSerial ? ["-s", deviceSerial] : []),
+          "shell",
+          "dumpsys window windows 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp'"
+        ];
+        const windowForegroundResult = await runProcess(adb, windowForegroundArgs, timeoutSeconds);
+        foregroundResult = {
+          ...windowForegroundResult,
+          command: `${foregroundResult.command} ; ${windowForegroundResult.command}`,
+          stdout: `${foregroundResult.stdout}\n${windowForegroundResult.stdout}`,
+          stderr: `${foregroundResult.stderr}\n${windowForegroundResult.stderr}`
+        };
+        foregroundPackage = parseAndroidForegroundPackage(`${foregroundResult.stdout}\n${foregroundResult.stderr}`);
+      }
+      const launchVerified = launchCommandSucceeded && foregroundResult.exitCode === 0 && foregroundPackage === packageName;
+      const success = launchVerified;
+      const suggestedOverallStatus = sample.id === "mega" ? "blocked" : success ? "passed" : "blocked";
+      const launchEvidence = launchVerified
+        ? `adb monkey completed and foreground package verified as ${packageName}. This verifies app launch only; it does not prove ${sample.id === "mega" ? "Mega Block localization or tracking" : "sample success"}.`
+        : foregroundPackage
+          ? `adb monkey returned success, but the verified foreground package is ${foregroundPackage}, not ${packageName}.`
+          : `adb monkey returned ${launchCommandSucceeded ? "success" : "failure"}, but the foreground package could not be verified.`;
+      const nextActions = launchVerified
+        ? [
+            `The target app is verified in the foreground. Continue with the real ${sample.name} validation checklist and collect logcat evidence; app launch alone is not a sample pass${sample.id === "mega" ? " and does not prove Mega localization/tracking" : ""}.`
+          ]
+        : foregroundPackage && foregroundPackage !== packageName
+          ? [`The launch command returned, but Android kept ${foregroundPackage} in the foreground. Confirm the APK package/activity and retry; do not record this as an app launch pass.`]
+          : ["Confirm the package name, install status, launcher activity, and adb dumpsys output, then retry app launch."];
       return jsonText({
         sample: sample.name,
         packageName,
         deviceSerial: deviceSerial ?? null,
         command: result.command,
         exitCode: result.exitCode,
+        launchCommandSucceeded,
+        launchVerified,
+        foregroundCommand: foregroundResult.command,
+        foregroundExitCode: foregroundResult.exitCode,
+        foregroundPackage,
         success,
+        sampleRunThroughComplete: false,
+        completionMeaning: sample.id === "mega"
+          ? "blocked: verified foreground launch is only an intermediate device step; Mega requires real-device localization/tracking evidence."
+          : "not established by this launch step; continue the focused sample validation.",
         stdout: redactSecretText(result.stdout).slice(-12000),
         stderr: redactSecretText(result.stderr).slice(-12000),
+        foregroundStdout: redactSecretText(foregroundResult.stdout).slice(-12000),
+        foregroundStderr: redactSecretText(foregroundResult.stderr).slice(-12000),
         suggestedRunResultCall: buildSuggestedRunResultCall({
           root,
           sample,
           platform: "android",
-          overallStatus: success ? "passed" : "blocked",
+          overallStatus: suggestedOverallStatus,
           stepName: "Android app launch",
           status: success ? "passed" : "blocked",
-          evidence: success ? `Launched ${packageName} on ${deviceSerial ?? "connected Android device"}.` : `adb monkey exitCode=${result.exitCode ?? "unknown"}.`,
-          nextAction: success ? "Grant camera permission if prompted and perform the focused real-device validation checklist." : "Confirm the package name, install status, launcher activity, and adb output."
+          evidence: launchEvidence,
+          nextAction: launchVerified ? "Grant camera permission if prompted and perform the focused real-device validation checklist. Do not treat this launch evidence as Mega localization/tracking success." : nextActions[0]
         }),
-        nextActions: success
-          ? ["Perform the real sample validation steps, then collect logcat evidence."]
-          : ["Install the APK, confirm the package identifier, and retry app launch."]
+        nextActions
       });
     }
   );
 
   registerTool(
     "easyar_android_collect_logcat",
-    "Collect a redacted adb logcat snapshot for focused sample device validation.",
+    "Collect a redacted adb logcat snapshot for focused sample device validation. For Mega, a clean log is not a sample pass; sampleSuccessEvidence=true requires an official localization/tracking success signal.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       adbPath: z.string().optional().describe("Optional adb executable path. Defaults to EASYAR_ADB_PATH or adb on PATH."),
       deviceSerial: z.string().optional().describe("Optional adb serial for a specific device."),
       relativePath: z.string().optional().describe("Optional log path inside the project. Defaults to Logs/mcp-easyar-DeviceLog-<sampleId>.log."),
@@ -549,6 +600,10 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, redacted + (redacted.endsWith("\n") ? "" : "\n"), "utf8");
       const issues = analyzeUnityLog(redacted, sample);
+      const sampleSuccessEvidence = sample.id === "mega"
+        ? hasMegaLocalizationEvidence(redacted)
+        : true;
+      const logEvidencePassed = result.exitCode === 0 && issues.length === 0 && sampleSuccessEvidence;
       return jsonText({
         sample: sample.name,
         deviceSerial: deviceSerial ?? null,
@@ -558,20 +613,24 @@ export function registerAndroidDeviceTools(registerTool: RegisterTool) {
         filteredLineCount: redacted.split(/\r?\n/).filter(Boolean).length,
         summary: summarizeLog(redacted),
         issueCount: issues.length,
+        sampleSuccessEvidence,
+        logEvidencePassed,
         issues,
         suggestedRunResultCall: buildSuggestedRunResultCall({
           root,
           sample,
           platform: "android",
-          overallStatus: result.exitCode === 0 && issues.length === 0 ? "passed" : "blocked",
+          overallStatus: logEvidencePassed ? "passed" : "blocked",
           stepName: "Android device logcat evidence",
-          status: result.exitCode === 0 && issues.length === 0 ? "passed" : "blocked",
+          status: logEvidencePassed ? "passed" : "blocked",
           evidence: `Collected redacted logcat snapshot at ${path.relative(root, target)}.`,
           nextAction: "Use this log together with observed device behavior before writing a passed RUN_RESULT.md."
         }),
         nextActions: issues.length > 0
           ? Array.from(new Set(issues.flatMap((issue) => issue.actions)))
-          : ["Review the written log and observed device behavior, then record RUN_RESULT.md with real-device evidence."],
+          : !sampleSuccessEvidence
+            ? ["No Mega localization/tracking success signal was found in this capture. Do not write a passed RUN_RESULT.md; observe the mapped environment and capture a fresh log after Mega reports localization/tracking success."]
+            : ["Review the written log and observed device behavior, then record RUN_RESULT.md with real-device evidence."],
         security: "The written log is filtered and redacted for common EasyAR token, key, license, credential, password, and secret fields. Review before sharing publicly."
       });
     }

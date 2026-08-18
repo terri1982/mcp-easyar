@@ -182,6 +182,21 @@ export async function buildLocalConfigFromEnvReport(
   allowPartial: boolean
 ) {
   const existingFile = await exists(target);
+  if (sample.id === "mega") {
+    return {
+      existingFile,
+      canWrite: false,
+      contents: "",
+      requiredMissing: [],
+      envPresence: [],
+      nextActions: [
+        "Mega does not use ProjectSettings/EasyAR/easyar.local.json.",
+        "Open Assets/XR/Settings/EasyAR Settings.asset in Unity and fill the package License Key plus Global Mega Block AppID, ServerAddress, APIKey, and APISecret locally.",
+        `Run easyar_validate_local_config projectPath=${root} sampleId=mega after saving EasyAR Settings.`
+      ],
+      security: "Mega Settings are edited locally in Unity. This tool does not write or return license or Global Mega Block credential values."
+    };
+  }
   const needsCloudRecognition = sample.id === "cloud-recognition";
   const envValues = {
     apiBaseUrl: envFirst(["EASYAR_API_BASE_URL"]) ?? "https://www.easyar.cn",

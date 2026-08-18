@@ -298,7 +298,7 @@ export function reviewCsharpScript(relativePath: string, text: string): ScriptRe
 
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
-    if (/(license\w*|appSecret|appKey|accountToken)\s*=\s*"[^"]{8,}"/i.test(line)) {
+    if (/(license(?:key|value)|appSecret|appKey|accountToken)\s*=\s*"[^"]{8,}"/i.test(line)) {
       addIssue(
         "hardcoded-easyar-secret",
         "high",

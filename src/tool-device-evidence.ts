@@ -18,6 +18,7 @@ import { isNonEmptyString, isNonPlaceholderString, isRecord, readJsonFile, sanit
 import { exists } from "./tool-project.js";
 import {
   buildImportChecklist,
+  buildMegaSettingsValidationReport,
   buildSampleImportGuide,
   buildSampleReadinessReport,
   buildSampleSceneAudit,
@@ -78,7 +79,9 @@ import {
 
 export async function buildFocusedRunReport(root: string, sample: SampleInfo, maxScriptIssues: number) {
   const readiness = await buildSampleReadinessReport(root, sample);
-  const configValidation = await buildLocalConfigValidationReport(root);
+  const configValidation = sample.id === "mega"
+    ? await buildMegaSettingsValidationReport(root)
+    : await buildLocalConfigValidationReport(root);
   const scriptReview = await buildScriptReviewReport(root, undefined, 80, maxScriptIssues);
   const runSequence = buildFocusedRunSequence({
     projectPath: root,
@@ -132,7 +135,7 @@ export async function buildFocusedPreflight(
   ] = await Promise.all([
     buildAccountMaterialsReport(root, sample, platform),
     buildUnityEnvironmentReport(root, sample),
-    buildLocalConfigValidationReport(root),
+    sample.id === "mega" ? buildMegaSettingsValidationReport(root) : buildLocalConfigValidationReport(root),
     buildImportChecklist(root, sample),
     buildSampleImportGuide(root, sample),
     buildSampleReadinessReport(root, sample),
@@ -141,13 +144,28 @@ export async function buildFocusedPreflight(
     buildWorkflowState(root, sample, platform, outputPath, maxScriptIssues),
     readPortalEvidenceArtifact(root, sample)
   ]);
+  const resolvedOutputPath = path.resolve(root, outputPath);
+  const existingDeviceBuild = platform === "android" && await exists(resolvedOutputPath);
+  const megaSettingsReady = sample.id !== "mega" || localConfig.valid;
   const portalEvidenceReady = isPortalEvidenceReadyForSample(portalEvidence, sample);
   const checks = [
-    preflightCheck("sample-focus", sample.implementationStatus === "focused", "sample", `${sample.name} status is ${sample.implementationStatus}.`, "Use image-tracking or cloud-recognition for the current focused run-through."),
+    preflightCheck("sample-focus", sample.implementationStatus === "focused", "sample", `${sample.name} status is ${sample.implementationStatus}.`, "Use image-tracking, cloud-recognition, or mega for the current focused run-through."),
     preflightCheck("account-materials", accountMaterials.missingRequired.length === 0, "account", accountMaterials.missingRequired.length > 0 ? `Missing account material(s): ${accountMaterials.missingRequired.join(", ")}.` : "Required account materials are present or not required.", "Run easyar_write_account_onboarding and easyar_write_account_materials, then prepare official account values."),
     preflightCheck("portal-evidence", portalEvidenceReady, "account", portalEvidenceReady ? "Portal evidence is sufficient for the selected sample." : portalEvidencePreflightDetail(portalEvidence, sample), `Run easyar_write_portal_evidence projectPath=${root} sampleId=${sample.id} platform=${platform} after checking the logged-in EasyAR development center page.`),
-    preflightCheck("local-config", localConfig.valid, "config", localConfig.valid ? "Local EasyAR config is valid." : `Local config failing check(s): ${localConfig.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_write_local_config_from_env or fill ProjectSettings/EasyAR/easyar.local.json locally, then validate again."),
-    preflightCheck("unity-environment", unityEnvironment.readyForUnityBatch, "unity", unityEnvironment.readyForUnityBatch ? `Unity batch path ready: ${unityEnvironment.recommendedUnityPath}.` : "No Unity executable path is ready for batch automation.", "Run easyar_write_unity_environment_report and set EASYAR_UNITY_PATH or pass unityPath explicitly."),
+    preflightCheck("local-config", sample.id === "mega" ? megaSettingsReady : localConfig.valid, "config", sample.id === "mega"
+      ? megaSettingsReady
+        ? "Mega license and Global Mega Block service fields are present in the official EasyAR Settings.asset."
+        : "Mega configuration is incomplete in Assets/XR/Settings/EasyAR Settings.asset."
+      : localConfig.valid
+        ? "Local EasyAR config is valid."
+        : `Local config failing check(s): ${localConfig.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, sample.id === "mega"
+      ? "Fill the missing Mega fields locally in Assets/XR/Settings/EasyAR Settings.asset, then rerun easyar_check_sample_readiness."
+      : "Run easyar_write_local_config_from_env or fill ProjectSettings/EasyAR/easyar.local.json locally, then validate again."),
+    preflightCheck("unity-environment", unityEnvironment.readyForUnityBatch, "unity", unityEnvironment.readyForUnityBatch
+      ? `Unity batch path ready: ${unityEnvironment.recommendedUnityPath}.`
+      : existingDeviceBuild
+        ? `No Unity executable path is ready for batch automation, but an existing device build is available at ${outputPath}; device validation may continue without rebuilding.`
+        : "No Unity executable path is ready for batch automation.", "Run easyar_write_unity_environment_report and set EASYAR_UNITY_PATH or pass unityPath explicitly. An existing APK can be installed without rebuilding."),
     preflightCheck("official-imports", importChecklist.readyForFocusedPreparation, "import", importChecklist.readyForFocusedPreparation ? "Official plugin and focused import requirements are present." : `Missing import item(s): ${importChecklist.items.filter((item) => item.required && !item.ok).map((item) => item.id).join(", ")}.`, buildImportChecklistAction(importChecklist)),
     preflightCheck("sample-readiness", readiness.ready, "readiness", readiness.ready ? "Focused sample readiness checks passed." : `Readiness failing check(s): ${readiness.checks.filter((check) => !check.ok).map((check) => check.id).join(", ")}.`, "Run easyar_prepare_unity_project, import official assets, and rerun easyar_check_sample_readiness."),
     preflightCheck("scene-build-settings", sceneAudit.readyForUnityValidation, "scene", sceneAudit.readyForUnityValidation ? "Scene audit is ready for Unity validation." : `Scene blocker(s): ${sceneAudit.blockers.map((blocker) => blocker.id).join(", ")}.`, "Run easyar_create_build_settings_helper and execute the generated Build Settings helper in Unity batch mode."),
@@ -155,8 +173,17 @@ export async function buildFocusedPreflight(
   ];
   const blockers = checks.filter((check) => !check.ok);
   const readyForUnityBatch = blockers.every((blocker) => !["sample", "account", "config", "unity", "import", "readiness", "code"].includes(blocker.area)) && sceneAudit.readyForUnityValidation;
-  const readyForDeviceBuild = blockers.length === 0;
-  const nextCall = blockers.length > 0
+  const lowOnlyScriptReview = scriptReview.issueCount > 0 && scriptReview.issues.every((issue) => issue.severity === "low");
+  const deviceBlockers = blockers.filter((blocker) =>
+    blocker.id !== "unity-environment" && !(existingDeviceBuild && blocker.id === "script-review" && lowOnlyScriptReview)
+  );
+  const readyForDeviceBuild = deviceBlockers.length === 0 && (unityEnvironment.readyForUnityBatch || existingDeviceBuild);
+  const nextCall = blockers.length > 0 && readyForDeviceBuild
+    ? {
+        tool: "easyar_android_device_status",
+        arguments: { projectPath: root }
+      }
+    : blockers.length > 0
     ? preflightNextCall(blockers[0], root, sample, platform)
     : {
         tool: "easyar_run_unity_compile_check",
@@ -183,7 +210,12 @@ export async function buildFocusedPreflight(
     blockers,
     nextCall,
     nextActions: blockers.length > 0
-      ? Array.from(new Set(blockers.map((blocker) => blocker.action)))
+      ? readyForDeviceBuild
+        ? [
+            `Existing device build is available at ${outputPath}; continue real-device validation without a Unity rebuild.`,
+            ...Array.from(new Set(deviceBlockers.map((blocker) => blocker.action)))
+          ]
+        : Array.from(new Set(blockers.map((blocker) => blocker.action)))
       : [
           "Run easyar_run_unity_compile_check.",
           "Run easyar_create_device_build_helper and EasyARDeviceBuildHelper.Build.",
@@ -195,6 +227,9 @@ export async function buildFocusedPreflight(
       importReady: importChecklist.readyForFocusedPreparation,
       packageCacheSamples: sampleImportGuide.packageCacheSamples,
       localConfigValid: localConfig.valid,
+      megaSettingsReady,
+      existingDeviceBuild,
+      deviceBlockers: deviceBlockers.map((blocker) => blocker.id),
       portalEvidenceExists: portalEvidence.exists,
       portalSenseLicenseStatus: portalEvidence.senseLicenseStatus,
       portalCloudLibraryStatus: portalEvidence.cloudLibraryStatus,
@@ -875,6 +910,7 @@ export async function buildSupportBundle(input: {
   const runReport = await buildFocusedRunReport(input.root, input.sample, input.maxScriptIssues);
   const sceneAudit = await buildSampleSceneAudit(input.root, input.sample, input.maxCandidates);
   const latestLog = await buildLatestLogDiagnostic(input.root, input.sample, input.maxLogBytes, input.maxLogIssues);
+  const existingDeviceBuild = input.platform === "android" && Boolean(input.outputPath) && await exists(path.resolve(input.root, input.outputPath!));
   const generatedArtifacts = {
     runbook: path.relative(input.root, focusedSampleRunbookPath(input.root, input.sample)),
     runSequence: path.relative(input.root, path.join(focusedSampleGeneratedDir(input.root, input.sample), "RUN_SEQUENCE.md")),
@@ -887,7 +923,9 @@ export async function buildSupportBundle(input: {
   };
   const nextActions = Array.from(new Set([
     runReport.nextRecommendedPhase,
-    ...sceneAudit.nextActions,
+    ...(existingDeviceBuild
+      ? ["An existing Android build is available; continue with the real-device checklist instead of running a Unity-only validation helper."]
+      : sceneAudit.nextActions),
     ...latestLog.nextActions
   ]));
 
@@ -1124,7 +1162,7 @@ export async function buildAndroidDeviceRunbook(input: {
         ...(input.deviceSerial ? { deviceSerial: input.deviceSerial } : {})
       },
       shell: [adb, ...serialArgs, "shell", "monkey", "-p", packageName, "-c", "android.intent.category.LAUNCHER", "1"].join(" "),
-      purpose: "Launch the focused EasyAR app on the Android device."
+      purpose: "Ask MCP to launch the focused EasyAR app and verify the target package is actually in the Android foreground. A monkey exit code alone is not a launch pass; for Mega, a verified foreground app still does not prove localization or tracking."
     },
     {
       id: "collect-logcat",
@@ -1232,12 +1270,19 @@ export async function buildRunResult(input: {
     maxLogBytes: input.maxLogBytes,
     maxLogIssues: input.maxLogIssues
   });
+  const megaPassedEvidenceMissing = input.sample.id === "mega"
+    && input.overallStatus === "passed"
+    && supportBundle.latestLog.sampleSuccessEvidence !== true;
+  const effectiveOverallStatus = megaPassedEvidenceMissing ? "blocked" : input.overallStatus;
   const failedSteps = input.steps.filter((step) => step.status === "failed" || step.status === "blocked");
   const missingSteps = input.steps.filter((step) => step.status === "not-run");
   const recommendedNextActions = Array.from(new Set([
     ...failedSteps.map((step) => step.nextAction).filter(isNonEmptyString),
     ...missingSteps.map((step) => step.nextAction).filter(isNonEmptyString),
-    ...supportBundle.nextActions
+    ...supportBundle.nextActions,
+    ...(megaPassedEvidenceMissing
+      ? ["Mega localization/tracking success evidence is missing from the latest log; the requested passed result was kept blocked. Run the physical localization attempt and collect logcat again."]
+      : [])
   ]));
 
   return {
@@ -1245,7 +1290,7 @@ export async function buildRunResult(input: {
     projectPath: input.root,
     sample: supportBundle.sample,
     platform: input.platform,
-    overallStatus: input.overallStatus,
+    overallStatus: effectiveOverallStatus,
     device: input.device ?? null,
     buildOutputPath: input.buildOutputPath ?? null,
     notes: sanitizeRunResultNotes(input.notes),
@@ -1288,7 +1333,8 @@ export async function buildCompletionReport(
   const preflightPassed = preflight.readyForDeviceBuild;
   const deviceReady = deviceValidation.readyForDeviceValidation;
   const runResultPassed = runResultArtifact.overallStatus === "passed";
-  const realDeviceRunPassed = runResultPassed && runResultArtifact.hasPassedDeviceValidationEvidence;
+  const sampleRuntimeEvidencePassed = sample.id !== "mega" || latestLog.sampleSuccessEvidence === true;
+  const realDeviceRunPassed = runResultPassed && runResultArtifact.hasPassedDeviceValidationEvidence && sampleRuntimeEvidencePassed;
   const hasRunResult = runResultArtifact.exists;
   const hasBlockingLogIssues = latestLog.issues.some((issue) => issue.severity === "high");
   const completionStatus = chooseCompletionStatus(hasRunResult, runResultArtifact.overallStatus, preflightPassed, deviceReady, realDeviceRunPassed, hasBlockingLogIssues);
@@ -1327,6 +1373,14 @@ export async function buildCompletionReport(
       passed: realDeviceRunPassed,
       detail: "RUN_RESULT.md must include a recorded device and a passed real-device/device-validation step."
     },
+    ...(sample.id === "mega"
+      ? [{
+          id: "mega-localization-evidence",
+          required: true,
+          passed: sampleRuntimeEvidencePassed,
+          detail: "The latest redacted Mega device/Unity log must contain an official localization or tracking success signal before completion can be passed."
+        }]
+      : []),
     {
       id: "latest-log-clean",
       required: false,
@@ -1400,6 +1454,13 @@ export async function buildCompletionReport(
             detail: `RUN_RESULT.md overall status is ${runResultArtifact.overallStatus ?? "unknown"}, not passed.`,
             action: "Resolve the recorded run result next actions, then rerun the focused sample on a real device."
           }]),
+    ...(!sampleRuntimeEvidencePassed
+      ? [{
+          id: "mega/missing-localization-evidence",
+          detail: "The latest redacted log does not contain a Mega Block localization/tracking success signal.",
+          action: "Run easyar_android_collect_logcat after testing in the mapped physical environment; keep RUN_RESULT.md blocked until sampleSuccessEvidence=true."
+        }]
+      : []),
     ...latestLog.issues
       .filter((issue) => issue.severity === "high")
       .map((issue) => ({
@@ -1429,8 +1490,9 @@ export async function buildCompletionReport(
       readyForUnityBatch: preflight.readyForUnityBatch,
       readyForDeviceBuild: preflight.readyForDeviceBuild,
       readyForDeviceValidation: deviceValidation.readyForDeviceValidation,
-      latestLogAnalyzed: latestLog.analyzed,
-      latestLogIssueCount: latestLog.issueCount,
+    latestLogAnalyzed: latestLog.analyzed,
+    latestLogIssueCount: latestLog.issueCount,
+    sampleRuntimeEvidencePassed,
       latestRunResultStatus: runResultArtifact.overallStatus
     },
     blockers: uniqueBlockers(blockers),
@@ -1684,6 +1746,9 @@ export function buildCompletionNextActions(
   }
   if (latestLog.issues.some((issue) => issue.severity === "high")) {
     actions.push("Run easyar_write_issue_report after reviewing SUPPORT_BUNDLE.md and the latest Unity/device log diagnostics.");
+  }
+  if (sample.id === "mega" && latestLog.sampleSuccessEvidence !== true) {
+    actions.push("No Mega localization/tracking success signal was found in the latest log. Run easyar_android_collect_logcat in the mapped physical environment and keep RUN_RESULT.md blocked until sampleSuccessEvidence=true.");
   }
   actions.push(`Regenerate this report with easyar_write_completion_report projectPath=${root} sampleId=${sample.id} platform=${platform}.`);
   return Array.from(new Set(actions)).slice(0, 14);

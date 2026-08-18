@@ -39,9 +39,23 @@ ${sceneNames}
 `;
 }
 
-export function buildBuildSettingsHelper(sample: SampleInfo, platform: typeof buildPlatforms[number]): string {
+export function buildBuildSettingsHelper(sample: SampleInfo, platform: typeof buildPlatforms[number], scenePath?: string): string {
   const sceneNames = sample.unityScenes.map((scene) => `            "${escapeCsharp(scene)}"`).join(",\n");
   const switchTarget = buildTargetSwitchSnippet(platform);
+  const explicitScenePath = scenePath ? `"${escapeCsharp(scenePath.replace(/\\/g, "/"))}"` : "null";
+  const candidateSelection = sample.id === "mega"
+    ? `            var matchingScenes = AssetDatabase.FindAssets("t:Scene")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0))
+                .ToArray();
+            if (matchingScenes.Length != 1)
+            {
+                throw new InvalidOperationException("Mega scene selection is ambiguous. Run easyar_write_scene_audit, then regenerate this helper with an explicit scenePath. Candidates: " + string.Join(", ", matchingScenes));
+            }
+            scene = matchingScenes[0];`
+    : `            scene = AssetDatabase.FindAssets("t:Scene")
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .FirstOrDefault(path => SceneNameHints.Any(hint => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0));`;
   return `using System;
 using System.Linq;
 using UnityEditor;
@@ -54,15 +68,24 @@ namespace EasyAR.EditorTools
         {
 ${sceneNames}
         };
+        private const string ExplicitScenePath = ${explicitScenePath};
 
         [MenuItem("Tools/EasyAR/Configure Build Settings")]
         public static void ConfigureBuildSettings()
         {
-            var scene = SceneNameHints
-                .Select(hint => AssetDatabase.FindAssets("t:Scene")
-                    .Select(AssetDatabase.GUIDToAssetPath)
-                    .FirstOrDefault(path => path.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0))
-                .FirstOrDefault(path => !string.IsNullOrEmpty(path));
+            string scene;
+            if (!string.IsNullOrEmpty(ExplicitScenePath))
+            {
+                scene = ExplicitScenePath;
+                if (!scene.StartsWith("Assets/", StringComparison.Ordinal) || AssetDatabase.LoadAssetAtPath<SceneAsset>(scene) == null)
+                {
+                    throw new InvalidOperationException("The explicit scenePath is not an existing Unity scene under Assets: " + scene);
+                }
+            }
+            else
+            {
+${candidateSelection.split("\n").map((line) => `    ${line}`).join("\n")}
+            }
 
             if (string.IsNullOrEmpty(scene))
             {

@@ -110,6 +110,7 @@ import {
   buildLocalConfigHandoffMarkdown,
   buildLocalConfigHandoffReport,
   buildLocalConfigValidationReport,
+  buildMegaSettingsValidationReport,
   buildOfficialAccessMarkdown,
   buildOfficialAccessReport,
   buildOfficialApiContract,
@@ -350,17 +351,46 @@ const easyarApi = createEasyARApiClient();
 
 type RegisterTool = McpServer["tool"];
 
+function megaSettingsRoute(root: string, sampleName: string) {
+  return {
+    sample: sampleName,
+    route: "mega-settings",
+    canWriteJsonConfig: false,
+    configPath: path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset"),
+    requiredFields: [
+      "LicenseKey",
+      "GlobalMegaBlockLocalizationServiceConfig.AppID",
+      "GlobalMegaBlockLocalizationServiceConfig.ServerAddress",
+      "GlobalMegaBlockLocalizationServiceConfig.APIKey",
+      "GlobalMegaBlockLocalizationServiceConfig.APISecret"
+    ],
+    nextActions: [
+      "Open EasyAR Settings in Unity and fill the package License Key plus Global Mega Block service fields locally.",
+      "Do not create easyar.local.json or a runtime JSON bridge for Mega.",
+      `Run easyar_validate_local_config projectPath=${root} sampleId=mega.`
+    ],
+    security: "Only field names and presence are reported. License and Mega service values stay local."
+  };
+}
+
 export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
   registerTool(
     "easyar_validate_local_config",
-    "Validate ProjectSettings/EasyAR/easyar.local.json without returning secret values.",
+    "Validate the focused sample's local configuration without returning secret values. Mega uses Assets/XR/Settings/EasyAR Settings.asset; other samples use easyar.local.json.",
     {
       projectPath: z.string().describe("Unity project path."),
+      sampleId: z.string().optional().describe("Focused sample id. Pass mega to validate EasyAR Settings.asset instead of easyar.local.json."),
       configPath: z.string().optional().describe("Optional config path. Defaults to ProjectSettings/EasyAR/easyar.local.json inside the project.")
     },
-    async ({ projectPath, configPath }) => {
+    async ({ projectPath, sampleId, configPath }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
+      if (sampleId === "mega") {
+        if (configPath) {
+          throw new Error("configPath is not accepted for sampleId=mega. Mega configuration is fixed at Assets/XR/Settings/EasyAR Settings.asset.");
+        }
+        return jsonText(await buildMegaSettingsValidationReport(root));
+      }
       const target = configPath
         ? path.resolve(root, configPath)
         : path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json");
@@ -391,10 +421,10 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_generate_local_config_form",
-    "Generate a fillable ProjectSettings/EasyAR/easyar.local.json form with field sources, placeholders, env alternatives, and validation calls.",
+    "Generate a fillable local-config form for non-Mega samples. Mega is routed to EasyAR Settings.asset.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios", "standalone"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known."),
       bundleIdentifier: z.string().optional().describe("Optional non-secret bundle/package identifier to show in the JSON skeleton.")
@@ -403,16 +433,19 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
+      if (sample.id === "mega") {
+        return jsonText(megaSettingsRoute(root, sample.name));
+      }
       return jsonText(await buildLocalConfigForm(root, sample, platform, accountStage, bundleIdentifier));
     }
   );
 
   registerTool(
     "easyar_write_local_config_form",
-    "Write a fillable local config form to Assets/EasyARGenerated/LOCAL_CONFIG_FORM.md without writing secret values.",
+    "Write a fillable local config form for non-Mega samples. Mega returns an EasyAR Settings.asset route and writes no JSON form.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios", "standalone"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known."),
       bundleIdentifier: z.string().optional().describe("Optional non-secret bundle/package identifier to show in the JSON skeleton."),
@@ -423,6 +456,9 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
+      if (sample.id === "mega") {
+        return jsonText({ written: null, ...megaSettingsRoute(root, sample.name) });
+      }
       const form = await buildLocalConfigForm(root, sample, platform, accountStage, bundleIdentifier);
       const target = relativePath
         ? path.resolve(root, relativePath)
@@ -446,10 +482,10 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_write_local_config_from_env",
-    "Write ProjectSettings/EasyAR/easyar.local.json from local environment variables without returning secret values.",
+    "Write easyar.local.json from local environment variables for non-Mega samples. Mega is intentionally blocked and routed to EasyAR Settings.asset.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       targetPlatform: z.enum(["android", "ios", "standalone"]).default("android"),
       bundleIdentifier: z.string().optional().describe("Optional non-secret bundle/package identifier. Defaults to EASYAR_BUNDLE_IDENTIFIER or sample default."),
       relativePath: z.string().optional().describe("Optional config path inside the project. Defaults to ProjectSettings/EasyAR/easyar.local.json."),
@@ -491,10 +527,10 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_local_config_handoff",
-    "Generate a first-run handoff for registering/logging into EasyAR, collecting account materials, and filling ProjectSettings/EasyAR/easyar.local.json locally.",
+    "Generate a first-run config handoff. Mega is routed to EasyAR Settings.asset; other samples use easyar.local.json.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios", "standalone"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known.")
     },
@@ -502,16 +538,19 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
+      if (sample.id === "mega") {
+        return jsonText(megaSettingsRoute(root, sample.name));
+      }
       return jsonText(await buildLocalConfigHandoffReport(root, sample, platform, accountStage));
     }
   );
 
   registerTool(
     "easyar_write_local_config_handoff",
-    "Write a local Markdown handoff that guides first-time EasyAR users from registration/login to safe easyar.local.json validation.",
+    "Write a local config handoff for non-Mega samples. Mega returns an EasyAR Settings.asset route and writes no JSON handoff.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().default("cloud-recognition").describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios", "standalone"]).default("android"),
       accountStage: z.enum(accountStageValues).default("unknown").describe("Current EasyAR account stage, if known."),
       relativePath: z.string().optional().describe("Optional output path inside the project. Defaults to Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md."),
@@ -521,6 +560,9 @@ export function registerLocalDiagnosticsTools(registerTool: RegisterTool) {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
+      if (sample.id === "mega") {
+        return jsonText({ written: null, ...megaSettingsRoute(root, sample.name) });
+      }
       const report = await buildLocalConfigHandoffReport(root, sample, platform, accountStage);
       const target = relativePath
         ? path.resolve(root, relativePath)

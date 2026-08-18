@@ -1005,7 +1005,7 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
     "Run a focused official EasyAR account, license, downloads, and Cloud Recognition access check without exposing secrets.",
     {
       projectPath: z.string().describe("Unity project path used for Unity version, bundle identifier, and local license metadata."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
       packageKind: z.enum(["unity-plugin", "unity-samples", "native-sdk", "xr-extension", "unknown"]).default("unity-samples")
     },
@@ -1022,7 +1022,7 @@ export function registerStatusAccountTools(registerTool: RegisterTool) {
     "Write the focused official EasyAR access check as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path used for Unity version, bundle identifier, and local license metadata."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios", "standalone", "unknown"]).default("android"),
       packageKind: z.enum(["unity-plugin", "unity-samples", "native-sdk", "xr-extension", "unknown"]).default("unity-samples"),
       relativePath: z.string().optional().describe("Optional report path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/OFFICIAL_ACCESS.md."),

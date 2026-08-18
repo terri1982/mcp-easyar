@@ -353,7 +353,7 @@ type RegisterTool = McpServer["tool"];
 export function registerUnityProgrammingTools(registerTool: RegisterTool) {
   registerTool(
     "easyar_prepare_unity_project",
-    "Prepare a Unity project for an authorized EasyAR sample workflow by creating editor helpers, local config templates, and secret ignore rules.",
+    "Prepare a Unity project for an authorized EasyAR sample workflow. Mega uses EasyAR Settings.asset; other samples also receive local JSON config helpers.",
     {
       projectPath: z.string().describe("Unity project path."),
       sampleId: z.string().describe("Sample id from easyar_list_samples."),
@@ -368,7 +368,9 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
       const configDir = path.join(root, "ProjectSettings", "EasyAR");
       const generatedSampleDir = focusedSampleGeneratedDir(root, sample);
       await mkdir(editorDir, { recursive: true });
-      await mkdir(configDir, { recursive: true });
+      if (sample.id !== "mega") {
+        await mkdir(configDir, { recursive: true });
+      }
       await mkdir(generatedSampleDir, { recursive: true });
   
       const runnerPath = path.join(editorDir, "EasyARSampleRunner.cs");
@@ -387,30 +389,43 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
       await writeGeneratedFile(buildSettingsPath, buildBuildSettingsHelper(sample, "none"), overwrite, written);
       await writeGeneratedFile(mobileSettingsPath, buildMobileSettingsHelper("android", defaultBundleIdentifier(sample), null, sample.id === "mega" ? 24 : null), overwrite, written);
       await writeGeneratedFile(validationPath, buildSampleValidationHelper(sample), overwrite, written);
-      await writeGeneratedFile(bridgeEditorPath, buildLocalConfigBridgeEditor(sample), overwrite, written);
-      await writeGeneratedFile(bridgeRuntimePath, buildLocalConfigBridgeRuntime(), overwrite, written);
+      if (sample.id !== "mega") {
+        await writeGeneratedFile(bridgeEditorPath, buildLocalConfigBridgeEditor(sample), overwrite, written);
+        await writeGeneratedFile(bridgeRuntimePath, buildLocalConfigBridgeRuntime(), overwrite, written);
+      }
       await writeGeneratedFile(runbookPath, buildFocusedSampleRunbook(sample), overwrite, written);
       await writeFocusedSampleSupportFiles(root, sample, overwrite, written);
-      await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
-      await ensureGitignoreEntries(gitignorePath, [
-        "ProjectSettings/EasyAR/easyar.local.json",
-        "ProjectSettings/EasyAR/*.secret.json",
-        "Assets/StreamingAssets/EasyAR/easyar.runtime.json",
-        "Assets/StreamingAssets/EasyAR/*.secret.json"
-      ]);
+      if (sample.id !== "mega") {
+        await writeGeneratedFile(configExamplePath, buildLocalConfigExample(sample), overwrite, written);
+        await ensureGitignoreEntries(gitignorePath, [
+          "ProjectSettings/EasyAR/easyar.local.json",
+          "ProjectSettings/EasyAR/*.secret.json",
+          "Assets/StreamingAssets/EasyAR/easyar.runtime.json",
+          "Assets/StreamingAssets/EasyAR/*.secret.json"
+        ]);
+      }
   
       return jsonText({
         projectPath: root,
         sample: sample.name,
         written,
-        localConfig: localConfigPath,
+        localConfig: sample.id === "mega" ? null : localConfigPath,
+        megaSettings: sample.id === "mega" ? path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset") : null,
         instructions: [
-          `Copy ${path.relative(root, configExamplePath)} to ${path.relative(root, localConfigPath)}.`,
-          "Fill the local file with the EasyAR license key and official account-scoped credentials.",
-          "Do not commit the local config file; .gitignore has been updated to protect it.",
+          ...(sample.id === "mega"
+            ? [
+                "Mega does not use ProjectSettings/EasyAR/easyar.local.json or the generated local-config bridge.",
+                "Open Assets/XR/Settings/EasyAR Settings.asset and fill the package License Key plus Global Mega Block AppID, ServerAddress, APIKey, and APISecret locally.",
+                "Run easyar_validate_local_config with sampleId=mega; the MCP reports field presence only and never returns values."
+              ]
+            : [
+                `Copy ${path.relative(root, configExamplePath)} to ${path.relative(root, localConfigPath)}.`,
+                "Fill the local file with the EasyAR license key and official account-scoped credentials.",
+                "Do not commit the local config file; .gitignore has been updated to protect it."
+              ]),
           "Import the official EasyAR Unity Plugin package from the EasyAR download page before opening the generated runner.",
           `Review ${path.relative(root, runbookPath)} for the focused ${sample.name} run-through checklist.`,
-          "Call EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig before mobile builds to copy local config into ignored StreamingAssets for device runtime.",
+          ...(sample.id === "mega" ? [] : ["Call EasyAR.EditorTools.EasyARLocalConfigBridge.ExportRuntimeConfig before mobile builds to copy local config into ignored StreamingAssets for device runtime."]),
           "Call EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample in Unity batch mode after importing the official sample scene.",
           "Call EasyAR.EditorTools.EasyARMobileSettingsHelper.ConfigureMobileSettings in Unity batch mode before device builds.",
           "Call EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings in Unity batch mode to add the matching sample scene to Build Settings."
@@ -424,7 +439,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Create a Unity Editor script that validates focused EasyAR sample import, scene, Build Settings, and sample-specific local requirements.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
     },
     async ({ projectPath, sampleId, overwrite }) => {
@@ -449,16 +464,29 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_create_local_config_bridge",
-    "Create Unity Editor/runtime scripts that export ProjectSettings/EasyAR/easyar.local.json into ignored StreamingAssets for device builds and read it at runtime without logging secret values.",
+    "Create Unity Editor/runtime scripts that export easyar.local.json for non-Mega samples. Mega is routed to EasyAR Settings.asset and does not generate this bridge.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       overwrite: z.boolean().default(false).describe("Whether to replace existing generated bridge scripts.")
     },
     async ({ projectPath, sampleId, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
+      if (sample.id === "mega") {
+        return jsonText({
+          created: [],
+          canCreate: false,
+          sample: sample.name,
+          configPath: path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset"),
+          nextActions: [
+            "Do not create a JSON runtime bridge for Mega.",
+            "Fill the package License Key and Global Mega Block fields in Assets/XR/Settings/EasyAR Settings.asset locally.",
+            "Run easyar_validate_local_config with sampleId=mega."
+          ]
+        });
+      }
       const editorPath = path.join(root, "Assets", "Editor", "EasyARLocalConfigBridge.cs");
       const runtimePath = path.join(root, "Assets", "EasyARGenerated", "Runtime", "EasyARLocalConfigRuntime.cs");
       const gitignorePath = path.join(root, ".gitignore");
@@ -539,23 +567,37 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
       projectPath: z.string().describe("Unity project path."),
       sampleId: z.string().describe("Sample id from easyar_list_samples."),
       platform: z.enum(buildPlatforms).default("none").describe("Optional Unity build target to switch to."),
+      scenePath: z.string().optional().describe("Explicit project-relative .unity scene path. Required when Mega scene audit reports ambiguous Onsite candidates."),
       overwrite: z.boolean().default(false).describe("Whether to replace an existing helper script.")
     },
-    async ({ projectPath, sampleId, platform, overwrite }) => {
+    async ({ projectPath, sampleId, platform, scenePath, overwrite }) => {
       const root = resolveProjectPath(projectPath);
       await ensureDirectory(root);
       const sample = findSample(sampleId);
+      let selectedScenePath: string | undefined;
+      if (scenePath) {
+        const sceneTarget = path.resolve(root, scenePath);
+        assertInside(root, sceneTarget);
+        selectedScenePath = path.relative(root, sceneTarget).replace(/\\/g, "/");
+        if (!selectedScenePath.startsWith("Assets/") || !selectedScenePath.toLowerCase().endsWith(".unity")) {
+          throw new Error("scenePath must be an existing .unity scene under the project's Assets directory.");
+        }
+        if (!await exists(sceneTarget)) {
+          throw new Error(`scenePath does not exist: ${selectedScenePath}`);
+        }
+      }
       const editorDir = path.join(root, "Assets", "Editor");
       const filePath = path.join(editorDir, "EasyARBuildSettingsHelper.cs");
   
       const written: string[] = [];
-      await writeGeneratedFile(filePath, buildBuildSettingsHelper(sample, platform), overwrite, written);
+      await writeGeneratedFile(filePath, buildBuildSettingsHelper(sample, platform, selectedScenePath), overwrite, written);
   
       return jsonText({
         created: written.includes(filePath) ? filePath : null,
         skipped: written.includes(filePath) ? null : filePath,
         sample: sample.name,
         platform,
+        scenePath: selectedScenePath ?? null,
         executeMethod: "EasyAR.EditorTools.EasyARBuildSettingsHelper.ConfigureBuildSettings",
         nextStep: "Run easyar_run_unity_method with the returned executeMethod to update Unity Build Settings."
       });
@@ -624,10 +666,10 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_generate_code_plan",
-    "Generate a focused Unity C# implementation plan before editing Image Tracking or Cloud Recognition sample code.",
+    "Generate a focused Unity C# implementation plan before editing Image Tracking, Cloud Recognition, or Mega sample code.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       goal: z.string().describe("Requested code change goal, for example add target found UI or handle cloud recognition timeout."),
       targetFiles: z.array(z.string()).default([]).describe("Optional relative .cs files expected to be created or changed."),
       maxScriptIssues: z.number().int().positive().max(100).default(25)
@@ -645,7 +687,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Write a focused Unity C# implementation plan Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       goal: z.string().describe("Requested code change goal, for example add target found UI or handle cloud recognition timeout."),
       targetFiles: z.array(z.string()).default([]).describe("Optional relative .cs files expected to be created or changed."),
       relativePath: z.string().optional().describe("Optional plan path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/CODE_PLAN.md."),
@@ -741,7 +783,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Audit how ProjectSettings/EasyAR/easyar.local.json can be wired into EasyAR Unity scripts, scenes, prefabs, and assets without exposing secret values.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       maxFiles: z.number().int().positive().max(300).default(120),
       maxCandidates: z.number().int().positive().max(100).default(40)
     },
@@ -758,7 +800,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Write a focused local-config integration audit to CONFIG_INTEGRATION.md for Unity programming handoff.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       relativePath: z.string().optional().describe("Optional output path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/CONFIG_INTEGRATION.md."),
       maxFiles: z.number().int().positive().max(300).default(120),
       maxCandidates: z.number().int().positive().max(100).default(40),
@@ -794,7 +836,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Generate a focused Unity programming context before editing EasyAR sample C# scripts.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       goal: z.string().optional().describe("Optional programming goal to contextualize recommendations."),
       maxFiles: z.number().int().positive().max(200).default(80),
       maxIssues: z.number().int().positive().max(100).default(25)
@@ -812,7 +854,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Write the focused Unity programming context as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       goal: z.string().optional().describe("Optional programming goal to contextualize recommendations."),
       relativePath: z.string().optional().describe("Optional context path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/PROGRAMMING_CONTEXT.md."),
       maxFiles: z.number().int().positive().max(200).default(80),
@@ -849,7 +891,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Generate a focused Unity C# change summary after editing scripts, including static review and next verification steps.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       goal: z.string().describe("Code change goal or user request that motivated the script edits."),
       targetFiles: z.array(z.string()).describe("Relative .cs files that were created or changed."),
       notes: z.string().optional().describe("Optional short notes about the implementation. Do not include secrets."),
@@ -868,7 +910,7 @@ export function registerUnityProgrammingTools(registerTool: RegisterTool) {
     "Write a focused Unity C# change summary Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       goal: z.string().describe("Code change goal or user request that motivated the script edits."),
       targetFiles: z.array(z.string()).describe("Relative .cs files that were created or changed."),
       notes: z.string().optional().describe("Optional short notes about the implementation. Do not include secrets."),

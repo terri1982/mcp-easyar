@@ -3,7 +3,7 @@ import path from "node:path";
 import type { SampleInfo } from "./samples.js";
 import { officialInfo } from "./samples.js";
 import { buildLocalConfigValidationReport, readCloudRecognitionConfig, cloudRecognitionCredentialMode, hasCompleteCloudRecognitionConfig, isNonPlaceholderString, isRecord } from "./tool-local-config.js";
-import { assertInside, walk } from "./tool-file-utils.js";
+import { assertInside, isIgnoredFilesystemMetadata, walk } from "./tool-file-utils.js";
 import { exists, findFiles, readUnityVersion } from "./tool-project.js";
 import { readAuthConfig } from "./tool-services.js";
 
@@ -13,6 +13,10 @@ export async function buildSampleReadinessReport(root: string, sample: SampleInf
   const matchingScenes = await matchSampleScenes(root, sample, sampleScenes);
   const packageCacheSamples = await findPackageCacheSamplePaths(root, sample, 20);
   const sampleSpecificChecks = await buildSampleSpecificReadinessChecks(root, sample);
+  const megaSettings = sample.id === "mega" ? await readMegaSettingsSummary(root) : null;
+  const megaScene = sample.id === "mega" ? await readMegaSceneSummary(root) : null;
+  const usesMegaConfig = sample.id === "mega" && Boolean(megaSettings?.exists);
+  const usesExistingMegaScene = sample.id === "mega" && Boolean(megaScene?.hasMegaBlockController);
 
   const checks = [
     {
@@ -50,38 +54,52 @@ export async function buildSampleReadinessReport(root: string, sample: SampleInf
     },
     {
       id: "local-config-template",
-      ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example")),
-      detail: "ProjectSettings/EasyAR/easyar.local.json.example exists."
+      ok: usesMegaConfig || await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json.example")),
+      detail: usesMegaConfig
+        ? "Mega uses the official Assets/XR/Settings/EasyAR Settings.asset configuration path."
+        : "ProjectSettings/EasyAR/easyar.local.json.example exists."
     },
     {
       id: "local-config",
-      ok: await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")),
-      detail: "ProjectSettings/EasyAR/easyar.local.json exists for local license and account credentials."
+      ok: usesMegaConfig || await exists(path.join(root, "ProjectSettings", "EasyAR", "easyar.local.json")),
+      detail: usesMegaConfig
+        ? "Mega uses local EasyAR license and Global Mega Block credentials in EasyAR Settings.asset."
+        : "ProjectSettings/EasyAR/easyar.local.json exists for local license and account credentials."
     },
     {
       id: "sample-runner",
-      ok: await exists(path.join(root, "Assets", "Editor", "EasyARSampleRunner.cs")),
-      detail: "Assets/Editor/EasyARSampleRunner.cs exists."
+      ok: usesExistingMegaScene || await exists(path.join(root, "Assets", "Editor", "EasyARSampleRunner.cs")),
+      detail: usesExistingMegaScene
+        ? "An existing official Mega scene supplies the runtime sample entrypoint; an MCP-generated runner is not required."
+        : "Assets/Editor/EasyARSampleRunner.cs exists."
     },
     {
       id: "build-settings-helper",
-      ok: await exists(path.join(root, "Assets", "Editor", "EasyARBuildSettingsHelper.cs")),
-      detail: "Assets/Editor/EasyARBuildSettingsHelper.cs exists."
+      ok: usesExistingMegaScene || await exists(path.join(root, "Assets", "Editor", "EasyARBuildSettingsHelper.cs")),
+      detail: usesExistingMegaScene
+        ? "The existing Mega scene can be validated directly; an MCP-generated Build Settings helper is not required."
+        : "Assets/Editor/EasyARBuildSettingsHelper.cs exists."
     },
     {
       id: "mobile-settings-helper",
-      ok: await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
-      detail: "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
+      ok: usesExistingMegaScene || await exists(path.join(root, "Assets", "Editor", "EasyARMobileSettingsHelper.cs")),
+      detail: usesExistingMegaScene
+        ? "The existing Mega scene may be validated without an MCP-generated mobile settings helper."
+        : "Assets/Editor/EasyARMobileSettingsHelper.cs exists for Android/iOS camera permission and player settings."
     },
     {
       id: "sample-validation-helper",
-      ok: await exists(path.join(root, "Assets", "Editor", "EasyARSampleValidationHelper.cs")),
-      detail: "Assets/Editor/EasyARSampleValidationHelper.cs exists for Unity-side focused sample validation."
+      ok: usesExistingMegaScene || await exists(path.join(root, "Assets", "Editor", "EasyARSampleValidationHelper.cs")),
+      detail: usesExistingMegaScene
+        ? "The existing Mega scene is sufficient for static readiness; an MCP-generated validation helper is optional."
+        : "Assets/Editor/EasyARSampleValidationHelper.cs exists for Unity-side focused sample validation."
     },
     {
       id: "focused-sample-runbook",
-      ok: await exists(focusedSampleRunbookPath(root, sample)),
-      detail: `${path.relative(root, focusedSampleRunbookPath(root, sample))} exists with sample-specific run-through steps.`
+      ok: usesExistingMegaScene || await exists(focusedSampleRunbookPath(root, sample)),
+      detail: usesExistingMegaScene
+        ? "The existing official Mega scene is the sample source; the MCP-generated runbook is optional."
+        : `${path.relative(root, focusedSampleRunbookPath(root, sample))} exists with sample-specific run-through steps.`
     },
     ...sampleSpecificChecks
   ];
@@ -588,6 +606,9 @@ export async function buildSampleSceneAudit(root: string, sample: SampleInfo, ma
   const matchingScenes = (await matchSampleScenes(root, sample, sampleScenes)).slice(0, maxCandidates);
   const buildSettingsHints = await readBuildSettingsSceneHints(root, sample);
   const sampleSpecific = await buildSampleSceneAuditSpecifics(root, sample, maxCandidates);
+  const megaSceneSelection = sample.id === "mega"
+    ? buildMegaSceneSelection(await readMegaSceneSummary(root), buildSettingsHints)
+    : null;
   const readiness = await buildSampleReadinessReport(root, sample);
   const blockers = uniqueBlockers([
     ...readiness.checks.filter((check) => !check.ok).map((check) => ({
@@ -595,7 +616,16 @@ export async function buildSampleSceneAudit(root: string, sample: SampleInfo, ma
       detail: check.detail,
       action: readinessAction(check.id, sample)
     })),
-    ...sampleSpecific.blockers
+    ...sampleSpecific.blockers,
+    ...(megaSceneSelection?.requiresExplicitSelection
+      ? [{
+          id: "mega-scene-selection",
+          detail: megaSceneSelection.reason,
+          action: megaSceneSelection.recommendedScene
+            ? `Regenerate EasyARBuildSettingsHelper with easyar_create_build_settings_helper sampleId=mega scenePath=${megaSceneSelection.recommendedScene}, then run ConfigureBuildSettings.`
+            : "Choose an Onsite MegaBlockController scene, pass its exact Assets/.../*.unity path as scenePath to easyar_create_build_settings_helper, then rerun the scene audit."
+        }]
+      : [])
   ]);
 
   return {
@@ -613,7 +643,10 @@ export async function buildSampleSceneAudit(root: string, sample: SampleInfo, ma
     sceneCandidates: sampleScenes.slice(0, maxCandidates),
     matchingScenes,
     buildSettingsHints,
-    sampleSpecific,
+    sampleSpecific: {
+      ...sampleSpecific,
+      sceneSelection: megaSceneSelection
+    },
     blockers,
     nextActions: blockers.length > 0
       ? Array.from(new Set(blockers.map((blocker) => blocker.action)))
@@ -623,6 +656,53 @@ export async function buildSampleSceneAudit(root: string, sample: SampleInfo, ma
           ? ["Run easyar_run_unity_method with EasyAR.EditorTools.EasyARSampleValidationHelper.ValidateFocusedSample."]
           : ["Run EasyARBuildSettingsHelper.ConfigureBuildSettings again so the focused sample scene is first in Build Settings."],
     security: "Secret values are not returned. Cloud Recognition audit only reports credential presence and placeholder status."
+  };
+}
+
+export function buildMegaSceneSelection(
+  megaScene: Awaited<ReturnType<typeof readMegaSceneSummary>>,
+  buildSettingsHints: Awaited<ReturnType<typeof readBuildSettingsSceneHints>>
+) {
+  const onsiteCandidates = megaScene.scenes
+    .filter((scene) => scene.locationInputModes.includes("Onsite"))
+    .map((scene) => scene.path);
+  const simulatorCandidates = megaScene.scenes
+    .filter((scene) => scene.locationInputModes.includes("Simulator"))
+    .map((scene) => scene.path);
+  const controllerCandidates = megaScene.scenes
+    .filter((scene) => scene.hasMegaBlockController)
+    .map((scene) => scene.path);
+  const selectedFirstEnabledScene = buildSettingsHints.firstEnabledScene;
+  const selectedSceneValid = Boolean(selectedFirstEnabledScene)
+    && onsiteCandidates.includes(selectedFirstEnabledScene as string)
+    && controllerCandidates.includes(selectedFirstEnabledScene as string);
+  const recommendedScene = onsiteCandidates.find((scenePath) => controllerCandidates.includes(scenePath))
+    ?? onsiteCandidates[0]
+    ?? null;
+  const selectedIsSimulator = Boolean(selectedFirstEnabledScene)
+    && simulatorCandidates.includes(selectedFirstEnabledScene as string);
+  const ambiguousCandidates = onsiteCandidates.length > 1 || megaScene.scenes.length > 1;
+  const requiresExplicitSelection = selectedIsSimulator
+    || (ambiguousCandidates && !selectedSceneValid)
+    || (Boolean(selectedFirstEnabledScene) && !selectedSceneValid);
+  const reason = onsiteCandidates.length > 1 && !selectedSceneValid
+    ? `Multiple Onsite Mega scene candidates were found (${onsiteCandidates.join(", ")}); scene selection must be explicit.`
+    : selectedIsSimulator
+      ? `The first enabled Build Settings scene is Simulator-only (${selectedFirstEnabledScene}); real-device Mega validation requires an Onsite scene.`
+      : megaScene.scenes.length > 1 && !selectedSceneValid
+        ? `Multiple Mega scene candidates were found (${megaScene.scenes.map((scene) => scene.path).join(", ")}); select the recommended Onsite scene explicitly.`
+      : selectedFirstEnabledScene && !selectedSceneValid
+        ? `The first enabled Build Settings scene is not a valid Onsite MegaBlockController scene: ${selectedFirstEnabledScene}.`
+        : "The selected Mega scene is unambiguous and valid for Onsite validation.";
+  return {
+    onsiteCandidates,
+    simulatorCandidates,
+    controllerCandidates,
+    selectedFirstEnabledScene,
+    selectedSceneValid,
+    recommendedScene,
+    requiresExplicitSelection,
+    reason
   };
 }
 
@@ -680,6 +760,9 @@ export async function sceneContentMatchesSample(root: string, sample: SampleInfo
   if (sample.id === "cloud-recognition") {
     return /CloudRecognition|CloudRecognizer|CloudRecogniz/i.test(text);
   }
+  if (sample.id === "mega") {
+    return /Mega Tracker|Mega Block|locationInputMode:\s*[012]/i.test(text);
+  }
   return false;
 }
 
@@ -713,6 +796,9 @@ export async function walkPackageCacheSamples(
   for (const entry of entries) {
     if (found.length >= limit) {
       return;
+    }
+    if (isIgnoredFilesystemMetadata(entry.name)) {
+      continue;
     }
     const fullPath = path.join(dirPath, entry.name);
     if (!entry.isDirectory()) {
@@ -844,6 +930,44 @@ export async function findMegaAssetHints(root: string, limit: number): Promise<s
     .slice(0, limit);
 }
 
+export async function readMegaSceneSummary(root: string) {
+  const candidates = await findFiles(root, ["Assets"], /\.unity$/i, 120);
+  const scenes: Array<{
+    path: string;
+    hasMegaTracker: boolean;
+    hasMegaBlock: boolean;
+    hasMegaBlockController: boolean;
+    locationInputModes: Array<"Onsite" | "Simulator" | "FramePlayer" | "Unknown">;
+  }> = [];
+  for (const scene of candidates) {
+    const text = await readFile(path.join(root, scene), "utf8");
+    const hasMegaTracker = /m_Name:\s*Mega Tracker\s*\n/.test(text);
+    const hasMegaBlock = /m_Name:\s*Mega Block\s*\n/.test(text);
+    const hasTrackerAssignment = /trackerHasSet:\s*1\s*\n/.test(text);
+    const locationInputModes = [...text.matchAll(/locationInputMode:\s*(\d+)/g)].map((match) => {
+      const raw = Number(match[1]);
+      return raw === 0 ? "Onsite" : raw === 1 ? "Simulator" : raw === 2 ? "FramePlayer" : "Unknown";
+    });
+    if (!hasMegaTracker && !hasMegaBlock && locationInputModes.length === 0) {
+      continue;
+    }
+    scenes.push({
+      path: scene,
+      hasMegaTracker,
+      hasMegaBlock,
+      hasMegaBlockController: hasMegaTracker && hasMegaBlock && hasTrackerAssignment,
+      locationInputModes
+    });
+  }
+  return {
+    sceneCount: scenes.length,
+    scenes,
+    hasMegaBlockController: scenes.some((scene) => scene.hasMegaBlockController),
+    hasOnsite: scenes.some((scene) => scene.locationInputModes.includes("Onsite")),
+    hasSimulator: scenes.some((scene) => scene.locationInputModes.includes("Simulator"))
+  };
+}
+
 export async function readMegaSettingsSummary(root: string) {
   const settingsPath = path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset");
   if (!await exists(settingsPath)) {
@@ -859,7 +983,10 @@ export async function readMegaSettingsSummary(root: string) {
   }
 
   const text = await readFile(settingsPath, "utf8");
-  const block = text.match(/GlobalMegaBlockLocalizationServiceConfig:\s*\n([\s\S]*?)(?:\n  GlobalMegaLandmarkLocalizationServiceConfig:|\n  GlobalSpatialMapServiceConfig:|\n  GlobalCloudRecognizerServiceConfig:|\n  [A-Za-z].*:|$)/)?.[1] ?? "";
+  const blockStart = text.indexOf("GlobalMegaBlockLocalizationServiceConfig:");
+  const blockText = blockStart >= 0 ? text.slice(blockStart) : "";
+  const nextGlobalConfig = blockText.search(/\n  Global[A-Za-z]+ServiceConfig:/);
+  const block = blockText.slice(0, nextGlobalConfig >= 0 ? nextGlobalConfig : undefined);
   return {
     exists: true,
     relativePath: path.relative(root, settingsPath),
@@ -871,22 +998,68 @@ export async function readMegaSettingsSummary(root: string) {
   };
 }
 
+export async function buildMegaSettingsValidationReport(root: string) {
+  const summary = await readMegaSettingsSummary(root);
+  const checks = [
+    {
+      id: "file-exists",
+      ok: summary.exists,
+      detail: summary.exists
+        ? `${summary.relativePath} exists.`
+        : `${summary.relativePath} does not exist.`
+    },
+    {
+      id: "license-key",
+      ok: summary.licensePresent,
+      detail: summary.licensePresent ? "Mega license presence is configured." : "Mega license presence is missing."
+    },
+    {
+      id: "mega-app-id",
+      ok: summary.appIdPresent,
+      detail: summary.appIdPresent ? "Global Mega Block AppID presence is configured." : "Global Mega Block AppID presence is missing."
+    },
+    {
+      id: "mega-server-address",
+      ok: summary.serverAddressPresent,
+      detail: summary.serverAddressPresent ? "Global Mega Block ServerAddress presence is configured." : "Global Mega Block ServerAddress presence is missing."
+    },
+    {
+      id: "mega-api-key",
+      ok: summary.apiKeyPresent,
+      detail: summary.apiKeyPresent ? "Global Mega Block APIKey presence is configured." : "Global Mega Block APIKey presence is missing."
+    },
+    {
+      id: "mega-api-secret",
+      ok: summary.apiSecretPresent,
+      detail: summary.apiSecretPresent ? "Global Mega Block APISecret presence is configured." : "Global Mega Block APISecret presence is missing."
+    }
+  ];
+  const valid = checks.every((check) => check.ok);
+  return {
+    configPath: path.join(root, "Assets", "XR", "Settings", "EasyAR Settings.asset"),
+    valid,
+    checks,
+    security: "Secret values are not returned. This tool only reports Mega Settings field presence and placeholder status.",
+    nextActions: valid
+      ? ["Run easyar_check_sample_readiness with sampleId=mega."]
+      : ["Fill the missing Mega fields locally in Assets/XR/Settings/EasyAR Settings.asset, then rerun easyar_check_sample_readiness with sampleId=mega."]
+  };
+}
+
 export async function readMegaLocationInputModeSummary(root: string) {
-  const sceneCandidates = await findFiles(root, ["Assets"], /(?:mega|megablock|cloudlocalizer).*\.unity$/i, 40);
+  const sceneSummary = await readMegaSceneSummary(root);
   const modes: Array<{ path: string; mode: "Onsite" | "Simulator" | "FramePlayer" | "Unknown"; raw: number }> = [];
-  for (const scene of sceneCandidates) {
-    const text = await readFile(path.join(root, scene), "utf8");
-    for (const match of text.matchAll(/locationInputMode:\s*(\d+)/g)) {
-      const raw = Number(match[1]);
+  for (const scene of sceneSummary.scenes) {
+    for (const mode of scene.locationInputModes) {
       modes.push({
-        path: scene,
-        raw,
-        mode: raw === 0 ? "Onsite" : raw === 1 ? "Simulator" : raw === 2 ? "FramePlayer" : "Unknown"
+        path: scene.path,
+        raw: mode === "Onsite" ? 0 : mode === "Simulator" ? 1 : mode === "FramePlayer" ? 2 : -1,
+        mode
       });
     }
   }
   return {
-    sceneCount: sceneCandidates.length,
+    sceneCount: sceneSummary.sceneCount,
     modes,
     hasOnsite: modes.some((item) => item.mode === "Onsite"),
     hasSimulator: modes.some((item) => item.mode === "Simulator")
@@ -984,6 +1157,7 @@ export async function buildSampleSpecificReadinessChecks(root: string, sample: S
   if (sample.id === "mega") {
     const megaHints = await findMegaAssetHints(root, 80);
     const megaSettings = await readMegaSettingsSummary(root);
+    const megaScene = await readMegaSceneSummary(root);
     const megaLocationInputMode = await readMegaLocationInputModeSummary(root);
     const megaBlockRoot = await readMegaBlockRootSummary(root);
     const locationInputModeOk = megaLocationInputMode.hasOnsite;
@@ -1012,6 +1186,13 @@ export async function buildSampleSpecificReadinessChecks(root: string, sample: S
           : "Assets/XR/Settings/EasyAR Settings.asset was not found. Create EasyAR Settings and fill local package license plus Global Mega Block AppID/server/API Key/API Secret."
       },
       {
+        id: "mega-block-controller",
+        ok: megaScene.hasMegaBlockController,
+        detail: megaScene.hasMegaBlockController
+          ? `Found a MegaBlockController-compatible scene signal: ${megaScene.scenes.filter((scene) => scene.hasMegaBlockController).map((scene) => scene.path).join(", ")}.`
+          : "No MegaBlockController-compatible scene signal was found. Import or configure the official 4003+ Mega Block sample with a Mega Block bound to its Mega Tracker."
+      },
+      {
         id: "mega-location-input-mode",
         ok: locationInputModeOk,
         detail: megaLocationInputMode.modes.length > 0
@@ -1022,10 +1203,12 @@ export async function buildSampleSpecificReadinessChecks(root: string, sample: S
       },
       {
         id: "mega-block-root",
-        ok: megaBlockRoot.ok,
+        ok: megaBlockRoot.ok || megaScene.hasMegaBlockController,
         detail: megaBlockRoot.holders.length > 0
-          ? megaBlockRoot.ok
-            ? `Mega BlockHolder root config is usable: ${megaBlockRoot.holders.map((item) => `${item.path}=${item.source}${item.hasBlockRoot ? "+root" : ""}`).join(", ")}.`
+          ? megaScene.hasMegaBlockController
+            ? "The 4003+ MegaBlockController workflow is detected; the legacy BlockRoot check is informational for this scene."
+            : megaBlockRoot.ok
+              ? `Mega BlockHolder root config is usable: ${megaBlockRoot.holders.map((item) => `${item.path}=${item.source}${item.hasBlockRoot ? "+root" : ""}`).join(", ")}.`
             : `Mega BlockHolder is External with empty blockRoot in: ${megaBlockRoot.blockers.map((item) => item.path).join(", ")}. Set BlockRootSource to Internal, Mixed, or assign a BlockRoot generated by Mega Studio; otherwise localization callback can break the session with "Block root not exist".`
           : "No serialized Mega BlockHolder BlockRootSource was found in Mega scene assets. Confirm the Mega scene has a BlockHolder and a usable BlockRoot before device validation."
       }
@@ -1128,6 +1311,53 @@ export async function buildSampleSceneAuditSpecifics(root: string, sample: Sampl
               action: readinessAction("cloud-recognition-credentials", sample)
             }
           ]
+    };
+  }
+
+  if (sample.id === "mega") {
+    const megaSettings = await readMegaSettingsSummary(root);
+    const megaScene = await readMegaSceneSummary(root);
+    const megaLocationInputMode = await readMegaLocationInputModeSummary(root);
+    const missingMegaSettings = [
+      megaSettings.licensePresent ? null : "license",
+      megaSettings.appIdPresent ? null : "GlobalMegaBlock.AppID",
+      megaSettings.serverAddressPresent ? null : "GlobalMegaBlock.ServerAddress",
+      megaSettings.apiKeyPresent ? null : "GlobalMegaBlock.APIKey",
+      megaSettings.apiSecretPresent ? null : "GlobalMegaBlock.APISecret"
+    ].filter((item): item is string => item !== null);
+    const blockers = [
+      ...(missingMegaSettings.length === 0
+        ? []
+        : [{
+            id: "mega-settings",
+            detail: megaSettings.exists
+              ? `Mega Settings are missing: ${missingMegaSettings.join(", ")}.`
+              : "Assets/XR/Settings/EasyAR Settings.asset is missing.",
+            action: "Fill the Mega license and Global Mega Block service fields in Assets/XR/Settings/EasyAR Settings.asset locally, then rerun easyar_check_sample_readiness."
+          }]),
+      ...(megaScene.hasMegaBlockController
+        ? []
+        : [{
+            id: "mega-block-controller",
+            detail: "No MegaBlockController-compatible scene signal was found.",
+            action: "Import or configure the official 4003+ Mega Block sample with a Mega Block bound to its Mega Tracker."
+          }]),
+      ...(megaLocationInputMode.hasOnsite
+        ? []
+        : [{
+            id: "mega-location-input-mode",
+            detail: "No Mega scene is configured with LocationInputMode=Onsite.",
+            action: "Set the Mega scene LocationInputMode to Onsite for real-device validation, then rerun the scene audit."
+          }])
+    ];
+    return {
+      kind: "mega",
+      targetAssets: [],
+      cloudConfig: null,
+      megaSettings,
+      megaScene,
+      megaLocationInputMode,
+      blockers
     };
   }
 

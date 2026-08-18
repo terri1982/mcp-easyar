@@ -94,6 +94,9 @@ async function listMarkdownFiles(directory, prefix = "") {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
+    if (entry.name.startsWith("._")) {
+      continue;
+    }
     const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
       files.push(...await listMarkdownFiles(path.join(directory, entry.name), relativePath));

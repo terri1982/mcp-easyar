@@ -435,7 +435,7 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
     "Generate a first-run onboarding report that combines client setup, official access, release manifest, and focused workflow state.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
       entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
       platform: z.enum(["android", "ios"]).default("android"),
@@ -468,7 +468,7 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
     "Write the first-run onboarding report as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       client: z.enum(clientKinds).default("claude-desktop").describe("Target MCP client config style."),
       entrypointMode: z.enum(clientEntrypointModes).default("local-dist").describe("How the MCP client should launch the server: local dist path, installed package bin, or npx package command."),
       platform: z.enum(["android", "ios"]).default("android"),
@@ -749,10 +749,10 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
 
   registerTool(
     "easyar_generate_focused_preflight",
-    "Generate a focused Image Tracking or Cloud Recognition preflight gate across account, config, Unity, import, scene, and script readiness.",
+    "Generate a focused Image Tracking, Cloud Recognition, or Mega preflight gate across account, config, Unity, import, scene, and script readiness.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
       maxScriptIssues: z.number().int().positive().max(100).default(25)
@@ -773,7 +773,7 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
     "Write the focused sample preflight gate as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
       output: outputModeSchema,
@@ -819,7 +819,7 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
     "Inspect the focused EasyAR workflow state and recommend the next MCP/Unity action.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
       maxScriptIssues: z.number().int().positive().max(100).default(25)
@@ -840,7 +840,7 @@ export function registerGuidesWorkflowTools(registerTool: RegisterTool) {
     "Write the focused workflow state and recommended next action as a Markdown artifact inside the Unity project.",
     {
       projectPath: z.string().describe("Unity project path."),
-      sampleId: z.string().describe("Focused sample id: image-tracking or cloud-recognition."),
+      sampleId: z.string().describe("Focused sample id: image-tracking, cloud-recognition, or mega."),
       platform: z.enum(["android", "ios"]).default("android"),
       outputPath: z.string().optional().describe("Build output path. Defaults to Builds/<sampleId>.apk for Android or Builds/iOS/<sampleId>."),
       relativePath: z.string().optional().describe("Optional workflow state path inside the project. Defaults to Assets/EasyARGenerated/<sampleId>/WORKFLOW_STATE.md."),

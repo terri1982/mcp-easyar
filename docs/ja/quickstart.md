@@ -40,6 +40,8 @@ easyar_write_focused_handoff_pack projectPath=/path/to/UnityProject sampleId=all
 
 このガイドでは、ユーザーを EasyAR の公式 Web サイトと開発センターに誘導し、すべての必須フィールド、情報の出所、保存場所、共有しても安全かどうかを列挙します。 `AUTHORIZATION_STRATEGY.md` はキーの区別を記録します。公式の EasyAR Sense Unity プラグインがインストールされた後、Unity サンプルの実行ではローカル ライセンス/API キー構成が使用され、実行時に Web サイトへのログインは必要ありません。 Web サイトへのログインは、承認されたパッケージとキーを取得するために行われます。 `FIRST_RUN.md` は、最初の安全な呼び出し、焦点を当てた画像追跡/Cloud 認識/Mega スコープ、およびアーティファクトの読み取り順序を指定します。 `PORTAL_EVIDENCE.md` は、アプリ レコード ID、サービス フラグ、センス ライセンスの存在、クラウド認識ライブラリ/target ステータス、メガ ライブラリ/block 識別子など、機密でない開発センターの観察のみを記録します。 `LOCAL_CONFIG_HANDOFF.md` は、これらのアカウントの手順を正確な `ProjectSettings/EasyAR/easyar.local.json` ファイルに結び付けます。 `LOCAL_CONFIG_FORM.md` は、入力可能な JSON スケルトン、フィールドごとのソース マップ、環境ベースのライター コマンド、および検証チェーンを提供します。 `easyar_write_focused_handoff_pack` は、安全なサンプルごとの診断、フォーム、実行シーケンス、プログラミング コンテキスト、`HANDOFF_PACK.md`、`ARTIFACT_INDEX.md`、プロジェクト ダッシュボードを 1 回の呼び出しで書き込みます。 MCPは、EasyAR Web サイトのパスワードを要求せず、アカウント認証情報も保存しません。
 
+Mega は JSON ルートの例外です。パッケージの License Key と Global Mega Block の各フィールドを `Assets/XR/Settings/EasyAR Settings.asset` で設定し、`sampleId=mega` で検証します。Build Settings に Onsite/Simulator の候補が複数ある場合は、シーン監査が推奨する `scenePath` を使用してください。
+
 まだ登録していないユーザーの場合、MCP フローは次のとおりです。
 
 1. MCP リソース `easyar://acceptance/fresh-project` を読み取り、現在の画像追跡、CRS/Cloud 認識、メガ受け入れ範囲を固定します。

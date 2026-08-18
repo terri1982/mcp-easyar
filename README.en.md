@@ -21,6 +21,15 @@ Current delivery path: use local-key MVP first. Users register/log in/download/c
 
 The `v0.1.0-local-key.41` prerelease also includes the WeChat Mini Program sample track and complete Japanese and Vietnamese mirrors of all 24 public Markdown source documents. The Mini Program track covers `wechat-mega` and `wechat-crs` first with local project inspection, WeChat Developer Tools CLI detection, local config forms, local official package import, DevTools checks, log analysis, preflight reports, run sequences, real-device validation checklists, run results, completion reports, and Mini Program scope status. Mini Program support remains an official browser/tool handoff path: no automated login, no download-gate bypass, and no secret collection in chat.
 
+### Distinguish the two Mega paths
+
+There are two similarly named but non-interchangeable Mega samples:
+
+- `mega`: the Unity Mega sample for an Android phone, PICO, XREAL, or visionOS target. Completion requires real-device Mega localization/tracking evidence.
+- `wechat-mega`: the WeChat Mini Program Mega sample. Completion requires WeChat Developer Tools preview and real WeChat-device evidence. A Unity project, Android APK, PICO run, or XREAL run cannot complete this path.
+
+Use the `easyar-run-mega` prompt for the Unity path. Use `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` for the WeChat path. Unity Mega is not complete from generated documents, an editor/Simulator run, or APK build success alone: the completion report must include real-device startup and localization/tracking evidence and say `runThroughComplete=true`.
+
 - inspect Unity project structure and EasyAR-related files
 - report server status, capability summary, resources, and recommended first calls
 - diagnose whether a Unity project is ready to run a selected EasyAR sample
@@ -183,6 +192,10 @@ EASYAR_CLOUD_API_KEY=<set locally for Cloud Recognition>
 EASYAR_CLOUD_API_SECRET=<set locally for Cloud Recognition>
 ```
 
+`EASYAR_UNITY_PATH` must point to the actual Unity Editor executable, such as `Unity.app/Contents/MacOS/Unity` on macOS. A Unity CLI shim such as `~/.unity/bin/Unity` does not support Editor `-batchmode` workflows. `easyar_write_unity_environment_report` checks the executable kind, symlink target, executable permission, and project-version match; restore or mount an external Unity volume before continuing when a Unity Hub version symlink is broken.
+
+Unity Mega does not use `ProjectSettings/EasyAR/easyar.local.json`. Configure the package License Key and Global Mega Block AppID, ServerAddress, APIKey, and APISecret locally in `Assets/XR/Settings/EasyAR Settings.asset`, then call `easyar_validate_local_config` with `sampleId=mega`. Run the scene audit before Build Settings; when more than one Onsite scene exists or Simulator is first, pass the exact `Assets/.../*.unity` path as `scenePath` to `easyar_create_build_settings_helper`.
+
 Production official API endpoints are optional until EasyAR-owned account services are available. Local-key MVP users do not need an `EASYAR_API_TOKEN`; do not ask users to provide one.
 
 ```bash
@@ -227,7 +240,9 @@ easyar_write_miniprogram_scope_status projectPath=/path/to/miniprogram
 
 Use `sampleId=wechat-crs` for the CRS path. The user still downloads official packages and manages EasyAR/WeChat credentials in the official website or official developer tools.
 
-MCP clients that support prompts can start from `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` or `sampleId=wechat-crs`. The prompt reads the Mini Program acceptance resources, keeps secrets out of chat, and does not allow completion claims until real-device preview evidence is recorded.
+MCP clients that support prompts can start from `easyar-run-mega` for Unity Mega, or `easyar-run-wechat-miniprogram` with `sampleId=wechat-mega` or `sampleId=wechat-crs` for Mini Programs. Each prompt states its project boundary, keeps secrets out of chat, and does not allow completion claims until the matching real-device evidence is recorded.
+
+For the clean package-consumer acceptance of the Unity Mega path, see [Mega clean environment acceptance](docs/zh-CN/MEGA_CLEAN_ACCEPTANCE.md).
 
 Use [`.env.example`](.env.example) as a non-secret template. Keep real `.env` files, license keys, and Cloud Recognition credentials local.
 
@@ -337,7 +352,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 `mcp-easyar` treats account setup as a guided browser handoff. If the user has not registered yet, start with `easyar_first_run_guide accountStage=not-registered sampleId=cloud-recognition`; the guide chooses the first safe MCP call, sends the user to the official EasyAR registration/login pages, and explains what to do after they return to Codex or Claude. The MCP server never asks for website passwords, verification codes, raw API tokens, license keys, API keys, `appKey`, or `appSecret` in chat.
 
-After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, the CRS/Cloud Recognition AppId, Client-end Target Recognition URL, API KEY, and API Secret. After the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses those local keys and does not require website login at runtime. EasyAR Unity CloudRecognizer API Key access uses `easyar.cloudRecognition.appId` + `serverAddress` + `apiKey` + `apiSecret`. Those values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`; `easyar_validate_local_config` reports only whether required fields are present and non-placeholder.
+After registration/login, the user creates or locates the EasyAR Sense license and, for Cloud Recognition, the CRS/Cloud Recognition AppId, Client-end Target Recognition URL, API KEY, and API Secret. After the official EasyAR Sense Unity Plugin is installed, Unity-side sample execution uses those local keys and does not require website login at runtime. EasyAR Unity CloudRecognizer API Key access uses `easyar.cloudRecognition.appId` + `serverAddress` + `apiKey` + `apiSecret`; those Cloud Recognition values are filled locally in `ProjectSettings/EasyAR/easyar.local.json`. Mega instead uses the package License Key and Global Mega Block fields in `Assets/XR/Settings/EasyAR Settings.asset`. `easyar_validate_local_config` reports only whether the fields required by the selected sample are present and non-placeholder.
 
 For Unity-project handoff, call `easyar_write_first_run_guide projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`, then `easyar_write_local_config_handoff projectPath=/path/to/UnityProject accountStage=not-registered sampleId=cloud-recognition`. These write `Assets/EasyARGenerated/FIRST_RUN.md` and `Assets/EasyARGenerated/LOCAL_CONFIG_HANDOFF.md`, combining the official browser registration/login path, focused sample scope, account materials checklist, manual `easyar.local.json` steps, environment-backed writer command, and validation chain.
 
@@ -504,6 +519,7 @@ The first MCP screen is intentionally account-stage driven:
 
 - `easyar-run-image-tracking`
 - `easyar-run-cloud-recognition`
+- `easyar-run-mega`
 - `easyar-validate-official-endpoints`
 - `easyar-close-focused-scope`
 - `easyar-unity-programming-assistant`
